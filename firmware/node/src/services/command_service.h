@@ -1,0 +1,10 @@
+#ifndef COMMAND_SERVICE_H
+#define COMMAND_SERVICE_H
+
+#include <Arduino.h>
+
+void command_init();
+void command_check();
+unsigned long command_get_interval();
+
+#endif

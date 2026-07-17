@@ -1,0 +1,49 @@
+:root {
+  /* Default Theme (Dark) - Google Design Style */
+  --bg-dark: #131314;
+  --bg-sidebar: #131314;
+  --bg-topbar: rgba(19, 19, 20, 0.75);
+  --bg-card: #1e1f20;
+  --bg-card-hover: #282a2c;
+  
+  --text-primary: #e3e3e3;
+  --text-secondary: #c4c7c5;
+  --text-muted: #9aa0a6;
+  
+  --primary: #8ab4f8; 
+  --primary-glow: rgba(138, 180, 248, 0.15);
+  --secondary: #c2e7ff; 
+  
+  --danger: #f28b82; 
+  --warning: #fdd663; 
+  --success: #81c995; 
+  
+  --border: #3c4043;
+  
+  /* Layout */
+  --sidebar-width: 240px;
+}
+
+/* Explicit selector to ensure it overrides everything */
+html[data-theme="light"], 
+[data-theme="light"] {
+  /* Elegant Off-White Theme (Google Style Light) */
+  --bg-dark: #f8fafd; 
+  --bg-sidebar: #ffffff;
+  --bg-topbar: rgba(248, 250, 253, 0.75);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f3f4;
+  
+  --text-primary: #1f1f1f; 
+  --text-secondary: #5e5e5e; 
+  --text-muted: #70757a; 
+  
+  --primary: #0b57d0; 
+  --primary-glow: rgba(11, 87, 208, 0.1);
+  --secondary: #12b5cb;
+  --success: #146c2e; 
+  --danger: #b3261e; 
+  --warning: #b06000; 
+  --border: rgba(0, 0, 0, 0.12); 
+}
+

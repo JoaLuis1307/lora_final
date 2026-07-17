@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # 1. Base de Datos Relacional (PostgreSQL)
+  db:
+    image: postgres:16-alpine
+    container_name: ecolora-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: iot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Broker de Mensajería MQTT (Mosquitto)
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: ecolora-mqtt
+    restart: always
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  # 3. Base de Datos Temporal (InfluxDB v2)
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: ecolora-influxdb
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin12345
+      - DOCKER_INFLUXDB_INIT_ORG=iot_org
+      - DOCKER_INFLUXDB_INIT_BUCKET=iot_bucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=jLsONHjrqqtbPKF4snQs-l4oGS-Eo7y7Biq8O6HtUxbqJMsOGTWANg5rp6gW7feI2saXoDeJzsD2dzq7nYl_kQ==
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+
+  # 4. Servidor API Backend (Fastify)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecolora-backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - JWT_SECRET=supersecret_jwt_key_smart_containers_2026
+      - MQTT_BROKER=mqtt://mqtt
+      - MQTT_PORT=1883
+      - DB_MODE=prisma
+      - DATABASE_URL=postgresql://admin:admin123@db:5432/iot_db?schema=public
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=jLsONHjrqqtbPKF4snQs-l4oGS-Eo7y7Biq8O6HtUxbqJMsOGTWANg5rp6gW7feI2saXoDeJzsD2dzq7nYl_kQ==
+      - INFLUX_ORG=iot_org
+      - INFLUX_BUCKET=iot_bucket
+    depends_on:
+      - db
+      - mqtt
+      - influxdb
+
+  # 5. Aplicación Web Frontend (React + Nginx)
+  frontend:
+    build:
+      context: ./web_app
+      dockerfile: Dockerfile
+    container_name: ecolora-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:
+  influxdb_data:
