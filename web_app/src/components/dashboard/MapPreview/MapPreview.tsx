@@ -702,7 +702,6 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
         ` : ''}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">${iconSvg}</svg>
         ${linkedDevice && isOnline && !isFull ? '<div style="position:absolute;top:-1px;right:-1px;width:9px;height:9px;background:#10b981;border:2px solid white;border-radius:50%;animation:pulse 2s infinite"></div>' : ''}
-        ${isHardwareReal ? '<div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#0071C5;color:white;font-size:6.5px;font-weight:900;padding:1px 3px;border-radius:3px;border:1px solid white;line-height:1;white-space:nowrap;letter-spacing:0.02em">REAL</div>' : ''}
       </div>`;
 
       if (!cached) {

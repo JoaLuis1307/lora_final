@@ -10,7 +10,17 @@ declare module 'fastify' {
 
 async function seedDefaultData(prisma: PrismaClient) {
   try {
-    // 1. Upsert Gateway 01
+    // 1. Clean up any orphaned map points from the database (points with no devices linked)
+    await prisma.mapPoint.deleteMany({
+      where: {
+        devices: {
+          none: {}
+        }
+      }
+    });
+    console.log('[DATABASE] Puntos de mapa huérfanos eliminados.');
+
+    // 2. Upsert Gateway 01
     await prisma.device.upsert({
       where: { device_id: 'gateway_01' },
       update: {},
@@ -30,7 +40,7 @@ async function seedDefaultData(prisma: PrismaClient) {
     });
     console.log('[DATABASE] Seaseed/Verify gateway_01 en base de datos.');
 
-    // 2. Upsert Gateway 02
+    // 3. Upsert Gateway 02
     await prisma.device.upsert({
       where: { device_id: 'gateway_02' },
       update: { name: 'Gateway Virtual' },
@@ -50,12 +60,12 @@ async function seedDefaultData(prisma: PrismaClient) {
     });
     console.log('[DATABASE] Seaseed/Verify gateway_02 en base de datos.');
 
-    // 3. Seed default MapPoints & Sensor Nodes if database is empty
-    const pointsCount = await prisma.mapPoint.count();
-    if (pointsCount === 0) {
-      console.log('[DATABASE] Creando puntos de mapa y contenedores por defecto...');
-      
-      const p1 = await prisma.mapPoint.create({
+    // 4. Find or create default MapPoints to link sensor nodes
+    let p1 = await prisma.mapPoint.findFirst({
+      where: { name: 'Punto Limpio Plaza Yanahuara' }
+    });
+    if (!p1) {
+      p1 = await prisma.mapPoint.create({
         data: {
           name: 'Punto Limpio Plaza Yanahuara',
           latitude: -16.3888,
@@ -64,8 +74,13 @@ async function seedDefaultData(prisma: PrismaClient) {
           description: 'Contenedor inteligente de vidrio y plástico'
         }
       });
+    }
 
-      const p2 = await prisma.mapPoint.create({
+    let p2 = await prisma.mapPoint.findFirst({
+      where: { name: 'Contenedor Av. Ejército C-4' }
+    });
+    if (!p2) {
+      p2 = await prisma.mapPoint.create({
         data: {
           name: 'Contenedor Av. Ejército C-4',
           latitude: -16.3920,
@@ -74,69 +89,49 @@ async function seedDefaultData(prisma: PrismaClient) {
           description: 'Contenedor de residuos generales de alta capacidad'
         }
       });
-
-      await prisma.mapPoint.create({
-        data: {
-          name: 'Punto Ecológico Mall Plaza',
-          latitude: -16.3980,
-          longitude: -71.5520,
-          type: 'Papel/Cartón',
-          description: 'Contenedor inteligente para papel y cartón'
-        }
-      });
-
-      await prisma.mapPoint.create({
-        data: {
-          name: 'Contenedor Calle Mercaderes',
-          latitude: -16.3988,
-          longitude: -71.5368,
-          type: 'General',
-          description: 'Ubicación central del simulador'
-        }
-      });
-
-      // Seed sensor nodes N1 and N2 linked to points
-      await prisma.device.upsert({
-        where: { device_id: 'n1' },
-        update: {},
-        create: {
-          device_id: 'n1',
-          name: 'Contenedor Plaza Yanahuara',
-          type: 'Nodo Sensor',
-          status: 'Online',
-          latitude: -16.3888,
-          longitude: -71.5415,
-          battery_level: 84,
-          signal_strength: -75,
-          last_seen: new Date(),
-          mac_address: '24:0A:C4:8B:58:AA',
-          registered: true,
-          map_point_id: p1.id,
-          gateway_id: 'gateway_01'
-        }
-      });
-
-      await prisma.device.upsert({
-        where: { device_id: 'n2' },
-        update: {},
-        create: {
-          device_id: 'n2',
-          name: 'Contenedor Av. Ejército C-4',
-          type: 'Nodo Sensor',
-          status: 'Warning',
-          latitude: -16.3920,
-          longitude: -71.5460,
-          battery_level: 42,
-          signal_strength: -88,
-          last_seen: new Date(),
-          mac_address: '24:0A:C4:8B:58:BB',
-          registered: true,
-          map_point_id: p2.id,
-          gateway_id: 'gateway_02'
-        }
-      });
-      console.log('[DATABASE] Seeding de puntos de mapa y nodos de sensores completado.');
     }
+
+    // 5. Seed sensor nodes N1 and N2 linked to points
+    await prisma.device.upsert({
+      where: { device_id: 'n1' },
+      update: {},
+      create: {
+        device_id: 'n1',
+        name: 'Contenedor Plaza Yanahuara',
+        type: 'Nodo Sensor',
+        status: 'Online',
+        latitude: -16.3888,
+        longitude: -71.5415,
+        battery_level: 84,
+        signal_strength: -75,
+        last_seen: new Date(),
+        mac_address: '24:0A:C4:8B:58:AA',
+        registered: true,
+        map_point_id: p1.id,
+        gateway_id: 'gateway_01'
+      }
+    });
+
+    await prisma.device.upsert({
+      where: { device_id: 'n2' },
+      update: {},
+      create: {
+        device_id: 'n2',
+        name: 'Contenedor Av. Ejército C-4',
+        type: 'Nodo Sensor',
+        status: 'Warning',
+        latitude: -16.3920,
+        longitude: -71.5460,
+        battery_level: 42,
+        signal_strength: -88,
+        last_seen: new Date(),
+        mac_address: '24:0A:C4:8B:58:BB',
+        registered: true,
+        map_point_id: p2.id,
+        gateway_id: 'gateway_02'
+      }
+    });
+    console.log('[DATABASE] Seeding de puntos de mapa y nodos de sensores completado.');
   } catch (err) {
     console.error('[DATABASE] Error seeding default data:', err);
   }
