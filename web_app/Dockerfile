@@ -25,6 +25,9 @@ RUN npm run build
 # ==========================================
 FROM nginx:1.25-alpine
 
+# Copy custom Nginx configuration for React Router routing support
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copy compiled static assets from builder stage to Nginx webroot
 COPY --from=builder /usr/src/app/build /usr/share/nginx/html
 
