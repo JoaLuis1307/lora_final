@@ -4,7 +4,7 @@ import {
   Trash2, Download, MapPin, Battery, AlertTriangle, 
   Clock, Activity, Gauge, Navigation, 
   Thermometer, Droplets, Wind, ShieldAlert,
-  Lock, Unlock, Edit, X, BarChart3, Router, Cpu, Database, Layers
+  Lock, Unlock, Edit, X, BarChart3, Router, Cpu, Database, Layers, Plus
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { containerStagger, fadeSlideUp, fadeInFromTop, fadeInFromRight } from '../shared/animations';
@@ -17,10 +17,7 @@ import {
 import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
 
-const defaultBins = [
-  { id: 'N1', name: 'Contenedor N1 (Plaza Yanahuara)', location: 'Plaza Yanahuara', fill: 45, battery: 84, status: 'warning' as const, lastUpdate: 'Ahora', capacity: 1100, temp: 20, hum: 50, aq: 120, ir: false, lat: -16.3888, lng: -71.5415 },
-  { id: 'N2', name: 'Contenedor N2 (Av. Ejército C-4)', location: 'Av. Ejército C-4', fill: 80, battery: 42, status: 'high' as const, lastUpdate: 'Ahora', capacity: 1100, temp: 22, hum: 45, aq: 150, ir: true, lat: -16.3920, lng: -71.5460 },
-];
+const defaultBins: any[] = [];
 
 const getFillColor = (fill: number) => {
   if (fill >= 90) return '#f28b82';
@@ -61,35 +58,53 @@ const Bins: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [editBinModalOpen, setEditBinModalOpen] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
   const [editBinData, setEditBinData] = useState<{ id: string; name: string; location: string; lat?: number; lng?: number } | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'real' | 'simulated' | 'independent'>('all');
   const [showSidebar, setShowSidebar] = useState(true);
+
+  const handleDeleteBin = async (binId: string) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar el contenedor ${binId}?`)) return;
+    try {
+      const liveDevice = devices.find(d => d.device_id === binId);
+      
+      // 1. Delete linked MapPoint in DB if exists
+      if (liveDevice && liveDevice.map_point_id) {
+        await mapService.deletePoint(liveDevice.map_point_id);
+      }
+      
+      // 2. Delete the Device from DB
+      await deviceService.deleteDevice(binId);
+      
+      // Refresh state
+      const [devicesData, telemetryData] = await Promise.all([
+        deviceService.getDevices(),
+        deviceService.getLatestTelemetry()
+      ]);
+      setDevices(devicesData);
+      setTelemetry(telemetryData);
+    } catch (err) {
+      console.error(err);
+      alert('Error al eliminar el contenedor');
+    }
+  };
 
   const handleSaveBinEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editBinData) return;
     try {
-      const liveDevice = devices.find(d => d.device_id === editBinData.id);
-      
-      if (liveDevice) {
-        // 1. Update Device name in DB
-        await deviceService.updateDevice(editBinData.id, {
-          name: editBinData.name,
-        });
-
-        // 2. Update linked MapPoint in DB if exists
-        if (liveDevice.map_point_id) {
-          await mapService.updatePoint(liveDevice.map_point_id, {
-            name: editBinData.name,
-            description: editBinData.location,
-          });
+      if (isCreateMode) {
+        // Check if device_id already exists
+        const exists = devices.some(d => d.device_id.toLowerCase() === editBinData.id.toLowerCase());
+        if (exists) {
+          alert('El ID de dispositivo ya existe');
+          return;
         }
-      } else {
-        // Fallback: register device if not exists
+
         const lat = editBinData.lat || -16.3888;
         const lng = editBinData.lng || -71.5415;
         
-        // Save MapPoint
+        // 1. Save MapPoint
         const np = await mapService.savePoint({
           name: editBinData.name,
           description: editBinData.location,
@@ -98,7 +113,7 @@ const Bins: React.FC = () => {
           type: 'bin',
         });
 
-        // Register Device
+        // 2. Register Device
         await deviceService.registerDevice({
           device_id: editBinData.id,
           name: editBinData.name,
@@ -108,6 +123,27 @@ const Bins: React.FC = () => {
           longitude: lng,
           map_point_id: np.id,
         });
+      } else {
+        const liveDevice = devices.find(d => d.device_id === editBinData.id);
+        
+        if (liveDevice) {
+          // 1. Update Device name/coordinates in DB
+          await deviceService.updateDevice(editBinData.id, {
+            name: editBinData.name,
+            latitude: editBinData.lat || liveDevice.latitude,
+            longitude: editBinData.lng || liveDevice.longitude
+          });
+
+          // 2. Update linked MapPoint in DB if exists
+          if (liveDevice.map_point_id) {
+            await mapService.updatePoint(liveDevice.map_point_id, {
+              name: editBinData.name,
+              description: editBinData.location,
+              latitude: editBinData.lat || liveDevice.latitude,
+              longitude: editBinData.lng || liveDevice.longitude
+            });
+          }
+        }
       }
 
       // Fetch latest data to refresh the UI
@@ -404,6 +440,29 @@ const totalBinsCount = combinedBins.length;
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+            {editMode && (
+              <Button 
+                variant="contained" 
+                color="primary"
+                onClick={() => {
+                  setIsCreateMode(true);
+                  setEditBinData({ id: '', name: '', location: '', lat: -16.3888, lng: -71.5415 });
+                  setEditBinModalOpen(true);
+                }}
+                startIcon={<Plus size={16} />}
+                sx={{ 
+                  fontSize: 11.5, 
+                  fontWeight: 600, 
+                  borderRadius: '24px', 
+                  bgcolor: 'primary.main', 
+                  '&:hover': { bgcolor: 'primary.dark' },
+                  color: 'primary.contrastText',
+                  px: 2, py: 0.75
+                }}
+              >
+                Añadir Contenedor
+              </Button>
+            )}
             <Button 
               variant={editMode ? "contained" : "outlined"}
               color={editMode ? "error" : "inherit"}
@@ -861,29 +920,46 @@ const totalBinsCount = combinedBins.length;
                             <BarChart3 size={12} style={{ marginRight: 6 }} /> Estadísticas
                           </Button>
                           {editMode && (
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                setEditBinData({
-                                  id: bin.id,
-                                  name: bin.name,
-                                  location: bin.location,
-                                  lat: bin.lat,
-                                  lng: bin.lng
-                                });
-                                setEditBinModalOpen(true);
-                              }}
-                              sx={{
-                                width: '32px', height: '32px',
-                                borderRadius: '50%',
-                                border: 'none',
-                                color: 'text.secondary',
-                                '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', color: 'text.primary' }
-                              }}
-                              title="Editar Contenedor"
-                            >
-                              <Edit size={14} />
-                            </IconButton>
+                            <>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setIsCreateMode(false);
+                                  setEditBinData({
+                                    id: bin.id,
+                                    name: bin.name,
+                                    location: bin.location,
+                                    lat: bin.lat,
+                                    lng: bin.lng
+                                  });
+                                  setEditBinModalOpen(true);
+                                }}
+                                sx={{
+                                  width: '32px', height: '32px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  color: 'text.secondary',
+                                  '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', color: 'text.primary' }
+                                }}
+                                title="Editar Contenedor"
+                              >
+                                <Edit size={14} />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteBin(bin.id)}
+                                sx={{
+                                  width: '32px', height: '32px',
+                                  borderRadius: '50%',
+                                  border: 'none',
+                                  color: 'error.main',
+                                  '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)' }
+                                }}
+                                title="Eliminar Contenedor"
+                              >
+                                <Trash2 size={14} />
+                              </IconButton>
+                            </>
                           )}
                         </Box>
                       </Box>
@@ -1019,11 +1095,13 @@ const totalBinsCount = combinedBins.length;
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-0.3px', fontFamily: '"Outfit", "Inter", sans-serif' }}>
-              Editar Contenedor
+              {isCreateMode ? 'Añadir Contenedor' : 'Editar Contenedor'}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-              ID del Dispositivo: {editBinData?.id}
-            </Typography>
+            {!isCreateMode && (
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                ID del Dispositivo: {editBinData?.id}
+              </Typography>
+            )}
           </Box>
           <IconButton onClick={() => { setEditBinModalOpen(false); setEditBinData(null); }} size="small" sx={{ borderRadius: '50%' }}>
             <X size={18} />
@@ -1031,11 +1109,22 @@ const totalBinsCount = combinedBins.length;
         </DialogTitle>
         <form onSubmit={handleSaveBinEdit}>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
+            {isCreateMode && (
+              <TextField
+                label="ID del Dispositivo EUI"
+                required
+                fullWidth
+                autoFocus
+                value={editBinData?.id || ''}
+                onChange={(e) => setEditBinData(prev => prev ? { ...prev, id: e.target.value } : null)}
+                placeholder="Ej: N3"
+              />
+            )}
             <TextField
               label="Nombre Personalizado"
               required
               fullWidth
-              autoFocus
+              autoFocus={!isCreateMode}
               value={editBinData?.name || ''}
               onChange={(e) => setEditBinData(prev => prev ? { ...prev, name: e.target.value } : null)}
               placeholder="Ej: Contenedor Sector A"
@@ -1048,13 +1137,33 @@ const totalBinsCount = combinedBins.length;
               onChange={(e) => setEditBinData(prev => prev ? { ...prev, location: e.target.value } : null)}
               placeholder="Ej: Calle Mercaderes 102"
             />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Latitud"
+                required
+                type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
+                value={editBinData?.lat ?? -16.3888}
+                onChange={(e) => setEditBinData(prev => prev ? { ...prev, lat: parseFloat(e.target.value) || 0 } : null)}
+                fullWidth
+              />
+              <TextField
+                label="Longitud"
+                required
+                type="number"
+                slotProps={{ htmlInput: { step: "any" } }}
+                value={editBinData?.lng ?? -71.5415}
+                onChange={(e) => setEditBinData(prev => prev ? { ...prev, lng: parseFloat(e.target.value) || 0 } : null)}
+                fullWidth
+              />
+            </Box>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2, gap: 1.5 }}>
             <Button onClick={() => { setEditBinModalOpen(false); setEditBinData(null); }} variant="outlined" color="inherit" fullWidth sx={{ borderRadius: '24px' }}>
               Cancelar
             </Button>
             <Button type="submit" variant="contained" color="primary" fullWidth sx={{ borderRadius: '24px', color: 'primary.contrastText' }}>
-              Guardar Cambios
+              {isCreateMode ? 'Añadir Contenedor' : 'Guardar Cambios'}
             </Button>
           </DialogActions>
         </form>
