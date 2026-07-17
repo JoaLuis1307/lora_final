@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
+import { getWsUrl } from '../services/config';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, Chip, Menu, MenuItem, ListItemIcon, ListItemText, IconButton, InputBase,
@@ -280,8 +281,7 @@ const Devices: React.FC = () => {
     fetchData();
 
     // Setup live WebSocket listener for real-time updates
-    const wsHost = window.location.hostname;
-    const wsUrl = process.env.REACT_APP_WS_URL || `ws://${wsHost}:3001/ws`;
+    const wsUrl = getWsUrl();
     let socket: WebSocket;
     let reconnectTimer: any;
 

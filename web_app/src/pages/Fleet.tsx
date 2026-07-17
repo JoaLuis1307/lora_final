@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 // Animations removed — values update instantly via WebSocket
 import { fleetService, VehicleData, MaintenanceLogData } from '../services/fleetService';
+import { getWsUrl } from '../services/config';
 import camion from '../assets/camion.png';
 
 const glassSx = (t: any) => ({
@@ -70,8 +71,7 @@ const Fleet: React.FC = () => {
   useEffect(() => {
     loadData();
 
-    const wsHost = window.location.hostname;
-    const wsUrl = process.env.REACT_APP_WS_URL || `ws://${wsHost}:3001/ws`;
+    const wsUrl = getWsUrl();
     let socket: WebSocket;
     let reconnectTimer: any;
 

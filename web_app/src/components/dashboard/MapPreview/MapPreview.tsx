@@ -19,6 +19,7 @@ import {
 import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
 import { fleetService, VehicleData } from '../../../services/fleetService';
+import { getWsUrl } from '../../../services/config';
 
 interface MapPreviewProps {
   isPage?: boolean;
@@ -295,8 +296,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     };
     fetchVehicles();
 
-    const wsHost = window.location.hostname;
-    const wsUrl = process.env.REACT_APP_WS_URL || `ws://${wsHost}:3001/ws`;
+    const wsUrl = getWsUrl();
     let socket: WebSocket;
     let reconnectTimer: any;
 

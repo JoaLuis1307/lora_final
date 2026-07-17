@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { containerStagger, fadeSlideUp } from '../shared/animations';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
+import { getWsUrl } from '../services/config';
 import {
   Box, Paper, Typography, Button, IconButton,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -113,11 +114,8 @@ const Gateways: React.FC = () => {
 
   const loadLatestTelemetry = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/telemetry/latest`);
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('last_telemetry', JSON.stringify(data));
-      }
+      const data = await deviceService.getLatestTelemetry();
+      localStorage.setItem('last_telemetry', JSON.stringify(data));
     } catch (err) {
       console.error('Error fetching telemetry:', err);
     }
@@ -129,8 +127,7 @@ const Gateways: React.FC = () => {
     loadLatestTelemetry();
 
     // Setup live WebSocket listener for real-time updates
-    const wsHost = window.location.hostname;
-    const wsUrl = process.env.REACT_APP_WS_URL || `ws://${wsHost}:3001/ws`;
+    const wsUrl = getWsUrl();
     let socket: WebSocket;
     let reconnectTimer: any;
 
