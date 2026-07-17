@@ -3,6 +3,9 @@
 # ==========================================
 FROM node:22-alpine AS builder
 
+# Install OpenSSL for Prisma query engine detection
+RUN apk add --no-cache openssl
+
 WORKDIR /usr/src/app
 
 # Copy dependency files
@@ -16,7 +19,7 @@ RUN npm ci
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma Client (if using prisma mode)
+# Generate Prisma Client
 RUN npx prisma generate
 
 # Compile TypeScript
@@ -27,20 +30,20 @@ RUN npm run build
 # ==========================================
 FROM node:22-alpine AS runner
 
+# Install OpenSSL for Prisma query engine runtime
+RUN apk add --no-cache openssl
+
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
 
-# Copy package definition and locks
+# Copy package files
 COPY package*.json ./
 
-# Install ONLY production dependencies
-RUN npm ci --only=production
-
-# Copy compiled files from builder stage
+# Copy complete node_modules (including built prisma engine) and dist
+COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /usr/src/app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /usr/src/app/prisma ./prisma
 
 # Create folder for local fallback data file storage
 RUN mkdir -p data
