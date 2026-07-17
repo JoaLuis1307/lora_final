@@ -12,7 +12,7 @@ import contenedorImg from '../assets/contenedor.png';
 import {
   Box, Paper, Typography, Button, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton,
-  Select, MenuItem, FormControl
+  Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
