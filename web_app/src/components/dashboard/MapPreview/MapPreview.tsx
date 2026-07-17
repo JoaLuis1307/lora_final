@@ -194,6 +194,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() =>
     (localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark'
   );
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [geoResults, setGeoResults] = useState<any[]>([]);
@@ -991,7 +992,15 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       style: getMapStyle(activeLayer, currentTheme) as any,
       center, zoom: 14, maxZoom: 19, pitch: 45, bearing: -17, attributionControl: false,
     });
-    const onStyleLoad = () => { add3DBuildings(); addRoutes(); addMarkers(); loadDbPoints(); updateMapLayers(); refreshRouteLayer(); };
+    const onStyleLoad = () => { 
+      setMapLoaded(true);
+      add3DBuildings(); 
+      addRoutes(); 
+      addMarkers(); 
+      loadDbPoints(); 
+      updateMapLayers(); 
+      refreshRouteLayer(); 
+    };
     map.current.on('style.load', onStyleLoad);
     const params = new URLSearchParams(window.location.search);
     const lat = params.get('lat'), lng = params.get('lng'), zoom = params.get('zoom');
@@ -1023,11 +1032,15 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
         setContextMenu({ x: e.point.x, y: e.point.y, lngLat: [e.lngLat.lng, e.lngLat.lat] });
       }
     });
-    return () => { map.current?.remove(); map.current = null; };
+    return () => { 
+      map.current?.remove(); 
+      map.current = null; 
+      setMapLoaded(false);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { if (map.current?.loaded()) addMarkers(); }, [dbPoints, devices, telemetry, addMarkers, currentTheme, editMode]);
+  useEffect(() => { if (mapLoaded) addMarkers(); }, [dbPoints, devices, telemetry, addMarkers, currentTheme, editMode, mapLoaded]);
   useEffect(() => { updateMapLayers(); refreshRouteLayer(); }, [activeLayer, updateMapLayers]);
   useEffect(() => { map.current?.flyTo({ pitch: viewMode === '2D' ? 0 : 45, bearing: viewMode === '2D' ? 0 : -17, duration: 1000 }); }, [viewMode]);
   useEffect(() => { if (showAddModal) return; loadDbPoints(); loadDevices(); loadTelemetry(); const i = setInterval(() => { loadDbPoints(); loadDevices(); loadTelemetry(); }, 5000); return () => clearInterval(i); }, [loadDbPoints, loadDevices, loadTelemetry, showAddModal]);
