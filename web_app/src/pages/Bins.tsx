@@ -323,7 +323,8 @@ const Bins: React.FC = () => {
       ir,
       lat,
       lng,
-      gateway_id
+      gateway_id,
+      satellites: dt?.satellites ?? mockBin.satellites ?? 0
     };
   });
 
@@ -375,7 +376,8 @@ const Bins: React.FC = () => {
         ir,
         lat: d.latitude,
         lng: d.longitude,
-        gateway_id: d.gateway_id
+        gateway_id: d.gateway_id,
+        satellites: dt?.satellites ?? 0
       };
     });
 
@@ -784,6 +786,17 @@ const totalBinsCount = combinedBins.length;
                                 {gwName}
                               </Typography>
                             </Box>
+                            <Box sx={{ gridColumn: 'span 2' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                                <MapPin size={10.5} style={{ opacity: 0.8, color: '#38bdf8' }} />
+                                <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
+                                  Ubicación GPS (Latitud, Longitud)
+                                </Typography>
+                              </Box>
+                              <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
+                                {bin.lat !== undefined && bin.lng !== undefined ? `${bin.lat.toFixed(5)}, ${bin.lng.toFixed(5)}` : 'Sin Coordenadas'}
+                              </Typography>
+                            </Box>
 
                             {/* Unified static telemetry row (never shifts the card height!) */}
                             <Box sx={{ 
@@ -861,21 +874,39 @@ const totalBinsCount = combinedBins.length;
                       {/* Bottom Info Row & Action Button */}
                       <Box sx={{ mt: 2, pt: 1.25, borderTop: '1px solid', borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          {/* Battery status */}
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 0.5, 
-                            bgcolor: bin.battery < 20 ? 'rgba(242,139,130,0.08)' : 'rgba(255,255,255,0.02)', 
-                            border: 'none',
-                            px: 1.25, 
-                            py: 0.25, 
-                            borderRadius: '100px' 
-                          }}>
-                            <Battery size={13} color={bin.battery < 20 ? '#f28b82' : '#81c784'} />
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: bin.battery < 20 ? '#f28b82' : 'text.secondary', fontSize: 10.5 }}>
-                              {bin.battery}%
-                            </Typography>
+                          {/* Battery & GPS Status badges */}
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 0.5, 
+                              bgcolor: bin.battery < 20 ? 'rgba(242,139,130,0.08)' : 'rgba(255,255,255,0.02)', 
+                              border: 'none',
+                              px: 1.25, 
+                              py: 0.25, 
+                              borderRadius: '100px' 
+                            }}>
+                              <Battery size={13} color={bin.battery < 20 ? '#f28b82' : '#81c784'} />
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: bin.battery < 20 ? '#f28b82' : 'text.secondary', fontSize: 10.5 }}>
+                                {bin.battery}%
+                              </Typography>
+                            </Box>
+
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 0.5, 
+                              bgcolor: bin.satellites > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)', 
+                              border: 'none',
+                              px: 1.25, 
+                              py: 0.25, 
+                              borderRadius: '100px' 
+                            }}>
+                              <Navigation size={11} color={bin.satellites > 0 ? '#81c784' : '#a1a1aa'} />
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: bin.satellites > 0 ? '#81c784' : 'text.secondary', fontSize: 10.5 }}>
+                                {bin.satellites > 0 ? `GPS OK (${bin.satellites})` : 'GPS NO FIX'}
+                              </Typography>
+                            </Box>
                           </Box>
 
                           {/* Last seen time */}
@@ -1157,6 +1188,32 @@ const totalBinsCount = combinedBins.length;
                 fullWidth
               />
             </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      setEditBinData(prev => prev ? {
+                        ...prev,
+                        lat: parseFloat(position.coords.latitude.toFixed(6)),
+                        lng: parseFloat(position.coords.longitude.toFixed(6))
+                      } : null);
+                    },
+                    (error) => {
+                      alert('No se pudo acceder al GPS del navegador: ' + error.message);
+                    }
+                  );
+                } else {
+                  alert('La geolocalización no está soportada en este navegador.');
+                }
+              }}
+              sx={{ textTransform: 'none', fontSize: 10.5, borderRadius: '8px', mt: -1 }}
+              startIcon={<Navigation size={12} />}
+            >
+              Obtener GPS de mi dispositivo actual
+            </Button>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2, gap: 1.5 }}>
             <Button onClick={() => { setEditBinModalOpen(false); setEditBinData(null); }} variant="outlined" color="inherit" fullWidth sx={{ borderRadius: '24px' }}>
