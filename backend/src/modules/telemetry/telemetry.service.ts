@@ -240,7 +240,27 @@ export const telemetryService = {
       
       // 3. Estimate Status and Battery based on container fill level, signal strength (RSSI), battery, and noise (SNR)
       const fillDistance = telemetryEntry.tof_cm || telemetryEntry.ultrasonic_cm;
-      const battery_level = typeof data.battery === 'number' ? data.battery : (95 - Math.min(15, Math.floor(telemetryEntry.sequence / 100)));
+      
+      // Extraer nivel de batería (porcentaje 0-100) de forma robusta
+      let battery_level = 100;
+      if (typeof data.BATP === 'number') {
+        battery_level = Math.round(data.BATP);
+      } else if (typeof data.batp === 'number') {
+        battery_level = Math.round(data.batp);
+      } else if (typeof data.battery === 'number') {
+        if (data.battery > 5.0) {
+          // Viene directamente en porcentaje (ej. 85%)
+          battery_level = Math.round(data.battery);
+        } else {
+          // Viene en formato voltaje (ej. 3.63V). Mapeamos de 3.0V (0%) a 4.2V (100%)
+          const voltage = data.battery;
+          const percentage = ((voltage - 3.0) / (4.2 - 3.0)) * 100;
+          battery_level = Math.round(Math.max(0, Math.min(100, percentage)));
+        }
+      } else {
+        // Fallback estimado basado en secuencia
+        battery_level = 95 - Math.min(15, Math.floor(telemetryEntry.sequence / 100));
+      }
       
       let status: 'Online' | 'Warning' | 'Offline' = 'Online';
       if (telemetryEntry.rssi <= -105 || telemetryEntry.snr <= -5.0) {
@@ -319,7 +339,11 @@ export const telemetryService = {
       fastify.broadcast({
         event: 'telemetry',
         device_id: nodeId,
-        data: savedTelemetry
+        data: {
+          ...(savedTelemetry as any),
+          battery: battery_level,
+          battery_level: battery_level
+        }
       });
       
     } catch (err) {
