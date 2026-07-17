@@ -146,7 +146,7 @@ const PointModal: React.FC<{
 );
 
 const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
-  if (layer === 'satellite' || layer === 'hybrid') {
+  if (layer === 'satellite') {
     return {
       version: 8,
       sources: {
@@ -159,6 +159,52 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
       },
       layers: [
         { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 }
+      ]
+    };
+  }
+
+  if (layer === 'hybrid') {
+    return {
+      version: 8,
+      sources: {
+        'satellite-tiles': {
+          type: 'raster',
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+          tileSize: 256,
+          attribution: 'Esri'
+        },
+        'carto-labels': {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+            'https://d.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '© CARTO'
+        }
+      },
+      layers: [
+        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 },
+        { id: 'labels-layer', type: 'raster', source: 'carto-labels', minzoom: 0, maxzoom: 19 }
+      ]
+    };
+  }
+
+  if (layer === 'liberty') {
+    return {
+      version: 8,
+      sources: {
+        'osm-tiles': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        { id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }
       ]
     };
   }
@@ -860,18 +906,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     markersCache.current.forEach((v, id) => { if (!currentMarkerIds.has(id)) { v.marker.remove(); markersCache.current.delete(id); } });
   }, [dbPoints, devices, telemetry, currentTheme, selectedSearchPoint, getPopupHTML, vehicles, editMode]);
 
-  const updateMapLayers = useCallback(() => {
-    if (!map.current) return;
-    const targetStyle = getMapStyle(activeLayer, currentTheme) as any;
-    const currentStyle = map.current.getStyle();
-    
-    const currentSource = currentStyle?.sources?.['carto-tiles'] || currentStyle?.sources?.['satellite-tiles'];
-    const targetSource = targetStyle.sources['carto-tiles'] || targetStyle.sources['satellite-tiles'];
-    
-    if (JSON.stringify(currentSource) !== JSON.stringify(targetSource)) {
-      map.current.setStyle(targetStyle);
-    }
-  }, [activeLayer, currentTheme]);
+
 
   const handleMapClick = (e: any) => {
     if (routingRef.current.mode) {
@@ -998,7 +1033,6 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       addRoutes(); 
       addMarkers(); 
       loadDbPoints(); 
-      updateMapLayers(); 
       refreshRouteLayer(); 
     };
     map.current.on('style.load', onStyleLoad);
@@ -1041,7 +1075,11 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   }, []);
 
   useEffect(() => { if (mapLoaded) addMarkers(); }, [dbPoints, devices, telemetry, addMarkers, currentTheme, editMode, mapLoaded]);
-  useEffect(() => { updateMapLayers(); refreshRouteLayer(); }, [activeLayer, updateMapLayers]);
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    const targetStyle = getMapStyle(activeLayer, currentTheme) as any;
+    map.current.setStyle(targetStyle);
+  }, [activeLayer, currentTheme, mapLoaded]);
   useEffect(() => { map.current?.flyTo({ pitch: viewMode === '2D' ? 0 : 45, bearing: viewMode === '2D' ? 0 : -17, duration: 1000 }); }, [viewMode]);
   useEffect(() => { if (showAddModal) return; loadDbPoints(); loadDevices(); loadTelemetry(); const i = setInterval(() => { loadDbPoints(); loadDevices(); loadTelemetry(); }, 5000); return () => clearInterval(i); }, [loadDbPoints, loadDevices, loadTelemetry, showAddModal]);
   useEffect(() => { const h = () => map.current?.resize(); window.addEventListener('resize', h); const t = setTimeout(h, 500); return () => { window.removeEventListener('resize', h); clearTimeout(t); }; }, [isExpanded]);
