@@ -63,6 +63,7 @@ const Bins: React.FC = () => {
   const [editBinData, setEditBinData] = useState<{ id: string; name: string; location: string; lat?: number; lng?: number } | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'real' | 'simulated' | 'independent'>('all');
   const [showSidebar, setShowSidebar] = useState(true);
+  const [discoveredIds, setDiscoveredIds] = useState<string[]>([]);
 
   const handleDeleteBin = async (binId: string) => {
     if (!window.confirm(`¿Estás seguro de que deseas eliminar el contenedor ${binId}?`)) return;
@@ -260,6 +261,25 @@ const Bins: React.FC = () => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
   }, []);
+
+  const loadDiscovered = useCallback(async () => {
+    try {
+      const discovered = await deviceService.getDiscoveredDevices();
+      const registeredIds = new Set(devices.map(d => d.device_id.toLowerCase()));
+      const ids = discovered
+        .map(d => d.device_id)
+        .filter((id): id is string => !!id && !registeredIds.has(id.toLowerCase()));
+      setDiscoveredIds(ids);
+    } catch (err) {
+      console.error('Error loading discovered devices:', err);
+    }
+  }, [devices]);
+
+  useEffect(() => {
+    if (editBinModalOpen && isCreateMode) {
+      loadDiscovered();
+    }
+  }, [editBinModalOpen, isCreateMode, loadDiscovered]);
 
   // Merge live devices and defaultBins
   const processedBins = defaultBins.map(mockBin => {
@@ -1141,15 +1161,47 @@ const totalBinsCount = combinedBins.length;
         <form onSubmit={handleSaveBinEdit}>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
             {isCreateMode && (
-              <TextField
-                label="ID del Dispositivo EUI"
-                required
-                fullWidth
-                autoFocus
-                value={editBinData?.id || ''}
-                onChange={(e) => setEditBinData(prev => prev ? { ...prev, id: e.target.value } : null)}
-                placeholder="Ej: N3"
-              />
+              <>
+                <FormControl fullWidth required>
+                  <InputLabel id="select-discovered-label">Dispositivo Escaneado (MQTT)</InputLabel>
+                  <Select
+                    labelId="select-discovered-label"
+                    value={editBinData?.id === 'manual' ? 'manual' : (discoveredIds.includes(editBinData?.id || '') ? editBinData?.id : (discoveredIds.length > 0 ? '' : 'manual'))}
+                    label="Dispositivo Escaneado (MQTT)"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'manual') {
+                        setEditBinData(prev => prev ? { ...prev, id: 'manual' } : null);
+                      } else {
+                        setEditBinData(prev => prev ? { ...prev, id: val } : null);
+                      }
+                    }}
+                    sx={{ mb: (editBinData?.id === 'manual' || editBinData?.id === '' || discoveredIds.length === 0) ? 0 : 2 }}
+                  >
+                    <MenuItem value="" disabled>-- Selecciona un dispositivo detectado --</MenuItem>
+                    {discoveredIds.map(id => (
+                      <MenuItem key={id} value={id}>
+                        {id} (Detectado en red LoRa/MQTT)
+                      </MenuItem>
+                    ))}
+                    <MenuItem value="manual" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                      + Ingresar ID manualmente
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                {(discoveredIds.length === 0 || editBinData?.id === 'manual' || editBinData?.id === '' || !discoveredIds.includes(editBinData?.id || '')) && (
+                  <TextField
+                    label="ID del Dispositivo EUI"
+                    required
+                    fullWidth
+                    autoFocus
+                    value={editBinData?.id === 'manual' ? '' : (editBinData?.id || '')}
+                    onChange={(e) => setEditBinData(prev => prev ? { ...prev, id: e.target.value } : null)}
+                    placeholder="Ej: N3"
+                  />
+                )}
+              </>
             )}
             <TextField
               label="Nombre Personalizado"
