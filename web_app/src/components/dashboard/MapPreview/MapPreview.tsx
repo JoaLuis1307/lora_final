@@ -504,113 +504,75 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     const accentColor = isFull ? '#ef4444' : isOnline ? '#10b981' : '#5f6f81';
 
     return `
-      <div style="background:${bg};backdrop-filter:blur(20px);border:1px solid ${bc};border-top:4px solid ${accentColor};border-radius:8px;padding:20px;color:${tc};min-width:300px;font-family:sans-serif;box-shadow:0 12px 32px rgba(0,0,0,0.3);position:relative;display:flex;flex-direction:column;gap:12px">
+      <div style="background:${bg};backdrop-filter:blur(20px);border:1px solid ${bc};border-radius:12px;padding:18px;color:${tc};min-width:280px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.15);display:flex;flex-direction:column;gap:12px">
         
-        <!-- Header: Badges & Name -->
-        <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-          <div style="display:flex;align-items:center;gap:6px">
-            <div style="padding:2px 8px;border-radius:4px;background:${statusBgColor};border:1px solid ${statusBorderColor};display:flex;align-items:center;gap:4px">
-              <div style="width:4.5px;height:4.5px;border-radius:50%;background:${statusDotColor}"></div>
-              <span style="font-size:8.5px;font-weight:900;color:${statusDotColor};text-transform:uppercase;letter-spacing:0.02em">${isOnline ? 'En Línea' : 'Desconectado'}</span>
-            </div>
-            <div style="padding:2px 8px;border-radius:4px;background:${isHardwareReal ? 'rgba(0,113,197,0.08)' : 'rgba(95,111,129,0.08)'};border:1px solid ${isHardwareReal ? 'rgba(0,113,197,0.18)' : 'rgba(95,111,129,0.18)'};display:flex;align-items:center;gap:4px">
-              <div style="width:4.5px;height:4.5px;border-radius:50%;background:${isHardwareReal ? '#0071C5' : '#5f6f81'}"></div>
-              <span style="font-size:8.5px;font-weight:900;color:${isHardwareReal ? '#0071C5' : '#5f6f81'};text-transform:uppercase;letter-spacing:0.02em">${isHardwareReal ? 'REAL' : 'VIRTUAL'}</span>
-            </div>
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:10px;font-weight:700;color:${mc};text-transform:uppercase;letter-spacing:0.05em">${typeLabel}</span>
+          <div style="display:flex;align-items:center;gap:5px">
+            <div style="width:6px;height:6px;border-radius:50%;background:${statusDotColor}"></div>
+            <span style="font-size:10px;font-weight:600;color:${tc};opacity:0.8">${isOnline ? 'En línea' : 'Desconectado'}</span>
           </div>
-          ${editMode ? `
-          <button onclick="window.editMapPoint(${point.id})" style="background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'};border:1px solid ${bc};color:${tc};cursor:pointer;width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center" title="Editar Punto">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          </button>
-          ` : `
-          <div style="font-size:8.5px;font-weight:900;color:#6366f1;font-family:monospace;letter-spacing:0.02em;opacity:0.8">
-            LORA: ACTIVE (SF9)
-          </div>
-          `}
         </div>
 
-        <!-- Name and Subtitle -->
-        <div style="display:flex;flex-direction:column;gap:2px">
-          <h4 style="margin:0;font-size:15px;font-weight:800;letter-spacing:-0.2px;line-height:1.25">${point.name}</h4>
-          <span style="font-size:9.5px;font-weight:600;color:${mc};opacity:0.6;text-transform:uppercase;letter-spacing:0.05em">${typeLabel}</span>
-        </div>
+        <!-- Name -->
+        <h4 style="margin:0;font-size:16px;font-weight:700;line-height:1.2;color:${tc}">${point.name}</h4>
 
-        <!-- Llenado (mirrors Cards progress gauge) -->
+        <!-- Fill level (Sleek Progress Bar) -->
         ${showBinIndicator ? `
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:baseline;gap:4px">
-              <span style="font-size:22px;font-weight:800;font-family:monospace;color:${isFull ? '#ef4444' : '#10b981'};line-height:1">${fillPct}%</span>
-              <span style="font-size:9.5px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;opacity:0.5;color:${mc}">Llenado</span>
+          <div style="display:flex;flex-direction:column;gap:5px;margin:2px 0">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <span style="font-size:11px;font-weight:600;color:${mc}">Nivel de llenado</span>
+              <span style="font-size:18px;font-weight:700;color:${accentColor}">${fillPct}%</span>
             </div>
-            <div style="height:6px;background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};border-radius:2px;overflow:hidden">
-              <div style="width:${fillPct}%;height:100%;background:linear-gradient(90deg,${isFull ? '#ef4444' : '#10b981'}cc,${isFull ? '#ef4444' : '#10b981'});border-radius:2px;transition:width 0.6s"></div>
+            <div style="height:5px;background:${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};border-radius:3px;overflow:hidden">
+              <div style="width:${fillPct}%;height:100%;background:${accentColor};border-radius:3px;transition:width 0.4s"></div>
             </div>
           </div>` : ''}
 
-        <!-- Premium Industrial Parameters Grid (2x2) -->
-        <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;margin-top:4px;padding-top:10px;border-top:1px solid ${dividerColor}">
-          <div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-              <svg class="lucide lucide-cpu" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#6366f1"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 15h3M1 9h3M1 15h3"/></svg>
-              <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Dispositivo EUI</span>
-            </div>
-            <span style="font-size:11px;font-weight:800;font-family:monospace;color:${tc};padding-left:14px">${linkedDevice?.device_id}</span>
+        <!-- Parameters Grid (Clean, minimalist list) -->
+        <div style="display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid ${dividerColor};font-size:11px">
+          
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:${mc}">Dispositivo EUI</span>
+            <span style="font-family:monospace;font-weight:600">${linkedDevice?.device_id}</span>
           </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-              <svg class="lucide lucide-map-pin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#0ea5e9"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Indicador GPS</span>
-            </div>
-            <span style="font-size:11px;font-weight:800;font-family:monospace;color:${tc};padding-left:14px;white-space:nowrap">${latStr}, ${lngStr}</span>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-              <svg class="lucide lucide-battery" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:${batt > 20 ? '#10b981' : '#ef4444'}"><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></svg>
-              <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Batería Nodo</span>
-            </div>
-            <span style="font-size:11px;font-weight:800;font-family:monospace;color:${batt > 20 ? '#10b981' : '#ef4444'};padding-left:14px">${batt || 0}%</span>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-              <svg class="lucide lucide-wifi" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#eab308"><path d="M12 20h.01M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 14 0M1.5 9.5a15 15 0 0 1 21 0"/></svg>
-              <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Señal / Ruido</span>
-            </div>
-            <span style="font-size:11px;font-weight:800;font-family:monospace;color:${tc};padding-left:14px;white-space:nowrap">${deviceTelemetry?.rssi ?? -70} dBm / +${deviceTelemetry?.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5'} dB</span>
+          
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:${mc}">Coordenadas</span>
+            <span style="font-family:monospace;font-weight:600">${latStr}, ${lngStr}</span>
           </div>
 
-          <!-- Unified static telemetry row (never shifts height!) -->
-          <div style="grid-column:span 2;display:flex;gap:16px;padding-top:10px;border-top:1px dashed ${dashDividerColor};min-height:38px">
-            <div>
-              <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;color:#fb923c"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
-                <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Temperatura</span>
-              </div>
-              <span style="font-size:11px;font-weight:800;font-family:monospace;color:#fb923c;padding-left:14px">${temp !== undefined ? temp.toFixed(1) + ' °C' : '--.- °C'}</span>
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;color:#38bdf8"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-                <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Humedad</span>
-              </div>
-              <span style="font-size:11px;font-weight:800;font-family:monospace;color:#38bdf8;padding-left:14px">${hum !== undefined ? hum.toFixed(0) + ' %' : '-- %'}</span>
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                <svg class="lucide lucide-database" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7;color:#10b981"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
-                <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Calidad / Sensor</span>
-              </div>
-              <span style="font-size:11px;font-weight:800;font-family:monospace;color:#10b981;padding-left:14px;white-space:nowrap">${airQuality} ppm / ${deviceTelemetry?.obstacle === 1 ? 'OBSTRUIDO' : 'LIBRE'}</span>
-            </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:${mc}">Batería</span>
+            <span style="font-weight:600;color:${batt > 20 ? '#10b981' : '#ef4444'}">${batt || 0}%</span>
           </div>
+
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:${mc}">Señal LoRa</span>
+            <span style="font-weight:600">${deviceTelemetry?.rssi ?? -70} dBm (SNR: ${deviceTelemetry?.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5'} dB)</span>
+          </div>
+
+          ${temp !== undefined || hum !== undefined ? `
+            <div style="display:flex;justify-content:space-between;padding-top:4px">
+              <span style="color:${mc}">Ambiente</span>
+              <span style="font-weight:600;color:${tc}">${temp !== undefined ? temp.toFixed(1) + '°C' : '--°C'} • ${hum !== undefined ? hum.toFixed(0) + '%' : '--%'} H.</span>
+            </div>
+          ` : ''}
+
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:${mc}">Estado de sensor</span>
+            <span style="font-weight:600;color:${deviceTelemetry?.obstacle === 1 ? '#ef4444' : '#10b981'}">${deviceTelemetry?.obstacle === 1 ? 'Obstruido' : 'Libre (Ok)'}</span>
+          </div>
+
         </div>
 
-        <!-- Footer / Last Activity -->
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid ${dividerColor}">
-          <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;opacity:0.5">Vía LoRaWAN • ${linkedDevice?.gateway_id ? linkedDevice.gateway_id.toUpperCase() : 'BASE'}</span>
-          <div style="text-align:right">
-            <span style="font-size:9.5px;font-weight:700;color:${tc};opacity:0.8">${linkedDevice?.last_seen ? new Date(linkedDevice.last_seen).toLocaleTimeString() : '---'}</span>
-          </div>
+        <!-- Footer -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid ${dividerColor};font-size:9px;color:${mc};opacity:0.7">
+          <span>Última transmisión</span>
+          <span>${linkedDevice?.last_seen ? new Date(linkedDevice.last_seen).toLocaleTimeString() : '---'}</span>
         </div>
+
       </div>`;
   }, [currentTheme, editMode]);
 
@@ -690,9 +652,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
         ? (isFull ? '#ef4444' : isOnline ? '#10b981' : isDark ? '#334155' : '#94a3b8')
         : '#3b82f6';
       
-      const isHardwareReal = linkedDevice?.gateway_id?.toLowerCase() === 'gateway_01';
-      const markerBorder = isHardwareReal ? '2.5px solid #0071C5' : '2.5px solid white';
-      const markerShadow = isHardwareReal ? '0 0 12px rgba(0, 113, 197, 0.8)' : `0 4px 12px ${markerColor}60`;
+      const markerBorder = '2.5px solid white';
+      const markerShadow = `0 4px 12px ${markerColor}60`;
 
       el.innerHTML = `<div style="background:${markerColor};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:${markerBorder};box-shadow:${markerShadow};position:relative">
         ${isFull ? `
