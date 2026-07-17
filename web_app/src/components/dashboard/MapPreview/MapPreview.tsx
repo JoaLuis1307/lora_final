@@ -145,6 +145,46 @@ const PointModal: React.FC<{
   </Dialog>
 );
 
+const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
+  if (layer === 'satellite' || layer === 'hybrid') {
+    return {
+      version: 8,
+      sources: {
+        'satellite-tiles': {
+          type: 'raster',
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+          tileSize: 256,
+          attribution: 'Esri'
+        }
+      },
+      layers: [
+        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 }
+      ]
+    };
+  }
+
+  const styleName = (layer === 'bright' || (layer === 'dark' && theme === 'light')) ? 'light_all' : 'dark_all';
+  return {
+    version: 8,
+    sources: {
+      'carto-tiles': {
+        type: 'raster',
+        tiles: [
+          `https://a.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
+          `https://b.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
+          `https://c.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
+          `https://d.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`
+        ],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors, © CARTO'
+      }
+    },
+    layers: [
+      { id: 'carto-layer', type: 'raster', source: 'carto-tiles', minzoom: 0, maxzoom: 19 }
+    ]
+  };
+};
+
 const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId = null }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -323,6 +363,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
 
   const add3DBuildings = useCallback(() => {
     if (!map.current?.loaded()) return;
+    if (!map.current.getSource('openmaptiles')) return;
     const layers = map.current.getStyle().layers;
     const labelLayerId = layers?.find(l => l.type === 'symbol' && l.layout?.['text-field'])?.id;
     if (map.current.getLayer('3d-buildings')) return;
@@ -819,26 +860,17 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   }, [dbPoints, devices, telemetry, currentTheme, selectedSearchPoint, getPopupHTML, vehicles, editMode]);
 
   const updateMapLayers = useCallback(() => {
-    if (!map.current?.loaded()) return;
-    const isSat = activeLayer === 'satellite' || activeLayer === 'hybrid';
-    if (isSat) {
-      if (!map.current.getSource('arcgis-satellite')) map.current.addSource('arcgis-satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, attribution: 'Esri' });
-      if (!map.current.getLayer('satellite-layer')) map.current.addLayer({ id: 'satellite-layer', type: 'raster', source: 'arcgis-satellite', paint: { 'raster-opacity': 1 } }, map.current.getStyle().layers?.[0]?.id);
-      map.current.setLayoutProperty('satellite-layer', 'visibility', 'visible');
-      map.current.getStyle().layers?.forEach(l => {
-        if (l.id !== 'satellite-layer') try { map.current?.setLayoutProperty(l.id, 'visibility', (activeLayer === 'hybrid' && (l.id.includes('label') || l.id.includes('road') || l.id.includes('place') || l.id.includes('border') || l.id === '3d-buildings')) ? 'visible' : 'none'); } catch (e) { }
-      });
-    } else {
-      if (map.current.getLayer('satellite-layer')) map.current.setLayoutProperty('satellite-layer', 'visibility', 'none');
-      const targetStyle = `https://tiles.openfreemap.org/styles/${activeLayer}`;
-      if ((map.current as any)._currentStyleUrl !== targetStyle) {
-        (map.current as any)._currentStyleUrl = targetStyle;
-        map.current.setStyle(targetStyle);
-      } else {
-        map.current.getStyle().layers?.forEach(l => { if (l.id !== 'satellite-layer') try { map.current?.setLayoutProperty(l.id, 'visibility', 'visible'); } catch (e) { } });
-      }
+    if (!map.current) return;
+    const targetStyle = getMapStyle(activeLayer, currentTheme) as any;
+    const currentStyle = map.current.getStyle();
+    
+    const currentSource = currentStyle?.sources?.['carto-tiles'] || currentStyle?.sources?.['satellite-tiles'];
+    const targetSource = targetStyle.sources['carto-tiles'] || targetStyle.sources['satellite-tiles'];
+    
+    if (JSON.stringify(currentSource) !== JSON.stringify(targetSource)) {
+      map.current.setStyle(targetStyle);
     }
-  }, [activeLayer]);
+  }, [activeLayer, currentTheme]);
 
   const handleMapClick = (e: any) => {
     if (routingRef.current.mode) {
@@ -956,7 +988,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     if (map.current || !mapContainer.current) return;
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: `https://tiles.openfreemap.org/styles/${activeLayer === 'satellite' || activeLayer === 'hybrid' ? (currentTheme === 'light' ? 'bright' : 'dark') : activeLayer}`,
+      style: getMapStyle(activeLayer, currentTheme) as any,
       center, zoom: 14, maxZoom: 19, pitch: 45, bearing: -17, attributionControl: false,
     });
     const onStyleLoad = () => { add3DBuildings(); addRoutes(); addMarkers(); loadDbPoints(); updateMapLayers(); refreshRouteLayer(); };
