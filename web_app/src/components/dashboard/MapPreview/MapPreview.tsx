@@ -19,6 +19,7 @@ import {
 import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
 import { getWsUrl } from '../../../services/config';
+import { useAuth } from '../../../context/AuthContext';
 import { calculateFillPercentage } from '../../../utils/fillCalculator';
 
 interface MapPreviewProps {
@@ -248,6 +249,7 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
 };
 
 const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId = null }) => {
+  const { user } = useAuth();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markersCache = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLDivElement }>>(new Map());
@@ -288,10 +290,12 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
 
   const [editMode, setEditMode] = useState(false);
   const editModeRef = useRef(false);
+  const userRef = useRef(user);
 
   useEffect(() => {
     editModeRef.current = editMode;
-  }, [editMode]);
+    userRef.current = user;
+  }, [editMode, user]);
 
   const effectiveExpanded = isPage ? false : isExpanded;
 
@@ -819,7 +823,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
 
   useEffect(() => {
     (window as any).editMapPoint = (id: number) => {
-      if (!editModeRef.current) return;
+      if (!user || !editModeRef.current) return;
       const point = dbPoints.find(p => p.id === id);
       if (point) {
         const device = devices.find(d => d.map_point_id === point.id);
@@ -829,7 +833,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
         setShowAddModal(true);
       }
     };
-  }, [dbPoints, devices, loadDiscoveredDevices]);
+  }, [dbPoints, devices, loadDiscoveredDevices, user]);
 
   // Trigger edit modal if query params specify it
   useEffect(() => {
@@ -914,7 +918,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     map.current.on('move', () => { const c = map.current?.getCenter(); if (c) setCoords({ lat: c.lat, lng: c.lng }); });
     map.current.on('contextmenu', (e) => {
       e.preventDefault();
-      if (editModeRef.current) {
+      if (userRef.current && editModeRef.current) {
         setContextMenu({ x: e.point.x, y: e.point.y, lngLat: [e.lngLat.lng, e.lngLat.lat] });
       }
     });
@@ -1125,7 +1129,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
                       Sin hardware vinculado
                     </Typography>
                   )}
-                  {editMode && (
+                  {editMode && user && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5, opacity: 0, transition: '0.2s', '&:hover': { opacity: 1 } }}>
                       <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingPointId(point.id!); setFormAddData({ id: point.id, name: point.name, description: point.description || '', type: point.type || 'node', lat: point.latitude, lng: point.longitude, deviceId: linkedDevice?.device_id || '' }); loadDiscoveredDevices(); setShowAddModal(true); }} sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: 'rgba(45,212,191,0.15)' }}>
                         <Edit size={12} />
@@ -1253,23 +1257,25 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
           >
             <List size={20} />
           </IconButton>
-          <IconButton
-            onClick={() => setEditMode(!editMode)}
-            sx={{
-              borderRadius: 2,
-              bgcolor: editMode ? 'rgba(239, 68, 68, 0.15)' : 'background.paper',
-              color: editMode ? 'error.main' : 'text.secondary',
-              backdropFilter: 'blur(24px)',
-              border: editMode ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid transparent',
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                bgcolor: editMode ? 'rgba(239, 68, 68, 0.25)' : 'action.hover',
-              }
-            }}
-            title={editMode ? "Desactivar Modo Edición" : "Activar Modo Edición"}
-          >
-            {editMode ? <Unlock size={20} /> : <Lock size={20} />}
-          </IconButton>
+          {user && (
+            <IconButton
+              onClick={() => setEditMode(!editMode)}
+              sx={{
+                borderRadius: 2,
+                bgcolor: editMode ? 'rgba(239, 68, 68, 0.15)' : 'background.paper',
+                color: editMode ? 'error.main' : 'text.secondary',
+                backdropFilter: 'blur(24px)',
+                border: editMode ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid transparent',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: editMode ? 'rgba(239, 68, 68, 0.25)' : 'action.hover',
+                }
+              }}
+              title={editMode ? "Desactivar Modo Edición" : "Activar Modo Edición"}
+            >
+              {editMode ? <Unlock size={20} /> : <Lock size={20} />}
+            </IconButton>
+          )}
         </Box>
 
         {/* Compass - Bottom Left (Google Maps style) */}
