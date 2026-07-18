@@ -18,6 +18,7 @@ COPY src ./src
 COPY .env.production ./.env
 
 # Build production bundle
+ENV GENERATE_SOURCEMAP=false
 RUN npm run build
 
 # ==========================================
