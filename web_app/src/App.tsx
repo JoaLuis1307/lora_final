@@ -32,7 +32,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </Box>
     );
   }
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/public_map" />;
   return <>{children}</>;
 };
 
@@ -184,6 +184,7 @@ function AppContent() {
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/public_map" element={<Login />} />
               <Route path="/mapa-publico" element={<Mapa />} />
               <Route path="/" element={
                 <ProtectedRoute>
