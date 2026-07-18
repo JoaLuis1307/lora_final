@@ -907,57 +907,104 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
               const linkedDevice = devices.find(d => d.map_point_id === point.id);
               const isOnline = linkedDevice?.status?.toLowerCase() === 'online';
               const dt = linkedDevice ? telemetry[linkedDevice.device_id] : null;
-              const battery = dt?.battery || 0;
-              const isFull = dt?.is_full === 1;
-              const rssi = dt?.rssi || -85;
+              const battery = dt?.battery ?? linkedDevice?.battery_level ?? 85;
+              const fillDistance = dt?.tof_cm ?? dt?.ultrasonic_cm;
+              const fillLevel = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : (dt?.fill_level ?? 0);
+              const isFull = fillLevel >= 90 || dt?.is_full === 1;
+              const rssi = dt?.rssi ?? dt?.signal_strength ?? -85;
+              const fillCol = fillLevel >= 90 ? 'error.main' : fillLevel >= 75 ? 'warning.main' : 'success.main';
+
               return (
-                <Box
+                <Paper
                   key={point.id}
                   onClick={() => focusOnBin([point.longitude, point.latitude])}
-                  sx={{ cursor: 'pointer', transition: '0.2s', py: 1 }}
+                  sx={{ 
+                    p: 2, 
+                    borderRadius: '12px',
+                    cursor: 'pointer', 
+                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.4)' : '#ffffff',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    position: 'relative',
+                    transition: 'all 0.15s',
+                    '&:hover': { 
+                      borderColor: 'text.secondary',
+                      bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.005)'
+                    } 
+                  }}
                 >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: isOnline ? 'success.main' : 'text.secondary', animation: isOnline ? 'pulse 2s infinite' : 'none' }} />
-                        <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: '0.1em', color: 'text.secondary', textTransform: 'uppercase' }}>
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: isOnline ? 'success.main' : 'text.secondary', animation: isOnline ? 'pulse 2s infinite' : 'none' }} />
+                        <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.05em', color: 'text.secondary', textTransform: 'uppercase', fontSize: 9.5 }}>
                           {point.type || 'Sensor'}
                         </Typography>
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 900, lineHeight: 1.2 }}>{point.name}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, lineHeight: 1.25 }}>{point.name}</Typography>
                     </Box>
                     {linkedDevice && (
-                      <Chip icon={<Battery size={12} />} label={`${battery}%`} size="small" color={battery < 20 ? 'error' : battery < 50 ? 'warning' : 'success'} sx={{ fontWeight: 800 }} />
+                      <Chip 
+                        icon={<Battery size={11} />} 
+                        label={`${battery}%`} 
+                        size="small" 
+                        sx={{ 
+                          fontWeight: 800, 
+                          height: 20, 
+                          fontSize: 10,
+                          bgcolor: battery < 20 ? 'rgba(217,48,37,0.08)' : 'rgba(24,128,56,0.08)',
+                          color: battery < 20 ? '#d93025' : '#188038',
+                          border: 'none',
+                          '& .MuiChip-icon': { color: 'inherit' }
+                        }} 
+                      />
                     )}
                   </Box>
+
                   {linkedDevice ? (
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1 }}>
-                      <Paper sx={{ p: 1.5, borderRadius: 2, textAlign: 'center', bgcolor: 'transparent' }}>
-                        <Thermometer size={14} style={{ opacity: 0.6, color: '#ef4444' }} />
-                        <Typography variant="caption" sx={{ fontWeight: 900, display: 'block', color: '#ef4444' }}>{dt?.temperatura?.toFixed(1) || '--'}°</Typography>
-                      </Paper>
-                      <Paper sx={{ p: 1.5, borderRadius: 2, textAlign: 'center', bgcolor: 'transparent' }}>
-                        <Droplets size={14} style={{ opacity: 0.6, color: '#3b82f6' }} />
-                        <Typography variant="caption" sx={{ fontWeight: 900, display: 'block', color: '#3b82f6' }}>{dt?.humedad?.toFixed(0) || '--'}%</Typography>
-                      </Paper>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {/* Capacity progress bar instead of temp/hum */}
+                      {point.type === 'bin' && (
+                        <Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', fontSize: 9 }}>Capacidad</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 900, fontFamily: 'monospace', color: fillCol, fontSize: 11.5 }}>{fillLevel}%</Typography>
+                          </Box>
+                          <Box sx={{ height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
+                            <Box sx={{ height: '100%', width: `${fillLevel}%`, bgcolor: fillCol }} />
+                          </Box>
+                        </Box>
+                      )}
+                      
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25, height: 12 }}>
+                            {[1, 2, 3, 4].map(b => (
+                              <Box key={b} sx={{ width: 2.5, borderRadius: '1px 1px 0 0', height: `${b * 25}%`, bgcolor: b <= (rssi > -60 ? 4 : rssi > -75 ? 3 : rssi > -85 ? 2 : 1) ? (rssi <= -85 ? 'error.main' : rssi <= -75 ? 'warning.main' : 'success.main') : 'rgba(255,255,255,0.08)' }} />
+                            ))}
+                          </Box>
+                          <Typography variant="caption" sx={{ fontWeight: 750, color: 'text.secondary', fontSize: '0.65rem', fontFamily: 'monospace' }}>{rssi} dBm</Typography>
+                        </Box>
+                        {isFull && (
+                          <Chip 
+                            label="CRÍTICO" 
+                            size="small" 
+                            sx={{ 
+                              height: 18, 
+                              fontSize: 8.5, 
+                              fontWeight: 900, 
+                              bgcolor: 'rgba(217,48,37,0.08)', 
+                              color: '#d93025', 
+                              border: 'none' 
+                            }} 
+                          />
+                        )}
+                      </Box>
                     </Box>
                   ) : (
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.1em', opacity: 0.5, fontStyle: 'italic', display: 'block', textAlign: 'center', py: 1 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: '0.05em', opacity: 0.5, fontStyle: 'italic', display: 'block', textAlign: 'center', py: 0.5 }}>
                       Sin hardware vinculado
                     </Typography>
-                  )}
-                  {linkedDevice && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, pt: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.25, height: 14 }}>
-                          {[1, 2, 3, 4].map(b => (
-                            <Box key={b} sx={{ width: 3, borderRadius: '1px 1px 0 0', height: `${b * 25}%`, bgcolor: b <= (rssi > -60 ? 4 : rssi > -75 ? 3 : rssi > -85 ? 2 : 1) ? (rssi <= -85 ? 'error.main' : rssi <= -75 ? 'warning.main' : 'success.main') : 'rgba(255,255,255,0.08)' }} />
-                          ))}
-                        </Box>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.55rem' }}>{rssi} dBm</Typography>
-                      </Box>
-                      {isFull && <Chip label="Crítico" size="small" color="error" sx={{ fontWeight: 900 }} />}
-                    </Box>
                   )}
                   {editMode && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5, opacity: 0, transition: '0.2s', '&:hover': { opacity: 1 } }}>
@@ -969,7 +1016,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
                       </IconButton>
                     </Box>
                   )}
-                </Box>
+                </Paper>
               );
             })}
             {binsData.sort((a, b) => b.level - a.level).map(bin => (
