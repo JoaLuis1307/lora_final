@@ -248,26 +248,6 @@ const Overview: React.FC = () => {
             flexDirection: 'column' 
           })}
         >
-          {/* Subtle Non-invasive Floating Geographic Distribution Tag */}
-          <Box 
-            sx={{ 
-              position: 'absolute', 
-              top: 16, 
-              left: 16, 
-              zIndex: 10, 
-              p: 1,
-              px: 2,
-              borderRadius: '24px',
-              bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.85)' : 'rgba(255, 255, 255, 0.9)',
-              backdropFilter: 'blur(16px)',
-              boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
-              border: (t) => t.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)',
-            }}
-          >
-            <Typography sx={{ fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary' }}>
-              Distribución Geográfica
-            </Typography>
-          </Box>
 
           {/* Immersive Floating Map Action Button */}
           <Button
