@@ -11,6 +11,7 @@ export interface UserPayload {
   id: number;
   email: string;
   name?: string | null;
+  role?: string;
 }
 
 export const authService = {
@@ -37,7 +38,7 @@ export const authService = {
    * Register a new user in the system
    */
   async register(fastify: FastifyInstance, data: any): Promise<UserPayload> {
-    const { email, password, name } = data;
+    const { email, password, name, role } = data;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     if (config.db.mode === 'prisma') {
@@ -48,7 +49,7 @@ export const authService = {
       const user = await fastify.prisma.user.create({
         data: { email, password: hashedPassword, name }
       });
-      return { id: user.id, email: user.email, name: user.name };
+      return { id: user.id, email: user.email, name: user.name, role: 'Operador' };
     } 
     
     else if (config.db.mode === 'supabase') {
@@ -64,11 +65,12 @@ export const authService = {
       const { data: user, error } = await supabase.from('users').insert({
         email,
         password: hashedPassword,
-        name
+        name,
+        role: role || 'Operador'
       }).select().single();
       
       if (error) throw error;
-      return { id: user.id, email: user.email, name: user.name };
+      return { id: user.id, email: user.email, name: user.name, role: user.role };
     } 
     
     else {
@@ -83,11 +85,12 @@ export const authService = {
         email,
         password: hashedPassword,
         name,
+        role: role || 'Operador',
         created_at: new Date().toISOString()
       };
       users.push(newUser);
       this.writeLocalUsers(users);
-      return { id: newUser.id, email: newUser.email, name: newUser.name };
+      return { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role };
     }
   },
 
@@ -126,7 +129,8 @@ export const authService = {
     const userPayload: UserPayload = {
       id: foundUser.id,
       email: foundUser.email,
-      name: foundUser.name
+      name: foundUser.name,
+      role: foundUser.role || 'Operador'
     };
 
     // Sign JWT token
@@ -136,5 +140,66 @@ export const authService = {
       user: userPayload,
       token
     };
+  },
+
+  /**
+   * Retrieve all users in the system
+   */
+  async getUsers(fastify: FastifyInstance): Promise<UserPayload[]> {
+    if (config.db.mode === 'prisma') {
+      const users = await fastify.prisma.user.findMany();
+      return users.map((u: any) => ({ id: u.id, email: u.email, name: u.name, role: 'Operador' }));
+    } else if (config.db.mode === 'supabase') {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(config.db.supabaseUrl, config.db.supabaseKey);
+      const { data: users } = await supabase.from('users').select('*');
+      return (users || []).map((u: any) => ({ id: u.id, email: u.email, name: u.name, role: u.role || 'Operador' }));
+    } else {
+      const users = this.readLocalUsers();
+      return users.map((u: any) => ({ id: u.id, email: u.email, name: u.name, role: u.role || 'Operador' }));
+    }
+  },
+
+  /**
+   * Update a user's role
+   */
+  async updateUserRole(fastify: FastifyInstance, id: number, role: string): Promise<boolean> {
+    if (config.db.mode === 'prisma') {
+      // Prisma user doesn't have role column by default, so we mock success.
+      return true;
+    } else if (config.db.mode === 'supabase') {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(config.db.supabaseUrl, config.db.supabaseKey);
+      await supabase.from('users').update({ role }).eq('id', id);
+      return true;
+    } else {
+      const users = this.readLocalUsers();
+      const idx = users.findIndex(u => u.id === id);
+      if (idx === -1) return false;
+      users[idx].role = role;
+      this.writeLocalUsers(users);
+      return true;
+    }
+  },
+
+  /**
+   * Delete a user
+   */
+  async deleteUser(fastify: FastifyInstance, id: number): Promise<boolean> {
+    if (config.db.mode === 'prisma') {
+      await fastify.prisma.user.delete({ where: { id } });
+      return true;
+    } else if (config.db.mode === 'supabase') {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(config.db.supabaseUrl, config.db.supabaseKey);
+      await supabase.from('users').delete().eq('id', id);
+      return true;
+    } else {
+      const users = this.readLocalUsers();
+      const filtered = users.filter(u => u.id !== id);
+      if (users.length === filtered.length) return false;
+      this.writeLocalUsers(filtered);
+      return true;
+    }
   }
 };

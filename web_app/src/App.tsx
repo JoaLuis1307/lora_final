@@ -15,6 +15,7 @@ const RoutesPage = lazy(() => import('./pages/Routes'));
 const Login = lazy(() => import('./pages/Login'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const StatsPage = lazy(() => import('./pages/Stats'));
+const Users = lazy(() => import('./pages/Users'));
 
 const LoadingScreen = () => (
   <Box sx={{ minHeight: '100vh', bgcolor: '#131314', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -198,6 +199,7 @@ function AppContent() {
                 <Route path="rutas" element={<RoutesPage />} />
                 <Route path="stats" element={<StatsPage />} />
                 <Route path="alertas" element={<Alerts />} />
+                <Route path="usuarios" element={<Users />} />
               </Route>
             </Routes>
           </Suspense>

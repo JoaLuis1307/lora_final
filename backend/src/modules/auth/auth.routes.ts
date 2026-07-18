@@ -47,4 +47,58 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
   }, async (request, reply) => {
     return { user: request.user };
   });
+
+  // 4. GET /api/v1/auth/users - Retrieve all users (Protected)
+  fastify.get('/auth/users', {
+    onRequest: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.send(err);
+      }
+    }]
+  }, async (request, reply) => {
+    const list = await authService.getUsers(fastify);
+    return { success: true, users: list };
+  });
+
+  // 5. PUT /api/v1/auth/users/:id - Update user role (Protected)
+  fastify.put('/auth/users/:id', {
+    onRequest: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.send(err);
+      }
+    }]
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { role } = request.body as { role: string };
+    if (!role) {
+      return reply.status(400).send({ error: 'Bad Request', message: 'role is required' });
+    }
+    const success = await authService.updateUserRole(fastify, parseInt(id), role);
+    if (!success) {
+      return reply.status(404).send({ error: 'Not Found', message: 'User not found' });
+    }
+    return { success: true, message: 'Rol actualizado correctamente' };
+  });
+
+  // 6. DELETE /api/v1/auth/users/:id - Delete a user (Protected)
+  fastify.delete('/auth/users/:id', {
+    onRequest: [async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.send(err);
+      }
+    }]
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const success = await authService.deleteUser(fastify, parseInt(id));
+    if (!success) {
+      return reply.status(404).send({ error: 'Not Found', message: 'User not found' });
+    }
+    return { success: true, message: 'Usuario eliminado correctamente' };
+  });
 }
