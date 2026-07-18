@@ -410,10 +410,10 @@ const Stats: React.FC = () => {
   const mode = sp.get('mode') || 'realtime';
   const isRealtime = mode === 'realtime';
 
-  // Filters & Sorting States (lightweight)
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'critical' | 'warning' | 'normal' | 'offline'>('all');
   const [sortBy, setSortBy] = useState<'fill' | 'name' | 'signal'>('fill');
+  const [viewType, setViewType] = useState<'summary' | 'all_params'>('summary');
 
   // State
   const [data, setData] = useState<Record<string, any[]>>({});
@@ -770,6 +770,39 @@ const Stats: React.FC = () => {
                 </Select>
               </FormControl>
 
+              {/* View Type Selector (Resumen / Todos los Parámetros) */}
+              <Box sx={{ display: 'flex', gap: 1, ml: { md: 'auto' } }}>
+                <Button
+                  variant={viewType === 'summary' ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setViewType('summary')}
+                  sx={{ 
+                    borderRadius: '24px', 
+                    textTransform: 'none', 
+                    fontWeight: 800, 
+                    px: 2.5,
+                    fontSize: 12
+                  }}
+                >
+                  Vista Resumida
+                </Button>
+                <Button
+                  variant={viewType === 'all_params' ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setViewType('all_params')}
+                  sx={{ 
+                    borderRadius: '24px', 
+                    textTransform: 'none', 
+                    fontWeight: 800, 
+                    px: 2.5,
+                    fontSize: 12
+                  }}
+                  startIcon={<Activity size={14} />}
+                >
+                  Todos los Parámetros
+                </Button>
+              </Box>
+
             </Box>
           </Paper>
 
@@ -777,101 +810,219 @@ const Stats: React.FC = () => {
           <TableContainer component={Paper} sx={glassSx}>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: 'action.hover' }}>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Contenedor</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>ID EUI</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Dirección / Ubicación</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Nivel de Llenado</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Señal LoRa</TableCell>
-                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Batería</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Acciones</TableCell>
-                </TableRow>
+                {viewType === 'all_params' ? (
+                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Contenedor</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Ubicación</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Llenado</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Ultrasonido</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Sensor ToF</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>RSSI</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>SNR</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Batería</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Altitud</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Satélites</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Último Reporte</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Acciones</TableCell>
+                  </TableRow>
+                ) : (
+                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Contenedor</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>ID EUI</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Dirección / Ubicación</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Nivel de Llenado</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Señal LoRa</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Batería</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Acciones</TableCell>
+                  </TableRow>
+                )}
               </TableHead>
               <TableBody>
                 {processedDevices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ py: 6, textAlign: 'center' }}>
+                    <TableCell colSpan={viewType === 'all_params' ? 12 : 7} sx={{ py: 6, textAlign: 'center' }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>No se encontraron dispositivos que coincidan con la búsqueda.</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
                   processedDevices.map(dev => (
                     <TableRow key={dev.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                      
-                      {/* Name */}
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
-                            <Cpu size={16} />
-                          </Box>
-                          <Typography sx={{ fontWeight: 800, fontSize: 13.5 }}>{dev.name || 'Sin nombre'}</Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* EUI */}
-                      <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>
-                        {dev.device_id}
-                      </TableCell>
-
-                      {/* Address */}
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.secondary' }}>
-                          <MapPin size={13} style={{ flexShrink: 0 }} />
-                          <Typography variant="body2" sx={{ fontWeight: 550, fontSize: 12.5 }}>
-                            {dev.locationLabel}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-
-                      {/* Fill Progress */}
-                      <TableCell>
-                        {dev.fill !== null ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>{dev.fill}%</Typography>
-                            <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
-                              <Box sx={{ height: '100%', width: `${dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
+                      {viewType === 'all_params' ? (
+                        <>
+                          {/* Contenedor (Name & EUI) */}
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                              <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                                <Cpu size={16} />
+                              </Box>
+                              <Box>
+                                <Typography sx={{ fontWeight: 800, fontSize: 13.5 }}>{dev.name || 'Sin nombre'}</Typography>
+                                <Typography sx={{ fontFamily: 'monospace', fontSize: 10.5, color: 'text.secondary' }}>{dev.device_id}</Typography>
+                              </Box>
                             </Box>
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">--</Typography>
-                        )}
-                      </TableCell>
+                          </TableCell>
 
-                      {/* RSSI & SNR */}
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', fontSize: 12.5 }}>
-                          {dev.rssi} dBm
-                          <Typography component="span" sx={{ fontSize: 10, opacity: 0.6, ml: 0.5, fontWeight: 550 }}>({Number(dev.snr).toFixed(1)} dB)</Typography>
-                        </Typography>
-                      </TableCell>
+                          {/* Ubicación */}
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.secondary' }}>
+                              <MapPin size={13} style={{ flexShrink: 0 }} />
+                              <Typography variant="body2" sx={{ fontWeight: 550, fontSize: 12.5 }}>
+                                {dev.locationLabel}
+                              </Typography>
+                            </Box>
+                          </TableCell>
 
-                      {/* Battery */}
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 750, color: dev.battery < 20 ? 'error.main' : 'text.primary', fontSize: 12.5 }}>
-                          {dev.battery}%
-                        </Typography>
-                      </TableCell>
+                          {/* Llenado */}
+                          <TableCell>
+                            {dev.fill !== null ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>{dev.fill}%</Typography>
+                                <Box sx={{ width: 40, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
+                                  <Box sx={{ height: '100%', width: `${dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
+                                </Box>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">--</Typography>
+                            )}
+                          </TableCell>
 
-                      {/* Action */}
-                      <TableCell align="right">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={() => selectDevice(dev.device_id)}
-                          sx={{
-                            borderRadius: '24px',
-                            fontSize: 10.5,
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            px: 2.5,
-                            boxShadow: 'none',
-                            '&:hover': { boxShadow: 'none' }
-                          }}
-                        >
-                          Ver Gráficos
-                        </Button>
-                      </TableCell>
+                          {/* Ultrasonido */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12.5 }}>
+                            {dev.latestEntry.ultrasonic_cm !== undefined && dev.latestEntry.ultrasonic_cm !== null ? `${Number(dev.latestEntry.ultrasonic_cm).toFixed(1)} cm` : '--'}
+                          </TableCell>
 
+                          {/* ToF */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12.5 }}>
+                            {dev.latestEntry.tof_cm !== undefined && dev.latestEntry.tof_cm !== null ? `${Number(dev.latestEntry.tof_cm).toFixed(1)} cm` : '--'}
+                          </TableCell>
+
+                          {/* RSSI */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12.5, fontWeight: 700 }}>
+                            {dev.rssi} dBm
+                          </TableCell>
+
+                          {/* SNR */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12.5 }}>
+                            {dev.snr !== undefined && dev.snr !== null ? `${Number(dev.snr).toFixed(1)} dB` : '--'}
+                          </TableCell>
+
+                          {/* Battery */}
+                          <TableCell sx={{ fontSize: 12.5, fontWeight: 750, color: dev.battery < 20 ? 'error.main' : 'text.primary' }}>
+                            {dev.battery}%
+                          </TableCell>
+
+                          {/* Altitude */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12.5 }}>
+                            {dev.latestEntry.altitude !== undefined && dev.latestEntry.altitude !== null ? `${Number(dev.latestEntry.altitude).toFixed(0)} m` : '--'}
+                          </TableCell>
+
+                          {/* Satellites */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12.5 }}>
+                            {dev.latestEntry.satellites !== undefined && dev.latestEntry.satellites !== null ? dev.latestEntry.satellites : '--'}
+                          </TableCell>
+
+                          {/* Timestamp */}
+                          <TableCell sx={{ fontSize: 11.5, color: 'text.secondary' }}>
+                            {dev.latestEntry.timestamp ? formatFull(dev.latestEntry.timestamp) : '--'}
+                          </TableCell>
+
+                          {/* Actions */}
+                          <TableCell align="right">
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => selectDevice(dev.device_id)}
+                              sx={{
+                                borderRadius: '24px',
+                                fontSize: 10.5,
+                                fontWeight: 800,
+                                textTransform: 'none',
+                                px: 2,
+                                boxShadow: 'none',
+                                '&:hover': { boxShadow: 'none' }
+                              }}
+                            >
+                              Gráficos
+                            </Button>
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          {/* Name */}
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                                <Cpu size={16} />
+                              </Box>
+                              <Typography sx={{ fontWeight: 800, fontSize: 13.5 }}>{dev.name || 'Sin nombre'}</Typography>
+                            </Box>
+                          </TableCell>
+
+                          {/* EUI */}
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>
+                            {dev.device_id}
+                          </TableCell>
+
+                          {/* Address */}
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.secondary' }}>
+                              <MapPin size={13} style={{ flexShrink: 0 }} />
+                              <Typography variant="body2" sx={{ fontWeight: 550, fontSize: 12.5 }}>
+                                {dev.locationLabel}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+
+                          {/* Fill Progress */}
+                          <TableCell>
+                            {dev.fill !== null ? (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>{dev.fill}%</Typography>
+                                <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
+                                  <Box sx={{ height: '100%', width: `${dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
+                                </Box>
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">--</Typography>
+                            )}
+                          </TableCell>
+
+                          {/* RSSI & SNR */}
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', fontSize: 12.5 }}>
+                              {dev.rssi} dBm
+                              <Typography component="span" sx={{ fontSize: 10, opacity: 0.6, ml: 0.5, fontWeight: 550 }}>({Number(dev.snr).toFixed(1)} dB)</Typography>
+                            </Typography>
+                          </TableCell>
+
+                          {/* Battery */}
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 750, color: dev.battery < 20 ? 'error.main' : 'text.primary', fontSize: 12.5 }}>
+                              {dev.battery}%
+                            </Typography>
+                          </TableCell>
+
+                          {/* Action */}
+                          <TableCell align="right">
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => selectDevice(dev.device_id)}
+                              sx={{
+                                borderRadius: '24px',
+                                fontSize: 10.5,
+                                fontWeight: 800,
+                                textTransform: 'none',
+                                px: 2.5,
+                                boxShadow: 'none',
+                                '&:hover': { boxShadow: 'none' }
+                              }}
+                            >
+                              Ver Gráficos
+                            </Button>
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))
                 )}
