@@ -747,7 +747,7 @@ const Stats: React.FC = () => {
                   sx={{ borderRadius: '24px' }}
                 >
                   <MenuItem value="all">Todos los estados</MenuItem>
-                  <MenuItem value="critical">Crítico (>= 90%)</MenuItem>
+                  <MenuItem value="critical">Crítico (&gt;= 90%)</MenuItem>
                   <MenuItem value="warning">Advertencia (75%-90%)</MenuItem>
                   <MenuItem value="normal">Normal (&lt; 75%)</MenuItem>
                   <MenuItem value="offline">Offline</MenuItem>
