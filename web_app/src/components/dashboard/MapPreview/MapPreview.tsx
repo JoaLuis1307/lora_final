@@ -159,6 +159,7 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
         }
       },
       layers: [
+        { id: 'bg-layer', type: 'background', paint: { 'background-color': '#09090a' } },
         { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 }
       ]
     };
@@ -187,6 +188,7 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
         }
       },
       layers: [
+        { id: 'bg-layer', type: 'background', paint: { 'background-color': '#09090a' } },
         { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 },
         { id: 'labels-layer', type: 'raster', source: 'carto-labels', minzoom: 0, maxzoom: 19 }
       ]
@@ -210,12 +212,14 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
         }
       },
       layers: [
+        { id: 'bg-layer', type: 'background', paint: { 'background-color': '#f1f3f4' } },
         { id: 'terrain-layer', type: 'raster', source: 'google-terrain', minzoom: 0, maxzoom: 19 }
       ]
     };
   }
 
   const styleName = (layer === 'bright' || (layer === 'dark' && theme === 'light')) ? 'light_all' : 'dark_all';
+  const bgColor = styleName === 'light_all' ? '#f1f3f4' : '#18181a';
   return {
     version: 8,
     sources: {
@@ -232,6 +236,7 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
       }
     },
     layers: [
+      { id: 'bg-layer', type: 'background', paint: { 'background-color': bgColor } },
       { id: 'carto-layer', type: 'raster', source: 'carto-tiles', minzoom: 0, maxzoom: 19 }
     ]
   };
@@ -772,6 +777,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       container: mapContainer.current,
       style: getMapStyle(activeLayer, currentTheme) as any,
       center, zoom: 14, maxZoom: 19, pitch: 45, bearing: -17, attributionControl: false,
+      fadeDuration: 50, // Fast tile loading fading
+      maxTileCacheSize: 150, // Keep more tiles in cache
     });
     const onStyleLoad = () => { 
       setMapLoaded(true);
