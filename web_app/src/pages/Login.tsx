@@ -73,21 +73,6 @@ const Login: React.FC = () => {
       }
     }
   };
-
-  const handleGuestLogin = () => {
-    setLoading(true);
-    const guestUser = {
-      id: 'guest-id-' + Math.random().toString(36).substring(2, 9),
-      email: 'guest@ecolora.com',
-      user_metadata: { full_name: 'Invitado Operador' },
-      aud: 'authenticated',
-      role: 'authenticated',
-      created_at: new Date().toISOString()
-    };
-    localStorage.setItem('guest_user', JSON.stringify(guestUser));
-    window.location.href = '/';
-  };
-
   return (
     <Box sx={{
       width: '100vw',
@@ -546,27 +531,6 @@ const Login: React.FC = () => {
                         </Button>
                       ))}
                     </Box>
-
-                    <Button
-                      variant="text"
-                      fullWidth
-                      disabled={loading}
-                      onClick={handleGuestLogin}
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        fontSize: 13,
-                        color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368',
-                        fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
-                        '&:hover': { 
-                          bgcolor: 'transparent', 
-                          color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
-                          textDecoration: 'underline' 
-                        }
-                      }}
-                    >
-                      Entrar como Invitado Operador
-                    </Button>
                   </Box>
                 </>
               )}
