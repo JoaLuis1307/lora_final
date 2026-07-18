@@ -218,16 +218,7 @@ const Overview: React.FC = () => {
                   {loading ? '...' : kpi.value}
                 </Typography>
               </Box>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                width: 42, 
-                height: 42, 
-                borderRadius: '50%', 
-                bgcolor: alpha(kpi.color, 0.08), 
-                color: kpi.color 
-              }}>
+              <Box sx={{ color: 'text.secondary', opacity: 0.65 }}>
                 {kpi.icon}
               </Box>
             </Box>
