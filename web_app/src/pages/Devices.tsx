@@ -589,7 +589,7 @@ const Devices: React.FC = () => {
                 {/* Name and Location */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                   <Typography sx={{ fontWeight: 800, fontSize: 15, lineHeight: 1.25, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={device.name}>
-                    {device.name && device.name.trim() !== '' ? device.name : (isGateway ? 'Gateway Concentrador' : 'Nodo LoRaWAN')}
+                    {device.name && device.name.trim() !== '' ? device.name : (isGateway ? 'Gateway Concentrador' : 'Nodo LoRa P2P')}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.6 }}>
                     <MapPin size={11} style={{ flexShrink: 0 }} />
@@ -1854,7 +1854,7 @@ const Devices: React.FC = () => {
               <Box sx={{ p: 1.5, borderRadius: '8px', bgcolor: 'rgba(253, 214, 99, 0.08)', border: 'none', color: 'warning.main', display: 'flex', gap: 1, alignItems: 'center' }}>
                 <TriangleAlert size={16} />
                 <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                  Este dispositivo fue auto-detectado por la red LoRaWAN. Al guardarlo se le dará de alta formalmente en el sistema.
+                  Este dispositivo fue auto-detectado por la red LoRa P2P. Al guardarlo se le dará de alta formalmente en el sistema.
                 </Typography>
               </Box>
             )}

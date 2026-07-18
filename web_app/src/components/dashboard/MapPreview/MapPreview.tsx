@@ -451,7 +451,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     const statusBgColor = isOnline ? (isDark ? 'rgba(196,252,209,0.08)' : 'rgba(24,128,56,0.08)') : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
     const statusTextColor = isOnline ? (isDark ? '#34a853' : '#137333') : (isDark ? '#c4c7c5' : '#5f6368');
 
-    const typeLabel = linkedDevice?.type === 'gateway' ? 'Gateway Concentrador' : 'Nodo Sensor LoRaWAN';
+    const typeLabel = linkedDevice?.type === 'gateway' ? 'Gateway Concentrador' : 'Nodo Sensor LoRa P2P';
 
     // Coordinates display formatting
     const latStr = point.latitude.toFixed(5);
@@ -514,7 +514,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
           </div>
 
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="color:${mc}">Señal LoRaWAN</span>
+            <span style="color:${mc}">Señal LoRa P2P</span>
             <span style="font-weight:700;color:${tc}">${deviceTelemetry?.rssi ?? -70} dBm <span style="font-weight:500;opacity:0.6;font-size:10px">(SNR: ${deviceTelemetry?.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5'} dB)</span></span>
           </div>
 

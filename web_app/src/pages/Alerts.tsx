@@ -79,7 +79,7 @@ const Alerts: React.FC = () => {
           sourceName: dev.name,
           type: 'Conectividad',
           severity: 'warning',
-          condition: 'Dispositivo desconectado de la red LoRaWAN',
+          condition: 'Dispositivo desconectado de la red LoRa P2P',
           timestamp: dev.last_seen || new Date().toISOString(),
           lat: dev.latitude,
           lng: dev.longitude

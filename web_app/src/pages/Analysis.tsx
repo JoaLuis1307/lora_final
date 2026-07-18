@@ -201,7 +201,7 @@ const Analysis: React.FC = () => {
             Análisis de Telemetría
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, opacity: 0.8 }}>
-            Selecciona un dispositivo de la red para visualizar gráficos históricos y métricas avanzadas de enlace LoRaWAN.
+            Selecciona un dispositivo de la red para visualizar gráficos históricos y métricas avanzadas de enlace LoRa P2P.
           </Typography>
         </Box>
         
@@ -379,7 +379,7 @@ const Analysis: React.FC = () => {
               { label: 'Estabilidad de Enlace', value: extendedStats ? `${extendedStats.stability}%` : '--%', status: 'Calibrado', statusColor: 'success.main' },
               { label: 'Calidad de Radio', value: extendedStats ? `${extendedStats.healthScore}/100` : '--/100', status: 'Ok' },
               { label: 'Frecuencia de Envío', value: extendedStats ? `${extendedStats.transmissionRate} msg/min` : '-- msg/min', status: 'Estable' },
-              { label: 'Uptime LoRaWAN', value: extendedStats ? extendedStats.uptime : '--%', status: 'Óptimo', statusColor: 'success.main' },
+              { label: 'Uptime LoRa P2P', value: extendedStats ? extendedStats.uptime : '--%', status: 'Óptimo', statusColor: 'success.main' },
             ].map((item, i) => (
               <Paper key={i} sx={(t) => ({ ...googlePaper(t), p: 2.5 })}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.5, mb: 1, display: 'block' }}>
@@ -555,7 +555,7 @@ const Analysis: React.FC = () => {
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, fontSize: 12.5, lineHeight: 1.5 }}>
               {extendedStats && Number(extendedStats.stability) > 95
-                ? 'La conexión LoRaWAN presenta estabilidad excepcional. No se detectan anomalías de señal o atenuación en la zona.'
+                ? 'La conexión LoRa P2P presenta estabilidad excepcional. No se detectan anomalías de señal o atenuación en la zona.'
                 : 'Se detecta fluctuación leve en la señal de radio (RSSI). Se recomienda verificar posible obstrucción física en la línea de vista del nodo o interferencia electromagnética.'}
             </Typography>
           </Paper>

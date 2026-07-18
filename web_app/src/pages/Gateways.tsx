@@ -326,7 +326,7 @@ const Gateways: React.FC = () => {
                   <Search size={32} style={{ opacity: 0.3, color: 'primary.main' }} />
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 900, letterSpacing: '0.2em', maxWidth: 300, mx: 'auto' }}>
-                  Escaneando señales LoRaWAN cercanas...
+                  Escaneando señales LoRa P2P cercanas...
                 </Typography>
               </Box>
             ) : (
@@ -719,7 +719,7 @@ const Gateways: React.FC = () => {
                 Vincular Hardware
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, letterSpacing: '0.15em', opacity: 0.6 }}>
-                Configuración de nodo LoRaWAN
+                Configuración de nodo LoRa P2P
               </Typography>
             </Box>
             <IconButton onClick={() => setShowRegisterModal(false)} size="small" sx={{ color: 'text.secondary' }}>

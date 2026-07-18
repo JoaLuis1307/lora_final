@@ -220,7 +220,7 @@ const Settings: React.FC = () => {
                     <MenuItem value="Ahorro de Energía (5min)">Ahorro de Energía (5min)</MenuItem>
                   </Select>
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontStyle: 'italic' }}>
-                    Afecta el consumo de datos de los Gateways LoRaWAN.
+                    Afecta el consumo de datos de los Gateways LoRa P2P.
                   </Typography>
                 </Box>
                 <Box sx={{ gridColumn: 'span 2', mt: 2, pt: 4, borderTop: (t) => `1px solid ${t.palette.divider}` }}>
