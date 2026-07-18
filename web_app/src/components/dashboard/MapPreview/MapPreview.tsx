@@ -1441,7 +1441,25 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                     ) : undefined,
                   }
                 }}
-                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 4, py: 0.5 } }}
+                sx={{ 
+                  '& .MuiOutlinedInput-root': { 
+                    borderRadius: '24px', 
+                    py: 0.5,
+                    bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.65)' : 'rgba(255, 255, 255, 0.65)',
+                    backdropFilter: 'blur(12px)',
+                    border: 'none',
+                    '& fieldset': {
+                      border: currentTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8',
+                      borderWidth: '1.5px',
+                    }
+                  }
+                }}
               />
             </Box>
           </ClickAwayListener>
@@ -1449,7 +1467,23 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
         {/* Route Stats Overlay */}
         {routeData && (
-          <Paper sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 100, px: 4, py: 2, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Paper sx={{ 
+            position: 'absolute', 
+            top: 16, 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 100, 
+            px: 4, 
+            py: 2, 
+            borderRadius: '20px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 4,
+            bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.75)' : 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(12px)',
+            border: currentTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(45,212,191,0.12)', color: 'primary.main' }}>
                 <Navigation size={20} style={{ animation: 'pulse 2s infinite' }} />
@@ -1472,7 +1506,21 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
         {/* Routing Instructions */}
         {routingMode && !routeData && (
-          <Paper sx={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 100, px: 3, py: 1.5, borderRadius: 4, bgcolor: 'primary.main', color: '#fff' }}>
+          <Paper sx={{ 
+            position: 'absolute', 
+            top: 16, 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 100, 
+            px: 3, 
+            py: 1.5, 
+            borderRadius: '24px', 
+            bgcolor: currentTheme === 'dark' ? 'rgba(45, 212, 191, 0.85)' : 'rgba(13, 148, 136, 0.85)', 
+            backdropFilter: 'blur(8px)',
+            color: '#fff',
+            border: 'none',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
+          }}>
             <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.15em', display: 'flex', alignItems: 'center', gap: 1 }}>
               <MapPin size={14} />
               {routePoints.length === 0 ? 'Selecciona punto de origen' : `Añadir punto #${routePoints.length + 1} o cerrar`}
@@ -1489,9 +1537,15 @@ const MapPreview: React.FC<MapPreviewProps> = ({
             transform: 'translateX(-50%)',
             zIndex: 10,
             display: 'flex',
-            gap: 1,
+            gap: 0.5,
             pointerEvents: 'auto',
-            bgcolor: 'transparent',
+            bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.55)' : 'rgba(255, 255, 255, 0.55)',
+            backdropFilter: 'blur(16px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(140%)',
+            borderRadius: '24px',
+            p: '3px 4px',
+            border: currentTheme === 'dark' ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.06)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
             maxWidth: 'calc(100% - 32px)',
             overflowX: 'auto',
             '&::-webkit-scrollbar': { display: 'none' },
@@ -1520,23 +1574,27 @@ const MapPreview: React.FC<MapPreviewProps> = ({
                   sx={{
                     borderRadius: '20px',
                     textTransform: 'none',
-                    fontWeight: 600,
-                    fontSize: '13px',
-                    px: 2.2,
-                    py: 0.8,
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: '11.5px',
+                    px: 1.8,
+                    py: 0.6,
+                    minWidth: 'auto',
                     bgcolor: isActive 
                       ? (currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8') 
-                      : (currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff'),
+                      : 'transparent',
                     color: isActive 
                       ? (currentTheme === 'dark' ? '#131314' : '#ffffff') 
-                      : 'text.primary',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-                    border: 'none', // Borderless as requested!
-                    backdropFilter: 'blur(8px)',
+                      : 'text.secondary',
+                    border: 'none',
+                    boxShadow: 'none',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
                       bgcolor: isActive
                         ? (currentTheme === 'dark' ? '#aecbfa' : '#1557b0')
-                        : (currentTheme === 'dark' ? '#35363a' : '#f1f3f4'),
+                        : (currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'),
+                      color: isActive 
+                        ? (currentTheme === 'dark' ? '#131314' : '#ffffff') 
+                        : 'text.primary',
                     }
                   }}
                 >
