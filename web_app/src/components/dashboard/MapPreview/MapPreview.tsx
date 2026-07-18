@@ -460,21 +460,20 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
 
   const getPopupHTML = useCallback((point: MapPoint, linkedDevice?: Device, isOnline?: boolean, deviceTelemetry?: any, isFull?: boolean, batt: number = 0) => {
     const isDark = currentTheme === 'dark';
-    const bg = isDark ? 'rgba(10, 18, 30, 0.95)' : '#ffffff';
-    const tc = isDark ? '#f8fafc' : '#0f172a';
-    const mc = isDark ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)';
+    const bg = isDark ? '#1e1f20' : '#ffffff';
+    const tc = isDark ? '#e3e3e3' : '#1f1f1f';
+    const mc = isDark ? '#c4c7c5' : '#5f6368';
     const bc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
-    const dividerColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-    const dashDividerColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+    const dividerColor = isDark ? '#3c4043' : '#e0e0e0';
     const temp = deviceTelemetry?.temperature ?? deviceTelemetry?.temperatura ?? deviceTelemetry?.temp;
     const hum = deviceTelemetry?.humidity ?? deviceTelemetry?.humedad ?? deviceTelemetry?.hum;
     const airQuality = deviceTelemetry?.air_quality ?? deviceTelemetry?.airQuality ?? deviceTelemetry?.aq ?? 100;
 
     if (!linkedDevice) {
       return `
-        <div style="background:${bg};backdrop-filter:blur(20px);border:1px solid ${bc};border-top:4px solid #3b82f6;border-radius:8px;padding:16px;color:${tc};min-width:240px;font-family:sans-serif;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
-          <h4 style="margin:0 0 4px;font-size:14px;font-weight:800">${point.name}</h4>
-          <p style="font-size:10px;opacity:0.5;margin:0;font-weight:600;text-transform:uppercase">Sin hardware vinculado</p>
+        <div style="background:${bg};border-radius:16px;padding:16px;color:${tc};min-width:240px;font-family:'Google Sans', Roboto, Arial, sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.15);border:none;display:flex;flex-direction:column;gap:6px">
+          <h4 style="margin:0;font-size:14px;font-weight:700;color:${tc}">${point.name}</h4>
+          <span style="font-size:10px;font-weight:700;color:#c5221f;background:rgba(217,19,14,0.08);padding:3px 8px;border-radius:100px;align-self:flex-start;text-transform:uppercase;letter-spacing:0.02em;white-space:nowrap">Sin hardware vinculado</span>
         </div>
       `;
     }
@@ -485,12 +484,11 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       fillPct = calculateFillPercentage(fillDistance);
     }
     const showBinIndicator = point.type === 'bin' || point.type === 'Reciclaje' || linkedDevice?.type === 'Nodo Sensor';
-    const isHardwareReal = linkedDevice?.gateway_id?.toLowerCase() === 'gateway_01';
 
     // Status Badges
-    const statusDotColor = isOnline ? '#10b981' : '#6b7280';
-    const statusBgColor = isOnline ? 'rgba(16,185,129,0.08)' : 'rgba(107,114,128,0.08)';
-    const statusBorderColor = isOnline ? 'rgba(16,185,129,0.18)' : 'rgba(107,114,128,0.18)';
+    const statusDotColor = isOnline ? '#34a853' : '#5f6368';
+    const statusBgColor = isOnline ? (isDark ? 'rgba(196,252,209,0.08)' : 'rgba(24,128,56,0.08)') : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
+    const statusTextColor = isOnline ? (isDark ? '#34a853' : '#137333') : (isDark ? '#c4c7c5' : '#5f6368');
 
     const typeLabel = linkedDevice?.type === 'gateway' ? 'Gateway Concentrador' : 'Nodo Sensor LoRaWAN';
 
@@ -498,74 +496,83 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     const latStr = point.latitude.toFixed(5);
     const lngStr = point.longitude.toFixed(5);
 
-    const accentColor = isFull ? '#ef4444' : isOnline ? '#10b981' : '#5f6f81';
+    const accentColor = isFull ? '#d93025' : isOnline ? '#188038' : '#5f6f81';
 
     return `
-      <div style="background:${bg};backdrop-filter:blur(20px);border:1px solid ${bc};border-radius:12px;padding:18px;color:${tc};min-width:280px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;box-shadow:0 10px 25px rgba(0,0,0,0.15);display:flex;flex-direction:column;gap:12px">
+      <div style="background:${bg};border-radius:16px;padding:20px;color:${tc};min-width:290px;font-family:'Google Sans', Roboto, Arial, sans-serif;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:flex;flex-direction:column;gap:14px">
         
         <!-- Header -->
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:10px;font-weight:700;color:${mc};text-transform:uppercase;letter-spacing:0.05em">${typeLabel}</span>
-          <div style="display:flex;align-items:center;gap:5px">
-            <div style="width:6px;height:6px;border-radius:50%;background:${statusDotColor}"></div>
-            <span style="font-size:10px;font-weight:600;color:${tc};opacity:0.8">${isOnline ? 'En línea' : 'Desconectado'}</span>
+          <div style="padding:4px 10px;border-radius:100px;background:${statusBgColor};color:${statusTextColor};display:flex;align-items:center;gap:5px;font-weight:700;font-size:10px;letter-spacing:0.02em">
+            <div style="width:5px;height:5px;border-radius:50%;background:${statusDotColor}"></div>
+            <span>${isOnline ? 'EN LÍNEA' : 'DESCONECTADO'}</span>
           </div>
+          ${editMode ? `
+          <button onclick="window.editMapPoint(${point.id})" style="background:none;border:none;color:${tc};cursor:pointer;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s" onmouseover="this.style.background='${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}'" onmouseout="this.style.background='none'" title="Editar Punto">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          ` : `
+          <span style="font-size:9.5px;font-weight:700;color:${isDark ? '#a8c7fa' : '#1a73e8'};letter-spacing:0.05em;text-transform:uppercase">LORA ACTIVE</span>
+          `}
         </div>
 
         <!-- Name -->
-        <h4 style="margin:0;font-size:16px;font-weight:700;line-height:1.2;color:${tc}">${point.name}</h4>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <h4 style="margin:0;font-size:16px;font-weight:700;color:${tc};line-height:1.2">${point.name}</h4>
+          <span style="font-size:10px;font-weight:500;color:${mc};text-transform:uppercase;letter-spacing:0.05em">${typeLabel}</span>
+        </div>
 
-        <!-- Fill level (Sleek Progress Bar) -->
+        <!-- Fill level (Google Material Progress Bar) -->
         ${showBinIndicator ? `
-          <div style="display:flex;flex-direction:column;gap:5px;margin:2px 0">
+          <div style="display:flex;flex-direction:column;gap:6px;margin:2px 0">
             <div style="display:flex;justify-content:space-between;align-items:baseline">
-              <span style="font-size:11px;font-weight:600;color:${mc}">Nivel de llenado</span>
-              <span style="font-size:18px;font-weight:700;color:${accentColor}">${fillPct}%</span>
+              <span style="font-size:11px;font-weight:500;color:${mc}">Nivel de llenado</span>
+              <span style="font-size:22px;font-weight:700;color:${accentColor}">${fillPct}%</span>
             </div>
-            <div style="height:5px;background:${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};border-radius:3px;overflow:hidden">
-              <div style="width:${fillPct}%;height:100%;background:${accentColor};border-radius:3px;transition:width 0.4s"></div>
+            <div style="height:6px;background:${isDark ? '#3c4043' : '#f1f3f4'};border-radius:100px;overflow:hidden">
+              <div style="width:${fillPct}%;height:100%;background:${accentColor};border-radius:100px;transition:width 0.4s"></div>
             </div>
           </div>` : ''}
 
-        <!-- Parameters Grid (Clean, minimalist list) -->
-        <div style="display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid ${dividerColor};font-size:11px">
+        <!-- Parameters Grid (Google style simple table list) -->
+        <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid ${dividerColor};font-size:11.5px">
           
-          <div style="display:flex;justify-content:space-between">
+          <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="color:${mc}">Dispositivo EUI</span>
-            <span style="font-family:monospace;font-weight:600">${linkedDevice?.device_id}</span>
+            <span style="font-family:monospace;font-weight:700;color:${tc}">${linkedDevice?.device_id}</span>
           </div>
           
-          <div style="display:flex;justify-content:space-between">
+          <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="color:${mc}">Coordenadas</span>
-            <span style="font-family:monospace;font-weight:600">${latStr}, ${lngStr}</span>
+            <span style="font-family:monospace;font-weight:700;color:${tc}">${latStr}, ${lngStr}</span>
           </div>
 
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:${mc}">Batería</span>
-            <span style="font-weight:600;color:${batt > 20 ? '#10b981' : '#ef4444'}">${batt || 0}%</span>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:${mc}">Batería del nodo</span>
+            <span style="font-weight:700;color:${batt > 20 ? (isDark ? '#81c995' : '#137333') : '#d93025'}">${batt || 0}%</span>
           </div>
 
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:${mc}">Señal LoRa</span>
-            <span style="font-weight:600">${deviceTelemetry?.rssi ?? -70} dBm (SNR: ${deviceTelemetry?.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5'} dB)</span>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:${mc}">Señal LoRaWAN</span>
+            <span style="font-weight:700;color:${tc}">${deviceTelemetry?.rssi ?? -70} dBm <span style="font-weight:500;opacity:0.6;font-size:10px">(SNR: ${deviceTelemetry?.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5'} dB)</span></span>
           </div>
 
           ${temp !== undefined || hum !== undefined ? `
-            <div style="display:flex;justify-content:space-between;padding-top:4px">
-              <span style="color:${mc}">Ambiente</span>
-              <span style="font-weight:600;color:${tc}">${temp !== undefined ? temp.toFixed(1) + '°C' : '--°C'} • ${hum !== undefined ? hum.toFixed(0) + '%' : '--%'} H.</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:2px">
+              <span style="color:${mc}">Clima ambiente</span>
+              <span style="font-weight:700;color:${tc}">${temp !== undefined ? temp.toFixed(1) + ' °C' : '-- °C'} • ${hum !== undefined ? hum.toFixed(0) + '%' : '--%'} Hum.</span>
             </div>
           ` : ''}
 
-          <div style="display:flex;justify-content:space-between">
+          <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="color:${mc}">Estado de sensor</span>
-            <span style="font-weight:600;color:${deviceTelemetry?.obstacle === 1 ? '#ef4444' : '#10b981'}">${deviceTelemetry?.obstacle === 1 ? 'Obstruido' : 'Libre (Ok)'}</span>
+            <span style="font-weight:700;color:${deviceTelemetry?.obstacle === 1 ? '#d93025' : (isDark ? '#81c995' : '#137333')}">${deviceTelemetry?.obstacle === 1 ? 'Obstruido' : 'Libre (Ok)'}</span>
           </div>
 
         </div>
 
         <!-- Footer -->
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid ${dividerColor};font-size:9px;color:${mc};opacity:0.7">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid ${dividerColor};font-size:9.5px;color:${mc};font-weight:500">
           <span>Última transmisión</span>
           <span>${linkedDevice?.last_seen ? new Date(linkedDevice.last_seen).toLocaleTimeString() : '---'}</span>
         </div>
@@ -766,80 +773,57 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
         const lngStr = match ? parseFloat(match[2]).toFixed(5) : '-71.53700';
 
         return `
-          <div style="background:${bg};backdrop-filter:blur(20px);border:1px solid ${bc};border-top:4px solid ${markerColor};border-radius:8px;padding:20px;color:${tc};min-width:300px;font-family:sans-serif;box-shadow:0 12px 32px rgba(0,0,0,0.3);position:relative;display:flex;flex-direction:column;gap:12px">
+          <div style="background:${bg};border-radius:16px;padding:20px;color:${tc};min-width:290px;font-family:'Google Sans', Roboto, Arial, sans-serif;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:flex;flex-direction:column;gap:14px">
             
             <!-- Header: Badges & Plates -->
-            <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="padding:2px 8px;border-radius:4px;background:${statusBgColor};border:1px solid ${statusBorderColor};display:flex;align-items:center;gap:4px">
-                  <div style="width:4.5px;height:4.5px;border-radius:50%;background:${statusTextColor}"></div>
-                  <span style="font-size:8.5px;font-weight:900;color:${statusTextColor};text-transform:uppercase;letter-spacing:0.02em">${statusText}</span>
-                </div>
-                <div style="padding:2px 8px;border-radius:4px;background:${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'};border:1px solid ${bc};display:flex;align-items:center;gap:4px">
-                  <span style="font-size:8.5px;font-weight:900;color:${mc};font-family:monospace;letter-spacing:0.05em">${vehicle.plate}</span>
-                </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="padding:4px 10px;border-radius:100px;background:${statusBgColor};color:${statusTextColor};display:flex;align-items:center;gap:5px;font-weight:700;font-size:10px;letter-spacing:0.02em">
+                <div style="width:5px;height:5px;border-radius:50%;background:${statusTextColor}"></div>
+                <span>${statusText.toUpperCase()}</span>
               </div>
-              <div style="font-size:8.5px;font-weight:900;color:#0ea5e9;font-family:monospace;letter-spacing:0.02em;opacity:0.8">
-                GPS: LOCK (3D)
-              </div>
+              <span style="font-size:11px;font-family:monospace;font-weight:700;color:${mc};background:${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'};padding:2px 8px;border-radius:6px">${vehicle.plate}</span>
             </div>
 
-            <!-- Vehicle ID and Driver -->
-            <div style="display:flex;flex-direction:column;gap:2px">
-              <h4 style="margin:0;font-size:15px;font-weight:800;letter-spacing:-0.2px;line-height:1.25;text-transform:uppercase">${vehicle.id}</h4>
-              <span style="font-size:9.5px;font-weight:600;color:${mc};opacity:0.6;text-transform:uppercase;letter-spacing:0.05em">CHOFER: ${vehicle.driver.toUpperCase()}</span>
+            <!-- Name and Subtitle -->
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <h4 style="margin:0;font-size:16px;font-weight:700;color:${tc};line-height:1.2;text-transform:uppercase">${vehicle.id}</h4>
+              <span style="font-size:10px;font-weight:500;color:${mc};text-transform:uppercase;letter-spacing:0.05em">Chofer: ${vehicle.driver}</span>
             </div>
 
-            <!-- Combustible (Horizontal Telemetry Bar) -->
-            <div style="display:flex;flex-direction:column;gap:6px">
+            <!-- Fuel Progress Bar -->
+            <div style="display:flex;flex-direction:column;gap:6px;margin:2px 0">
               <div style="display:flex;justify-content:space-between;align-items:baseline">
-                <span style="font-size:9.5px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;opacity:0.5;color:${mc}">Combustible</span>
-                <span style="font-size:14px;font-weight:800;font-family:monospace;color:${vehicle.fuel < 20 ? '#ef4444' : '#10b981'}">${vehicle.fuel}%</span>
+                <span style="font-size:11px;font-weight:500;color:${mc}">Nivel de combustible</span>
+                <span style="font-size:22px;font-weight:700;color:${vehicle.fuel < 20 ? '#d93025' : (isDark ? '#81c995' : '#137333')}">${vehicle.fuel}%</span>
               </div>
-              <div style="height:6px;background:${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};border-radius:2px;overflow:hidden">
-                <div style="width:${vehicle.fuel}%;height:100%;background:${vehicle.fuel < 20 ? '#ef4444' : '#10b981'};border-radius:2px;transition:width 1s"></div>
-              </div>
-            </div>
-
-            <!-- Premium Telemetry Grid (2x2) -->
-            <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;margin-top:4px;padding-top:10px;border-top:1px solid ${dividerColor}">
-              <div>
-                <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                  <svg class="lucide lucide-gauge" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#06b6d4"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
-                  <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Velocidad</span>
-                </div>
-                <span style="font-size:11px;font-weight:800;font-family:monospace;color:#06b6d4;padding-left:14px">${vehicle.speed || 0} km/h</span>
-              </div>
-              <div>
-                <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                  <svg class="lucide lucide-database" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#f59e0b"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
-                  <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Carga Contenedor</span>
-                </div>
-                <span style="font-size:11px;font-weight:800;font-family:monospace;color:#f59e0b;padding-left:14px">${vehicle.capacity}%</span>
-              </div>
-              <div>
-                <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                  <svg class="lucide lucide-map-pin" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#0ea5e9"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                  <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Ubicación GPS</span>
-                </div>
-                <span style="font-size:11px;font-weight:800;font-family:monospace;color:${tc};padding-left:14px;white-space:nowrap">${latStr}, ${lngStr}</span>
-              </div>
-              <div>
-                <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-                  <svg class="lucide lucide-user" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;color:#6366f1"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;letter-spacing:0.05em;opacity:0.6">Operador</span>
-                </div>
-                <span style="font-size:11px;font-weight:800;color:${tc};padding-left:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block">${vehicle.driver.split(' ')[0]}</span>
+              <div style="height:6px;background:${isDark ? '#3c4043' : '#f1f3f4'};border-radius:100px;overflow:hidden">
+                <div style="width:${vehicle.fuel}%;height:100%;background:${vehicle.fuel < 20 ? '#d93025' : (isDark ? '#81c995' : '#137333')};border-radius:100px;transition:width 1s"></div>
               </div>
             </div>
 
-            <!-- Footer / Current Location -->
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid ${bc};margin-top:2px">
-              <div style="display:flex;flex-direction:column;width:100%">
-                <span style="font-size:8.5px;font-weight:800;color:${mc};text-transform:uppercase;opacity:0.5;margin-bottom:2px">Dirección de Seguimiento</span>
-                <span style="font-size:10px;font-weight:700;color:${tc};opacity:0.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${vehicle.location.split(' (')[0]}">${vehicle.location.split(' (')[0]}</span>
+            <!-- Parameters Grid (Clean, minimalist list) -->
+            <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid ${dividerColor};font-size:11.5px">
+              
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:${mc}">Velocidad</span>
+                <span style="font-weight:700;color:${tc}">${vehicle.speed || 0} km/h</span>
               </div>
-            </div>
+              
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:${mc}">Carga recolectada</span>
+                <span style="font-weight:700;color:${tc}">${vehicle.capacity}%</span>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="color:${mc}">Coordenadas GPS</span>
+                <span style="font-family:monospace;font-weight:700;color:${tc}">${latStr}, ${lngStr}</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:4px;padding-top:4px;border-top:1px dashed ${dividerColor}">
+                <span style="color:${mc};font-size:10px;text-transform:uppercase;letter-spacing:0.02em">Última Dirección</span>
+                <span style="font-weight:700;color:${tc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${vehicle.location.split(' (')[0]}">${vehicle.location.split(' (')[0]}</span>
+              </div>
+
           </div>`;
       };
 
