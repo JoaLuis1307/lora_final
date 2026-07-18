@@ -4,7 +4,7 @@ import {
   Box, Paper, Typography, Button, Divider, Chip, CircularProgress, List, ListItem, ListItemText, alpha
 } from '@mui/material';
 import {
-  Trash2, Cpu, AlertTriangle, Activity, MapPin, ArrowUpRight, Signal
+  Trash2, Cpu, AlertTriangle, Activity, MapPin, ArrowUpRight, Signal, RefreshCw
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
