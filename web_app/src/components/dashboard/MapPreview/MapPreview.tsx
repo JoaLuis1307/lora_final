@@ -922,14 +922,13 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
                     p: 2, 
                     borderRadius: '12px',
                     cursor: 'pointer', 
-                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.4)' : '#ffffff',
-                    border: '1px solid',
-                    borderColor: 'divider',
+                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.025)',
+                    border: 'none',
+                    boxShadow: 'none',
                     position: 'relative',
                     transition: 'all 0.15s',
                     '&:hover': { 
-                      borderColor: 'text.secondary',
-                      bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.005)'
+                      bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.045)'
                     } 
                   }}
                 >
