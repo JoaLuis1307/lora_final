@@ -30,7 +30,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggl
   const userInitial = fullName.charAt(0).toUpperCase();
   const drawerWidth = isCollapsed ? 70 : 240;
 
-  const sections = [
+  interface SidebarItem {
+    icon: React.ReactNode;
+    label: string;
+    path: string;
+    badge?: number;
+  }
+
+  interface SidebarSection {
+    title: string;
+    items: SidebarItem[];
+  }
+
+  const sections: SidebarSection[] = [
     {
       title: 'Comando',
       items: [
