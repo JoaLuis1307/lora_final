@@ -35,6 +35,14 @@ const calcFill = (e: any) => {
   return calculateFillPercentage(d);
 };
 
+const fillColor = (v: number | null) => {
+  if (v === null) return '#94a3b8';
+  if (v >= 90) return '#d93025'; // Google Red
+  if (v >= 75) return '#f59e0b'; // Google Orange
+  if (v >= 30) return '#eab308'; // Yellow
+  return '#188038'; // Google Green
+};
+
 const RANGES = [
   { value: '15m', label: '15 min' },
   { value: '1h', label: '1 hora' },
