@@ -157,8 +157,20 @@ const Analysis: React.FC = () => {
   }, [data, range]);
 
   const metricConfig = {
-    sig: { label: 'Conectividad', color: '#10b981', unit: ' dBm', key: 'rssi', icon: <Signal size={18} /> },
-    batt: { label: 'Energía', color: '#2dd4bf', unit: '%', key: 'battery', icon: <Battery size={18} /> }
+    sig: { 
+      label: 'Conectividad', 
+      color: theme === 'dark' ? '#81c995' : '#188038', 
+      unit: ' dBm', 
+      key: 'rssi', 
+      icon: <Signal size={18} /> 
+    },
+    batt: { 
+      label: 'Energía', 
+      color: theme === 'dark' ? '#8ab4f8' : '#1a73e8', 
+      unit: '%', 
+      key: 'battery', 
+      icon: <Battery size={18} /> 
+    }
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
