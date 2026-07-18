@@ -13,7 +13,7 @@ export interface Device {
   last_seen: string | null;
   mac_address?: string;
   registered?: boolean;
-  map_point_id?: number;
+  map_point_id?: number | null;
   gateway_id?: string | null;
 }
 

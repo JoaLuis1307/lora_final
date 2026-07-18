@@ -33,7 +33,8 @@ const center: [number, number] = [-71.537, -16.409];
 const PointModal: React.FC<{
   show: boolean; onClose: () => void; onSave: (e: React.FormEvent) => void;
   formData: any; setFormData: (d: any) => void; isEditing: boolean; devices: Device[];
-}> = ({ show, onClose, onSave, formData, setFormData, isEditing, devices }) => (
+  discoveredDevices: Partial<Device>[];
+}> = ({ show, onClose, onSave, formData, setFormData, isEditing, devices, discoveredDevices }) => (
   <Dialog open={show} onClose={onClose} maxWidth="sm" fullWidth>
     <DialogTitle sx={{ pb: 1 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -83,22 +84,31 @@ const PointModal: React.FC<{
               ))}
             </ToggleButtonGroup>
           </Box>
-          {!isEditing && (
-            <TextField
-              select
-              label="Vincular Hardware Detectado"
-              value={formData.deviceId}
-              onChange={(e) => setFormData({ ...formData, deviceId: e.target.value })}
-              slotProps={{ select: { native: true } }}
-            >
-              <option value="">-- Elegir Hardware --</option>
-              {devices.filter(d => !d.registered || d.map_point_id === null).map(device => (
+          <TextField
+            select
+            label="Vincular Hardware Detectado"
+            value={formData.deviceId || ''}
+            onChange={(e) => setFormData({ ...formData, deviceId: e.target.value })}
+            slotProps={{ select: { native: true } }}
+            fullWidth
+            size="small"
+          >
+            <option value="">-- Ninguno (Sin hardware vinculado) --</option>
+            <optgroup label="Dispositivos Registrados Libres">
+              {devices.filter(d => d.map_point_id === null || d.map_point_id === formData.id).map(device => (
                 <option key={device.device_id} value={device.device_id}>
-                  {device.device_id} ({device.type === 'gateway' ? 'Base' : 'Nodo'})
+                  {device.device_id} - {device.name} ({device.type === 'Gateway' || device.type === 'gateway' ? 'Base' : 'Nodo'})
                 </option>
               ))}
-            </TextField>
-          )}
+            </optgroup>
+            <optgroup label="Hardware IoT Descubierto (No Registrado)">
+              {discoveredDevices.map(device => (
+                <option key={device.device_id} value={device.device_id}>
+                  {device.device_id} ({device.type === 'gateway' || device.type === 'Gateway' ? 'Base' : 'Nodo'})
+                </option>
+              ))}
+            </optgroup>
+          </TextField>
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.1em', color: 'text.secondary', mb: 1, display: 'block', opacity: 0.6 }}>
               Ubicación GPS (Coordenadas)
@@ -273,7 +283,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   const [telemetry, setTelemetry] = useState<Record<string, any>>({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPointId, setEditingPointId] = useState<number | null>(null);
-  const [formAddData, setFormAddData] = useState({ name: '', description: '', type: 'node', lat: 0, lng: 0, deviceId: '' });
+  const [formAddData, setFormAddData] = useState<{ id?: number; name: string; description: string; type: string; lat: number; lng: number; deviceId: string }>({ name: '', description: '', type: 'node', lat: 0, lng: 0, deviceId: '' });
+  const [discoveredDevices, setDiscoveredDevices] = useState<Partial<Device>[]>([]);
 
   const [editMode, setEditMode] = useState(false);
   const editModeRef = useRef(false);
@@ -389,6 +400,9 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   }, []);
   const loadTelemetry = useCallback(async () => {
     try { setTelemetry(await deviceService.getLatestTelemetry()); } catch (e) { console.error(e); }
+  }, []);
+  const loadDiscoveredDevices = useCallback(async () => {
+    try { setDiscoveredDevices(await deviceService.getDiscoveredDevices()); } catch (e) { console.error(e); }
   }, []);
 
   const add3DBuildings = useCallback(() => {
@@ -694,6 +708,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     if (!editMode) return;
     setEditingPointId(null);
     setFormAddData({ name: '', description: '', type: 'node', lat: lngLat[1], lng: lngLat[0], deviceId: '' });
+    loadDiscoveredDevices();
     setShowAddModal(true);
     setContextMenu(null);
   };
@@ -703,23 +718,97 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     if (!editMode) return;
     try {
       if (editingPointId) {
-        await mapService.updatePoint(editingPointId, { name: formAddData.name, latitude: formAddData.lat, longitude: formAddData.lng, type: formAddData.type, description: formAddData.description });
-        if (formAddData.deviceId) {
+        // 1. Update Map Point details
+        await mapService.updatePoint(editingPointId, {
+          name: formAddData.name,
+          latitude: formAddData.lat,
+          longitude: formAddData.lng,
+          type: formAddData.type,
+          description: formAddData.description
+        });
+
+        // 2. Manage device association
+        const oldDevice = devices.find(d => d.map_point_id === editingPointId);
+
+        // If the linked device ID has changed:
+        if (oldDevice?.device_id !== formAddData.deviceId) {
+          // Unlink the old device
+          if (oldDevice) {
+            await deviceService.updateDevice(oldDevice.device_id, { map_point_id: null });
+          }
+          // Link the new device
+          if (formAddData.deviceId) {
+            const isRegisteredInDb = devices.some(d => d.device_id === formAddData.deviceId);
+            const devType = formAddData.type === 'bin' ? 'Nodo Sensor' : (formAddData.type === 'gateway' ? 'Gateway' : 'Nodo Sensor');
+            if (isRegisteredInDb) {
+              await deviceService.updateDevice(formAddData.deviceId, {
+                map_point_id: editingPointId,
+                name: formAddData.name,
+                latitude: formAddData.lat,
+                longitude: formAddData.lng,
+                type: devType
+              });
+            } else {
+              await deviceService.registerDevice({
+                device_id: formAddData.deviceId,
+                map_point_id: editingPointId,
+                name: formAddData.name,
+                latitude: formAddData.lat,
+                longitude: formAddData.lng,
+                type: devType,
+                registered: true
+              });
+            }
+          }
+        } else if (oldDevice && formAddData.deviceId) {
+          // Device did not change, but update metadata
+          const devType = formAddData.type === 'bin' ? 'Nodo Sensor' : (formAddData.type === 'gateway' ? 'Gateway' : 'Nodo Sensor');
           await deviceService.updateDevice(formAddData.deviceId, {
             name: formAddData.name,
             latitude: formAddData.lat,
             longitude: formAddData.lng,
-            type: formAddData.type
+            type: devType
           });
         }
       } else {
-        const np = await mapService.savePoint({ name: formAddData.name || 'Nuevo Punto', latitude: formAddData.lat, longitude: formAddData.lng, type: formAddData.type, description: formAddData.description });
-        if (formAddData.deviceId) await deviceService.registerDevice({ device_id: formAddData.deviceId, map_point_id: np.id, name: formAddData.name, type: formAddData.type, registered: true });
+        const np = await mapService.savePoint({
+          name: formAddData.name || 'Nuevo Punto',
+          latitude: formAddData.lat,
+          longitude: formAddData.lng,
+          type: formAddData.type,
+          description: formAddData.description
+        });
+        if (formAddData.deviceId) {
+          const isRegisteredInDb = devices.some(d => d.device_id === formAddData.deviceId);
+          const devType = formAddData.type === 'bin' ? 'Nodo Sensor' : (formAddData.type === 'gateway' ? 'Gateway' : 'Nodo Sensor');
+          if (isRegisteredInDb) {
+            await deviceService.updateDevice(formAddData.deviceId, {
+              map_point_id: np.id,
+              name: formAddData.name,
+              latitude: formAddData.lat,
+              longitude: formAddData.lng,
+              type: devType
+            });
+          } else {
+            await deviceService.registerDevice({
+              device_id: formAddData.deviceId,
+              map_point_id: np.id,
+              name: formAddData.name,
+              latitude: formAddData.lat,
+              longitude: formAddData.lng,
+              type: devType,
+              registered: true
+            });
+          }
+        }
       }
       setShowAddModal(false);
       setEditingPointId(null);
-      loadDbPoints(); loadDevices(); loadTelemetry();
-    } catch { alert('Error al procesar el punto'); }
+      loadDbPoints(); loadDevices(); loadTelemetry(); loadDiscoveredDevices();
+    } catch (err) {
+      console.error(err);
+      alert('Error al procesar el punto');
+    }
   };
 
   const handleDeletePoint = async (id: number) => {
@@ -735,11 +824,12 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       if (point) {
         const device = devices.find(d => d.map_point_id === point.id);
         setEditingPointId(point.id!);
-        setFormAddData({ name: point.name, description: point.description || '', type: point.type || 'node', lat: point.latitude, lng: point.longitude, deviceId: device?.device_id || '' });
+        setFormAddData({ id: point.id, name: point.name, description: point.description || '', type: point.type || 'node', lat: point.latitude, lng: point.longitude, deviceId: device?.device_id || '' });
+        loadDiscoveredDevices();
         setShowAddModal(true);
       }
     };
-  }, [dbPoints, devices]);
+  }, [dbPoints, devices, loadDiscoveredDevices]);
 
   // Trigger edit modal if query params specify it
   useEffect(() => {
@@ -749,21 +839,37 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     const triggerEdit = params.get('edit') === 'true';
     if (triggerEdit && editDeviceId) {
       const linkedDevice = devices.find(d => d.device_id === editDeviceId);
-      if (linkedDevice && linkedDevice.map_point_id) {
-        // Clean URL params to prevent re-triggering
-        const url = new URL(window.location.href);
-        url.searchParams.delete('edit');
-        window.history.replaceState({}, '', url.toString());
-        
-        // Enable edit mode first
-        setEditMode(true);
-        editModeRef.current = true;
-        
-        // Trigger the edit handler!
-        (window as any).editMapPoint(linkedDevice.map_point_id);
+      
+      // Clean URL params to prevent re-triggering
+      const url = new URL(window.location.href);
+      url.searchParams.delete('edit');
+      window.history.replaceState({}, '', url.toString());
+      
+      // Enable edit mode first
+      setEditMode(true);
+      editModeRef.current = true;
+      
+      if (linkedDevice) {
+        if (linkedDevice.map_point_id) {
+          // Trigger the edit handler!
+          (window as any).editMapPoint(linkedDevice.map_point_id);
+        } else {
+          // If no map point is linked yet, open add modal to register and place it
+          setEditingPointId(null);
+          setFormAddData({
+            name: linkedDevice.name || `Contenedor ${linkedDevice.device_id}`,
+            description: 'Ubicación registrada',
+            type: linkedDevice.type === 'Gateway' || linkedDevice.type === 'gateway' ? 'gateway' : 'bin',
+            lat: linkedDevice.latitude || center[1],
+            lng: linkedDevice.longitude || center[0],
+            deviceId: linkedDevice.device_id
+          });
+          loadDiscoveredDevices();
+          setShowAddModal(true);
+        }
       }
     }
-  }, [devices, dbPoints]);
+  }, [devices, dbPoints, loadDiscoveredDevices]);
 
   // Map initialization
   useEffect(() => {
@@ -827,7 +933,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     map.current.setStyle(targetStyle);
   }, [activeLayer, currentTheme, mapLoaded]);
   useEffect(() => { map.current?.flyTo({ pitch: viewMode === '2D' ? 0 : 45, bearing: viewMode === '2D' ? 0 : -17, duration: 1000 }); }, [viewMode]);
-  useEffect(() => { if (showAddModal) return; loadDbPoints(); loadDevices(); loadTelemetry(); const i = setInterval(() => { loadDbPoints(); loadDevices(); loadTelemetry(); }, 5000); return () => clearInterval(i); }, [loadDbPoints, loadDevices, loadTelemetry, showAddModal]);
+  useEffect(() => { if (showAddModal) return; loadDbPoints(); loadDevices(); loadTelemetry(); loadDiscoveredDevices(); const i = setInterval(() => { loadDbPoints(); loadDevices(); loadTelemetry(); loadDiscoveredDevices(); }, 5000); return () => clearInterval(i); }, [loadDbPoints, loadDevices, loadTelemetry, loadDiscoveredDevices, showAddModal]);
   useEffect(() => { const h = () => map.current?.resize(); window.addEventListener('resize', h); const t = setTimeout(h, 500); return () => { window.removeEventListener('resize', h); clearTimeout(t); }; }, [isExpanded]);
 
 
@@ -1021,7 +1127,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
                   )}
                   {editMode && (
                     <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 0.5, opacity: 0, transition: '0.2s', '&:hover': { opacity: 1 } }}>
-                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingPointId(point.id!); setFormAddData({ name: point.name, description: point.description || '', type: point.type || 'node', lat: point.latitude, lng: point.longitude, deviceId: linkedDevice?.device_id || '' }); setShowAddModal(true); }} sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: 'rgba(45,212,191,0.15)' }}>
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditingPointId(point.id!); setFormAddData({ id: point.id, name: point.name, description: point.description || '', type: point.type || 'node', lat: point.latitude, lng: point.longitude, deviceId: linkedDevice?.device_id || '' }); loadDiscoveredDevices(); setShowAddModal(true); }} sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: 'rgba(45,212,191,0.15)' }}>
                         <Edit size={12} />
                       </IconButton>
                       <IconButton size="small" onClick={(e) => { e.stopPropagation(); if (window.confirm('¿Eliminar este punto?')) handleDeletePoint(point.id!); }} sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: 'rgba(251,113,133,0.15)' }}>
@@ -1292,6 +1398,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
           setFormData={setFormAddData}
           isEditing={!!editingPointId}
           devices={devices}
+          discoveredDevices={discoveredDevices}
         />
       </Box>
   );

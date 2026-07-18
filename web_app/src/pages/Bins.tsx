@@ -640,6 +640,14 @@ const Bins: React.FC = () => {
                               <Button size="small" onClick={() => navigate(`/mapa?lat=${bin.lat}&lng=${bin.lng}&zoom=17.5`)} sx={{ textTransform: 'none', fontWeight: 800 }} color="secondary">Mapa</Button>
                               {editMode && (
                                 <>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => navigate(`/mapa?deviceId=${bin.id}&edit=true`)}
+                                    title="Vincular Hardware en Mapa 3D"
+                                    sx={{ color: 'primary.main', bgcolor: 'rgba(45,212,191,0.08)', mr: 0.5 }}
+                                  >
+                                    <Cpu size={14} />
+                                  </IconButton>
                                   <IconButton size="small" onClick={() => {
                                     setIsCreateMode(false);
                                     setEditBinData({ id: bin.id, name: bin.name, location: bin.location, lat: bin.lat, lng: bin.lng });
@@ -977,7 +985,30 @@ const Bins: React.FC = () => {
                               <BarChart3 size={12} style={{ marginRight: 6 }} /> Estadísticas
                             </Button>
                             {editMode && (
-                              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => navigate(`/mapa?deviceId=${bin.id}&edit=true`)}
+                                  sx={{
+                                    fontSize: 10.5,
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    borderRadius: '16px',
+                                    height: '32px',
+                                    borderColor: 'rgba(45,212,191,0.3)',
+                                    color: 'primary.main',
+                                    bgcolor: 'rgba(45,212,191,0.05)',
+                                    px: 1.5,
+                                    mr: 0.5,
+                                    '&:hover': {
+                                      bgcolor: 'rgba(45,212,191,0.15)',
+                                      borderColor: 'primary.main'
+                                    }
+                                  }}
+                                >
+                                  <Cpu size={12} style={{ marginRight: 4 }} /> Vincular IoT
+                                </Button>
                                 <IconButton
                                   size="small"
                                   onClick={() => {
