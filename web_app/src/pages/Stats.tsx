@@ -542,8 +542,7 @@ const Stats: React.FC = () => {
                   '&.Mui-selected': {
                     bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
                     color: 'text.primary'
-                  },
-                  display: isRealtime && r => r !== '15m' && r !== '1h' ? 'none' : undefined
+                  }
                 } 
               }}
             >
