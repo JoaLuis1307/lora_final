@@ -284,6 +284,8 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
           duration: Math.round(route.duration / 60)
         });
         return;
+      } else {
+        console.warn('OSRM returned non-Ok code:', data.code, 'falling back to straight lines');
       }
     } catch (error) {
       console.warn('Error calculating OSRM route, falling back to straight lines:', error);
@@ -543,43 +545,62 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
 
     // Update Route Line
     if (routeData) {
-      if (map.current.getSource('route')) {
-        (map.current.getSource('route') as any).setData(routeData.geometry);
-        map.current.setPaintProperty('route-glow', 'line-color', currentColor);
-        map.current.setPaintProperty('route-line', 'line-color', currentColor);
+      const geojsonFeature = {
+        type: 'Feature',
+        properties: {},
+        geometry: routeData.geometry
+      };
+
+      const source = map.current.getSource('route');
+      if (source) {
+        (source as any).setData(geojsonFeature);
       } else {
         map.current.addSource('route', {
           type: 'geojson',
-          data: routeData.geometry
+          data: geojsonFeature as any
         });
+      }
+
+      // Check and add glow layer independently
+      if (!map.current.getLayer('route-glow')) {
         map.current.addLayer({
           id: 'route-glow',
           type: 'line',
           source: 'route',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': currentColor,
-            'line-width': 10,
+            'line-width': 8,
             'line-opacity': 0.2,
-            'line-blur': 5
+            'line-blur': 4
           }
         });
+      } else {
+        map.current.setPaintProperty('route-glow', 'line-color', currentColor);
+      }
+
+      // Check and add line layer independently
+      if (!map.current.getLayer('route-line')) {
         map.current.addLayer({
           id: 'route-line',
           type: 'line',
           source: 'route',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: {
             'line-color': currentColor,
             'line-width': 4,
             'line-opacity': 0.8
           }
         });
+      } else {
+        map.current.setPaintProperty('route-line', 'line-color', currentColor);
       }
     } else {
       if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
       if (map.current.getLayer('route-glow')) map.current.removeLayer('route-glow');
       if (map.current.getSource('route')) map.current.removeSource('route');
     }
-  }, [points, routeData, selectedColor, activeRoute, mapLoaded]);
+  }, [points, routeData, selectedColor, activeRoute, mapLoaded, drawingMode]);
 
   const clearRoute = () => {
     setPoints([]);
