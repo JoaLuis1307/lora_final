@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, LabelList
 } from 'recharts';
 import {
-  Thermometer, Droplets, Battery, RefreshCcw, ArrowLeft, Signal, Info, Cpu
+  Battery, RefreshCcw, ArrowLeft, Signal, Info, Cpu
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import {
@@ -32,8 +32,6 @@ const generateMockHistory = (range: string) => {
   else if (range === '7d') timeGapMs = 7 * 60 * 60 * 1000; // every 7 hours
 
   // Seed values
-  const baseTemp = 18 + Math.random() * 8; // 18 to 26
-  const baseHum = 45 + Math.random() * 20; // 45 to 65
   const baseRssi = -70 - Math.random() * 15; // -70 to -85
   const baseBattery = 85 + Math.random() * 15; // 85 to 100
 
@@ -41,8 +39,6 @@ const generateMockHistory = (range: string) => {
     const timestamp = new Date(now - i * timeGapMs).toISOString();
     
     // Add realistic fluctuations
-    const tempNoise = Math.sin(i * 0.5) * 1.2 + (Math.random() - 0.5) * 0.4;
-    const humNoise = Math.cos(i * 0.5) * 3 + (Math.random() - 0.5) * 1.5;
     const rssiNoise = (Math.random() - 0.5) * 4;
     const snr = Math.round((8.0 + Math.sin(i * 0.3) * 2.5 + (Math.random() - 0.5) * 1) * 10) / 10;
     const battery = Math.round(baseBattery - (points - 1 - i) * 0.05);
@@ -50,8 +46,6 @@ const generateMockHistory = (range: string) => {
     mockData.push({
       timestamp,
       time: timestamp,
-      temperature: Math.round((baseTemp + tempNoise) * 10) / 10,
-      humidity: Math.round(Math.max(0, Math.min(100, baseHum + humNoise))),
       rssi: Math.round(baseRssi + rssiNoise),
       snr,
       battery,
@@ -71,7 +65,7 @@ const Analysis: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState('5m');
-  const [activeMetric, setActiveMetric] = useState<'temp' | 'hum' | 'sig' | 'batt'>('temp');
+  const [activeMetric, setActiveMetric] = useState<'sig' | 'batt'>('sig');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   // Theme observer for Recharts
@@ -108,8 +102,6 @@ const Analysis: React.FC = () => {
         // Map database response keys to standard API structure
         const processed = history.map(d => ({
           ...d,
-          temperature: d.temperature ?? d.temperatura ?? 23.5,
-          humidity: d.humidity ?? d.humedad ?? 52.0,
           rssi: d.rssi ?? d.signal_strength ?? -75,
           snr: d.snr ?? 8.0,
           battery: d.battery ?? d.battery_level ?? d.bateria ?? (95 - Math.min(15, Math.floor((d.sequence || 0) / 100)))
@@ -133,16 +125,12 @@ const Analysis: React.FC = () => {
 
   const stats = useMemo(() => {
     if (data.length === 0) return null;
-    const temps = data.map(d => d.temperature).filter(v => v != null);
-    const hums = data.map(d => d.humidity).filter(v => v != null);
     const batts = data.map(d => d.battery).filter(v => v != null);
     const sigs = data.map(d => d.rssi).filter(v => v != null);
     
-    if (temps.length === 0 || hums.length === 0 || batts.length === 0 || sigs.length === 0) return null;
+    if (batts.length === 0 || sigs.length === 0) return null;
 
     return {
-      temp: { current: temps[temps.length - 1], min: Math.min(...temps), max: Math.max(...temps), avg: temps.reduce((a, b) => a + b, 0) / temps.length },
-      hum: { current: hums[hums.length - 1], min: Math.min(...hums), max: Math.max(...hums), avg: hums.reduce((a, b) => a + b, 0) / hums.length },
       batt: { current: batts[batts.length - 1], min: Math.min(...batts), max: Math.max(...batts), avg: batts.reduce((a, b) => a + b, 0) / batts.length },
       sig: { current: sigs[sigs.length - 1], min: Math.min(...sigs), max: Math.max(...sigs), avg: sigs.reduce((a, b) => a + b, 0) / sigs.length }
     };
@@ -155,22 +143,20 @@ const Analysis: React.FC = () => {
       const avg = values.reduce((a, b) => a + b, 0) / values.length;
       return Math.sqrt(values.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / values.length);
     };
-    const temps = data.map(d => d.temperature).filter(v => v != null);
     const batts = data.map(d => d.battery).filter(v => v != null);
     const sigs = data.map(d => d.rssi).filter(v => v != null);
-    const tempSD = calculateSD(temps);
+    const rssiSD = calculateSD(sigs);
+    
     return {
-      stability: Math.max(0, 100 - (tempSD * 8)).toFixed(1),
+      stability: Math.max(0, 100 - (rssiSD * 8)).toFixed(1),
       transmissionRate: (data.length / (range === '5m' ? 5 : (range === '1h' ? 60 : 300))).toFixed(1),
       healthScore: Math.min(100, (batts[batts.length - 1] * 0.6 + (120 + sigs[sigs.length - 1]) * 0.4)).toFixed(0),
       uptime: '99.98%',
-      anomalies: temps.filter(t => Math.abs(t - (temps.reduce((a, b) => a + b, 0) / temps.length)) > tempSD * 2).length
+      anomalies: sigs.filter(s => Math.abs(s - (sigs.reduce((a, b) => a + b, 0) / sigs.length)) > rssiSD * 2).length
     };
   }, [data, range]);
 
   const metricConfig = {
-    temp: { label: 'Temperatura', color: '#f97316', unit: '°C', key: 'temperature', icon: <Thermometer size={18} /> },
-    hum: { label: 'Humedad', color: '#3b82f6', unit: '%', key: 'humidity', icon: <Droplets size={18} /> },
     sig: { label: 'Conectividad', color: '#10b981', unit: ' dBm', key: 'rssi', icon: <Signal size={18} /> },
     batt: { label: 'Energía', color: '#2dd4bf', unit: '%', key: 'battery', icon: <Battery size={18} /> }
   };
@@ -378,8 +364,8 @@ const Analysis: React.FC = () => {
           {/* Main KPI metrics */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
             {[
-              { label: 'Estabilidad de Sensor', value: extendedStats ? `${extendedStats.stability}%` : '--%', status: 'Calibrado', statusColor: 'success.main' },
-              { label: 'Salud de Enlace', value: extendedStats ? `${extendedStats.healthScore}/100` : '--/100', status: 'Ok' },
+              { label: 'Estabilidad de Enlace', value: extendedStats ? `${extendedStats.stability}%` : '--%', status: 'Calibrado', statusColor: 'success.main' },
+              { label: 'Calidad de Radio', value: extendedStats ? `${extendedStats.healthScore}/100` : '--/100', status: 'Ok' },
               { label: 'Frecuencia de Envío', value: extendedStats ? `${extendedStats.transmissionRate} msg/min` : '-- msg/min', status: 'Estable' },
               { label: 'Uptime LoRaWAN', value: extendedStats ? extendedStats.uptime : '--%', status: 'Óptimo', statusColor: 'success.main' },
             ].map((item, i) => (
@@ -402,12 +388,12 @@ const Analysis: React.FC = () => {
           {/* Metric Selector Tabs */}
           <Box sx={(t) => ({ 
             display: 'grid', 
-            gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, 
+            gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
             borderRadius: '16px', 
             overflow: 'hidden',
             bgcolor: t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)'
           })}>
-            {(['temp', 'hum', 'sig', 'batt'] as const).map((m) => {
+            {(['sig', 'batt'] as const).map((m) => {
               const isActive = activeMetric === m;
               return (
                 <Box
@@ -429,7 +415,7 @@ const Analysis: React.FC = () => {
                     <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: metricConfig[m].color }} />
                   </Box>
                   <Typography variant="h5" sx={{ fontWeight: 900, fontVariant: 'tabular-nums', letterSpacing: '-0.03em' }}>
-                    {stats ? Number(stats[m].current).toFixed(m === 'hum' || m === 'batt' ? 0 : 1) : '--'}
+                    {stats ? Number(stats[m].current).toFixed(0) : '--'}
                     <Typography component="span" variant="body2" color="text.secondary" sx={{ fontWeight: 700, ml: 0.5, textTransform: 'uppercase', letterSpacing: '-0.01em' }}>
                       {metricConfig[m].unit}
                     </Typography>
@@ -480,7 +466,7 @@ const Analysis: React.FC = () => {
                     <XAxis dataKey="timestamp" stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} fontSize={10}
                       tickFormatter={(v) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       minTickGap={range === '5m' ? 10 : 60} />
-                    <YAxis domain={activeMetric === 'hum' || activeMetric === 'batt' ? [0, 100] : ['auto', 'auto']}
+                    <YAxis domain={activeMetric === 'batt' ? [0, 100] : ['auto', 'auto']}
                       stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} fontSize={10} />
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: metricConfig[activeMetric].color, strokeWidth: 1, strokeDasharray: '4 4' }} />
                     <Area type="monotone" dataKey={metricConfig[activeMetric].key} stroke={metricConfig[activeMetric].color}
@@ -527,7 +513,7 @@ const Analysis: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Desviación Estándar</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 900 }}>
-                  {stats ? `±${(Math.max(0, 100 - Number(extendedStats?.stability)) / 8).toFixed(2)} °C` : '--'}
+                  {stats ? `±${(Math.max(0, 100 - Number(extendedStats?.stability)) / 8).toFixed(2)} dBm` : '--'}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -557,8 +543,8 @@ const Analysis: React.FC = () => {
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, fontSize: 12.5, lineHeight: 1.5 }}>
               {extendedStats && Number(extendedStats.stability) > 95
-                ? 'El sensor presenta telemetría estable y calibrada. La tasa de transmisión LoRaWAN se encuentra en parámetros óptimos sin pérdida de paquetes.'
-                : 'Se detecta fluctuación leve en las lecturas del sensor o baja densidad de registros en base de datos. Se recomienda inspección visual por posibles corrientes térmicas locales.'}
+                ? 'La conexión LoRaWAN presenta estabilidad excepcional. No se detectan anomalías de señal o atenuación en la zona.'
+                : 'Se detecta fluctuación leve en la señal de radio (RSSI). Se recomienda verificar posible obstrucción física en la línea de vista del nodo o interferencia electromagnética.'}
             </Typography>
           </Paper>
 

@@ -428,8 +428,6 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     const mc = isDark ? '#c4c7c5' : '#5f6368';
     const bc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
     const dividerColor = isDark ? '#3c4043' : '#e0e0e0';
-    const temp = deviceTelemetry?.temperature ?? deviceTelemetry?.temperatura ?? deviceTelemetry?.temp;
-    const hum = deviceTelemetry?.humidity ?? deviceTelemetry?.humedad ?? deviceTelemetry?.hum;
     const airQuality = deviceTelemetry?.air_quality ?? deviceTelemetry?.airQuality ?? deviceTelemetry?.aq ?? 100;
 
     if (!linkedDevice) {
@@ -519,13 +517,6 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
             <span style="color:${mc}">Señal LoRaWAN</span>
             <span style="font-weight:700;color:${tc}">${deviceTelemetry?.rssi ?? -70} dBm <span style="font-weight:500;opacity:0.6;font-size:10px">(SNR: ${deviceTelemetry?.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5'} dB)</span></span>
           </div>
-
-          ${temp !== undefined || hum !== undefined ? `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:2px">
-              <span style="color:${mc}">Clima ambiente</span>
-              <span style="font-weight:700;color:${tc}">${temp !== undefined ? temp.toFixed(1) + ' °C' : '-- °C'} • ${hum !== undefined ? hum.toFixed(0) + '%' : '--%'} Hum.</span>
-            </div>
-          ` : ''}
 
           <div style="display:flex;justify-content:space-between;align-items:center">
             <span style="color:${mc}">Estado de sensor</span>
