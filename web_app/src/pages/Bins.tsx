@@ -22,10 +22,9 @@ import { calculateFillPercentage } from '../utils/fillCalculator';
 const defaultBins: any[] = [];
 
 const getFillColor = (fill: number) => {
-  if (fill >= 90) return '#d93025'; // Google Red
-  if (fill >= 75) return '#f59e0b'; // Google Orange
-  if (fill >= 30) return '#eab308'; // Yellow
-  return '#188038'; // Google Green
+  if (fill >= 90) return '#ea4335'; // Softer Google Red
+  if (fill >= 75) return '#f9ab00'; // Softer Google Amber
+  return '#34a853'; // Google Green (safe state)
 };
 
 const formatLastSeen = (dateStr: string | null | undefined) => {
@@ -387,24 +386,53 @@ const Bins: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
             {editMode && (
               <Button 
-                variant="contained" 
                 onClick={() => {
                   setIsCreateMode(true);
                   setEditBinData({ id: '', name: '', location: '', lat: -16.3888, lng: -71.5415 });
                   setEditBinModalOpen(true);
                 }}
                 startIcon={<Plus size={16} />}
-                sx={{ fontSize: 11.5, fontWeight: 600, borderRadius: '24px', px: 2, py: 0.75 }}
+                sx={{ 
+                  fontSize: 11.5, 
+                  fontWeight: 700, 
+                  borderRadius: '24px', 
+                  px: 2.5, py: 0.75,
+                  border: 'none',
+                  textTransform: 'none',
+                  bgcolor: '#1a73e8', // Google Blue
+                  color: '#ffffff',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    bgcolor: '#1557b0',
+                    boxShadow: 'none'
+                  }
+                }}
               >
                 Añadir Contenedor
               </Button>
             )}
             <Button 
-              variant={editMode ? "contained" : "outlined"}
-              color={editMode ? "error" : "inherit"}
               onClick={() => setEditMode(!editMode)}
               startIcon={editMode ? <Unlock size={16} /> : <Lock size={16} />}
-              sx={{ fontSize: 11.5, fontWeight: 600, borderRadius: '24px', px: 2, py: 0.75 }}
+              sx={{ 
+                fontSize: 11.5, 
+                fontWeight: 700, 
+                borderRadius: '24px', 
+                px: 2.5, py: 0.75,
+                border: 'none',
+                textTransform: 'none',
+                bgcolor: editMode 
+                  ? 'rgba(217,48,37,0.1)' 
+                  : (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                color: editMode 
+                  ? '#ea4335' 
+                  : 'text.primary',
+                '&:hover': {
+                  bgcolor: editMode 
+                    ? 'rgba(217,48,37,0.18)' 
+                    : (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.065)',
+                }
+              }}
             >
               {editMode ? "Edición activa" : "Modo edición"}
             </Button>
@@ -436,10 +464,21 @@ const Bins: React.FC = () => {
             </ToggleButtonGroup>
             
             <Button 
-              variant="outlined" 
               onClick={() => setShowSidebar(!showSidebar)} 
               startIcon={<Layers size={16} />} 
-              sx={{ fontSize: 11.5, fontWeight: 600, borderRadius: '24px', px: 2, py: 0.75 }}
+              sx={{ 
+                fontSize: 11.5, 
+                fontWeight: 700, 
+                borderRadius: '24px', 
+                px: 2.5, py: 0.75,
+                border: 'none',
+                textTransform: 'none',
+                bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.065)',
+                }
+              }}
             >
               {showSidebar ? "Ocultar resumen" : "Mostrar resumen"}
             </Button>
