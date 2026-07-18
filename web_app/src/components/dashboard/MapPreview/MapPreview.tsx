@@ -1278,45 +1278,158 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           </Box>
         </Drawer>
 
-        {/* Controls - Bottom Right (Waze style) */}
-        <Box sx={{ position: 'absolute', bottom: 24, right: 24, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <IconButton onClick={() => map.current?.zoomIn()} sx={{ borderRadius: 2, bgcolor: 'background.paper', backdropFilter: 'blur(24px)', '&:hover': { bgcolor: 'action.hover' } }}>
-            <ZoomIn size={20} />
-          </IconButton>
-          <IconButton onClick={() => map.current?.zoomOut()} sx={{ borderRadius: 2, bgcolor: 'background.paper', backdropFilter: 'blur(24px)', '&:hover': { bgcolor: 'action.hover' } }}>
-            <ZoomOut size={20} />
-          </IconButton>
-          <Box sx={{ height: 1, bgcolor: 'divider', mx: 1 }} />
+        {/* Controls - Bottom Right (Google Maps style) */}
+        <Box sx={{ position: 'absolute', bottom: 24, right: 24, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'center' }}>
+          
+          {/* Zoom Group - Capsule style */}
+          <Paper elevation={2} sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            borderRadius: '12px',
+            bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+            backdropFilter: 'blur(24px)',
+            border: 'none',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
+          }}>
+            <IconButton 
+              onClick={() => map.current?.zoomIn()} 
+              sx={{ 
+                borderRadius: 0, 
+                width: 40,
+                height: 40,
+                color: currentTheme === 'dark' ? '#e3e3e3' : '#5f6368', 
+                '&:hover': { bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } 
+              }}
+            >
+              <ZoomIn size={20} />
+            </IconButton>
+            <Divider sx={{ borderColor: currentTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }} />
+            <IconButton 
+              onClick={() => map.current?.zoomOut()} 
+              sx={{ 
+                borderRadius: 0, 
+                width: 40,
+                height: 40,
+                color: currentTheme === 'dark' ? '#e3e3e3' : '#5f6368', 
+                '&:hover': { bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } 
+              }}
+            >
+              <ZoomOut size={20} />
+            </IconButton>
+          </Paper>
+
+          {/* Layers Button */}
           <IconButton
             onClick={(e) => setLayerAnchor(e.currentTarget)}
-            sx={{ borderRadius: 2, bgcolor: 'background.paper', backdropFilter: 'blur(24px)', color: layerAnchor ? 'primary.main' : 'text.secondary', '&:hover': { bgcolor: 'action.hover' } }}
+            sx={{ 
+              width: 40,
+              height: 40,
+              borderRadius: '50%', 
+              bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+              color: layerAnchor ? (currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8') : (currentTheme === 'dark' ? '#e3e3e3' : '#5f6368'), 
+              backdropFilter: 'blur(24px)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+              '&:hover': { bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }
+            }}
           >
             <Layers size={20} />
           </IconButton>
+
+          {/* Globe/Satellite View Button */}
           <IconButton
             onClick={() => setActiveLayer(activeLayer === 'hybrid' ? (currentTheme === 'light' ? 'bright' : 'dark') : 'hybrid')}
-            sx={{ borderRadius: 2, bgcolor: activeLayer === 'hybrid' ? 'rgba(45,212,191,0.15)' : 'background.paper', color: activeLayer === 'hybrid' ? 'primary.main' : 'text.secondary', backdropFilter: 'blur(24px)' }}
+            sx={{ 
+              width: 40,
+              height: 40,
+              borderRadius: '50%', 
+              bgcolor: activeLayer === 'hybrid' 
+                ? (currentTheme === 'dark' ? 'rgba(138,180,248,0.18)' : 'rgba(26,115,232,0.1)') 
+                : (currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff'),
+              color: activeLayer === 'hybrid' ? (currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8') : (currentTheme === 'dark' ? '#e3e3e3' : '#5f6368'), 
+              backdropFilter: 'blur(24px)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+              '&:hover': { bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }
+            }}
           >
             <Globe size={20} />
           </IconButton>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(_, v) => v && setViewMode(v)}
-            size="small"
-            sx={{ bgcolor: 'background.paper', backdropFilter: 'blur(24px)', '& .MuiToggleButton-root': { border: 'none', px: 1.5, py: 1, fontWeight: 900, fontSize: '0.6rem' } }}
-          >
-            <ToggleButton value="3D">3D</ToggleButton>
-            <ToggleButton value="2D">2D</ToggleButton>
-          </ToggleButtonGroup>
+
+          {/* 3D/2D Toggle Group */}
+          <Paper elevation={2} sx={{ 
+            borderRadius: '20px',
+            bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+            backdropFilter: 'blur(24px)',
+            p: '3px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
+          }}>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_, v) => v && setViewMode(v)}
+              size="small"
+              sx={{ 
+                '& .MuiToggleButton-root': { 
+                  border: 'none', 
+                  borderRadius: '16px',
+                  px: 1.5, 
+                  py: 0.5, 
+                  fontWeight: 900, 
+                  fontSize: '0.65rem',
+                  fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                  color: currentTheme === 'dark' ? '#9aa0a6' : '#5f6368',
+                  '&.Mui-selected': {
+                    bgcolor: currentTheme === 'dark' ? 'rgba(138,180,248,0.18)' : 'rgba(26,115,232,0.1)',
+                    color: currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8',
+                    '&:hover': {
+                      bgcolor: currentTheme === 'dark' ? 'rgba(138,180,248,0.25)' : 'rgba(26,115,232,0.15)',
+                    }
+                  },
+                  '&:hover': {
+                    bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
+                  }
+                } 
+              }}
+            >
+              <ToggleButton value="3D">3D</ToggleButton>
+              <ToggleButton value="2D">2D</ToggleButton>
+            </ToggleButtonGroup>
+          </Paper>
+
+          {/* Routing/Simulation Button */}
           <IconButton
             onClick={() => { setRoutingMode(!routingMode); setRoutePoints([]); setRouteData(null); if (map.current?.getSource('active-route')) (map.current.getSource('active-route') as any).setData({ type: 'FeatureCollection', features: [] }); }}
-            sx={{ borderRadius: 2, bgcolor: routingMode ? 'rgba(59,130,246,0.15)' : 'background.paper', color: routingMode ? '#3b82f6' : 'text.secondary', backdropFilter: 'blur(24px)' }}
+            sx={{ 
+              width: 40,
+              height: 40,
+              borderRadius: '50%', 
+              bgcolor: routingMode 
+                ? (currentTheme === 'dark' ? 'rgba(138,180,248,0.18)' : 'rgba(26,115,232,0.1)') 
+                : (currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff'),
+              color: routingMode ? (currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8') : (currentTheme === 'dark' ? '#e3e3e3' : '#5f6368'), 
+              backdropFilter: 'blur(24px)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+              '&:hover': { bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }
+            }}
           >
             <Route size={20} />
           </IconButton>
+
+          {/* Expand/Minimize Button */}
           {!isPage && (
-            <IconButton onClick={() => setIsExpanded(!isExpanded)} sx={{ borderRadius: 2, bgcolor: 'background.paper', backdropFilter: 'blur(24px)' }}>
+            <IconButton 
+              onClick={() => setIsExpanded(!isExpanded)} 
+              sx={{ 
+                width: 40,
+                height: 40,
+                borderRadius: '50%', 
+                bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+                color: currentTheme === 'dark' ? '#e3e3e3' : '#5f6368', 
+                backdropFilter: 'blur(24px)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                '&:hover': { bgcolor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
               {isExpanded ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
             </IconButton>
           )}
