@@ -1944,7 +1944,16 @@ const Devices: React.FC = () => {
                   labelId="point-select-label"
                   label="Vincular con Contenedor / Recipiente"
                   value={selectedDeviceData.map_point_id || ''}
-                  onChange={(e) => setSelectedDeviceData(prev => ({ ...prev, map_point_id: e.target.value ? Number(e.target.value) : undefined }))}
+                  onChange={(e) => {
+                    const ptId = e.target.value ? Number(e.target.value) : undefined;
+                    const linkedPoint = mapPoints.find(p => p.id === ptId);
+                    setSelectedDeviceData(prev => ({
+                      ...prev,
+                      map_point_id: ptId,
+                      latitude: linkedPoint ? linkedPoint.latitude : prev.latitude,
+                      longitude: linkedPoint ? linkedPoint.longitude : prev.longitude
+                    }));
+                  }}
                 >
                   <MenuItem value=""><em>Ninguno (Sin Contenedor Asignado)</em></MenuItem>
                   {mapPoints.map(point => (
