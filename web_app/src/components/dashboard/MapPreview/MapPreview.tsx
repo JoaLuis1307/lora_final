@@ -885,7 +885,9 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
           sx={{
             '& .MuiDrawer-paper': {
               width: 340, top: 0, right: 0, height: '100%',
-              bgcolor: 'background.paper',
+              bgcolor: 'var(--bg-sidebar)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
               borderLeft: '1px solid',
               borderColor: 'divider',
               boxShadow: 'none',
