@@ -885,18 +885,25 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
           sx={{
             '& .MuiDrawer-paper': {
               width: 340, top: 0, right: 0, height: '100%',
-              bgcolor: currentTheme === 'dark' ? 'rgba(3,7,18,0.85)' : 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(32px)',
+              bgcolor: 'background.paper',
+              borderLeft: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 'none',
               pt: 1,
             },
           }}
         >
-          <Box sx={{ px: 2, py: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.2em' }}>
-              Estado de Red
-            </Typography>
-            <IconButton size="small" onClick={() => setShowNetworkPanel(false)} sx={{ color: 'text.secondary' }}>
-              <X size={18} />
+          <Box sx={{ px: 3, py: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', lineHeight: 1.2, mb: 0.25 }}>
+                Estado de Red
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Telemetría en Vivo
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setShowNetworkPanel(false)} size="small" sx={{ bgcolor: 'action.hover', color: 'text.secondary', '&:hover': { color: 'primary.main' } }}>
+              <X size={16} />
             </IconButton>
           </Box>
           <Divider />
@@ -1041,7 +1048,24 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
             ))}
           </Box>
           <Box sx={{ p: 2 }}>
-            <Button fullWidth variant="outlined" onClick={resetView} startIcon={<RotateCcw size={14} />} color="inherit">
+            <Button 
+              fullWidth 
+              onClick={resetView} 
+              startIcon={<RotateCcw size={14} />} 
+              sx={{ 
+                fontSize: 11.5, 
+                fontWeight: 700, 
+                borderRadius: '24px', 
+                py: 1,
+                border: 'none',
+                textTransform: 'none',
+                bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.065)',
+                }
+              }}
+            >
               Restablecer Cámara
             </Button>
           </Box>
