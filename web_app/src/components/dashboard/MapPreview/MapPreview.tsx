@@ -197,15 +197,20 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
     return {
       version: 8,
       sources: {
-        'osm-tiles': {
+        'google-terrain': {
           type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tiles: [
+            'https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+            'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+            'https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+            'https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
+          ],
           tileSize: 256,
-          attribution: '© OpenStreetMap contributors'
+          attribution: '© Google Maps'
         }
       },
       layers: [
-        { id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }
+        { id: 'terrain-layer', type: 'raster', source: 'google-terrain', minzoom: 0, maxzoom: 19 }
       ]
     };
   }
@@ -354,7 +359,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
 
   // Sync map style with theme
   useEffect(() => {
-    if (activeLayer !== 'satellite' && activeLayer !== 'hybrid') {
+    if (activeLayer === 'bright' || activeLayer === 'dark') {
       const newLayer = currentTheme === 'light' ? 'bright' : 'dark';
       if (activeLayer !== newLayer) setActiveLayer(newLayer);
     }
