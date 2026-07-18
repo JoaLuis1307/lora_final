@@ -202,7 +202,6 @@ const Overview: React.FC = () => {
               ...googlePaper(t),
               p: 3,
               cursor: 'pointer',
-              borderLeft: `5px solid ${kpi.color}`,
               transition: 'transform 0.15s, background-color 0.15s',
               '&:hover': {
                 transform: 'translateY(-2px)',
@@ -215,11 +214,20 @@ const Overview: React.FC = () => {
                 <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 10, letterSpacing: '0.08em', color: 'text.secondary', textTransform: 'uppercase' }}>
                   {kpi.label}
                 </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 900, color: kpi.color, mt: 0.5 }}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: 'text.primary', mt: 0.5 }}>
                   {loading ? '...' : kpi.value}
                 </Typography>
               </Box>
-              <Box sx={{ color: 'text.secondary', opacity: 0.5 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                width: 42, 
+                height: 42, 
+                borderRadius: '50%', 
+                bgcolor: alpha(kpi.color, 0.08), 
+                color: kpi.color 
+              }}>
                 {kpi.icon}
               </Box>
             </Box>
@@ -237,27 +245,69 @@ const Overview: React.FC = () => {
         gap: 3 
       }}>
         {/* Left Side: Map Preview */}
-        <Paper sx={(t) => ({ ...googlePaper(t), p: 0, overflow: 'hidden', height: 'calc(100vh - 21.5rem)', minHeight: 450, display: 'flex', flexDirection: 'column' })}>
-          <Box sx={{ px: 2.5, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography sx={{ fontWeight: 850, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Mapa de Distribución Geográfica
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
-                Ubicación georreferenciada de contenedores y gateways
-              </Typography>
-            </Box>
-            <Button
-              size="small"
-              variant="text"
-              onClick={() => navigate('/mapa')}
-              endIcon={<ArrowUpRight size={14} />}
-              sx={{ textTransform: 'none', fontWeight: 800, fontSize: 11.5, borderRadius: '24px' }}
-            >
-              Ver Mapa
-            </Button>
+        <Paper 
+          sx={(t) => ({ 
+            ...googlePaper(t), 
+            p: 0, 
+            overflow: 'hidden', 
+            height: 'calc(100vh - 21.5rem)', 
+            minHeight: 450, 
+            position: 'relative',
+            display: 'flex', 
+            flexDirection: 'column' 
+          })}
+        >
+          {/* Subtle Non-invasive Floating Geographic Distribution Tag */}
+          <Box 
+            sx={{ 
+              position: 'absolute', 
+              top: 16, 
+              left: 16, 
+              zIndex: 10, 
+              p: 1,
+              px: 2,
+              borderRadius: '24px',
+              bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(16px)',
+              boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
+              border: (t) => t.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)',
+            }}
+          >
+            <Typography sx={{ fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary' }}>
+              Distribución Geográfica
+            </Typography>
           </Box>
-          <Divider />
+
+          {/* Immersive Floating Map Action Button */}
+          <Button
+            size="small"
+            onClick={() => navigate('/mapa')}
+            endIcon={<ArrowUpRight size={13} />}
+            sx={{ 
+              position: 'absolute', 
+              top: 16, 
+              right: 16, 
+              zIndex: 10,
+              textTransform: 'none', 
+              fontWeight: 800, 
+              fontSize: 11, 
+              borderRadius: '24px',
+              px: 2.2,
+              py: 0.8,
+              bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+              color: 'text.primary',
+              backdropFilter: 'blur(16px)',
+              boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 2px 8px rgba(0,0,0,0.06)',
+              border: (t) => t.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)',
+              '&:hover': {
+                bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                boxShadow: 'none'
+              }
+            }}
+          >
+            Ver Mapa Completo
+          </Button>
+
           <Box sx={{ flex: 1, position: 'relative', width: '100%' }}>
             <MapPreview />
           </Box>
