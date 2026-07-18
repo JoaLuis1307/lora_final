@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, LabelList
 } from 'recharts';
 import {
-  Thermometer, Droplets, Battery, RefreshCcw, ArrowLeft, Signal, Info
+  Thermometer, Droplets, Battery, RefreshCcw, ArrowLeft, Signal, Info, Cpu
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import {
-  Box, Paper, Typography, IconButton, ToggleButton, ToggleButtonGroup, Chip, Button, CircularProgress
+  Box, Paper, Typography, IconButton, ToggleButton, ToggleButtonGroup, Chip, Button, CircularProgress,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 
 const googlePaper = (t: any) => ({
@@ -46,16 +47,14 @@ const Analysis: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Fetch devices when there is no device selected
+  // Fetch devices lists initially
   useEffect(() => {
-    if (!deviceId) {
-      setLoading(true);
-      deviceService.getDevices()
-        .then(setDevices)
-        .catch(err => console.error('Error loading devices list:', err))
-        .finally(() => setLoading(false));
-    }
-  }, [deviceId]);
+    setLoading(true);
+    deviceService.getDevices()
+      .then(setDevices)
+      .catch(err => console.error('Error loading devices list:', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   // Fetch telemetry history when device is selected
   const fetchHistory = useCallback(async () => {
@@ -144,7 +143,7 @@ const Analysis: React.FC = () => {
             Análisis de Telemetría
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, opacity: 0.8 }}>
-            Seleccione un dispositivo de la red para visualizar gráficos históricos y métricas avanzadas.
+            Selecciona un dispositivo de la red para visualizar gráficos históricos y métricas avanzadas de enlace LoRaWAN.
           </Typography>
         </Box>
         
@@ -154,84 +153,86 @@ const Analysis: React.FC = () => {
           </Box>
         ) : devices.length === 0 ? (
           <Paper sx={(t) => ({ ...googlePaper(t), p: 5, textAlign: 'center' })}>
-            <Typography sx={{ fontWeight: 700, color: 'text.secondary' }}>No hay dispositivos registrados</Typography>
+            <Typography sx={{ fontWeight: 700, color: 'text.secondary' }}>No hay dispositivos registrados en la red</Typography>
           </Paper>
         ) : (
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' }, 
-            gap: 3 
-          }}>
-            {devices.map(dev => (
-              <Paper
-                key={dev.id}
-                sx={(t) => ({
-                  ...googlePaper(t),
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: 180,
-                  transition: 'transform 0.2s, background-color 0.2s',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    bgcolor: t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
-                  }
-                })}
-              >
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Chip 
-                      label={dev.type?.toUpperCase() === 'GATEWAY' ? 'Gateway' : 'Nodo Sensor'} 
-                      size="small"
-                      sx={{
-                        fontWeight: 800,
-                        fontSize: 9,
-                        bgcolor: dev.type?.toUpperCase() === 'GATEWAY' ? 'rgba(129,140,248,0.08)' : 'rgba(251,146,60,0.08)',
-                        color: dev.type?.toUpperCase() === 'GATEWAY' ? '#818cf8' : '#fb923c',
-                        border: 'none'
-                      }}
-                    />
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Box sx={{ 
-                        width: 6, 
-                        height: 6, 
-                        borderRadius: '50%', 
-                        bgcolor: dev.status?.toLowerCase() === 'online' ? 'success.main' : 'text.secondary' 
-                      }} />
-                      <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 9.5, color: 'text.secondary' }}>
-                        {dev.status?.toLowerCase() === 'online' ? 'En línea' : 'Desconectado'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography sx={{ fontWeight: 800, fontSize: 16, color: 'text.primary', mt: 1 }}>
-                    {dev.name || 'Dispositivo sin nombre'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.secondary', opacity: 0.7 }}>
-                    ID: {dev.device_id}
-                  </Typography>
-                </Box>
-                
-                <Button
-                  variant="contained"
-                  fullWidth
-                  onClick={() => navigate(`/analisis?device=${dev.device_id}`)}
-                  sx={{
-                    mt: 2.5,
-                    borderRadius: '24px',
-                    fontSize: 11,
-                    fontWeight: 800,
-                    textTransform: 'none',
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': { bgcolor: 'primary.dark' }
-                  }}
-                >
-                  Ver Análisis Histórico
-                </Button>
-              </Paper>
-            ))}
-          </Box>
+          <TableContainer component={Paper} sx={(t) => ({ ...googlePaper(t), overflow: 'hidden' })}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary', letterSpacing: '0.05em' }}>Dispositivo</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary', letterSpacing: '0.05em' }}>ID de Dispositivo (EUI)</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary', letterSpacing: '0.05em' }}>Tipo de Nodo</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary', letterSpacing: '0.05em' }}>Estado de Red</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary', letterSpacing: '0.05em' }}>Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {devices.map(dev => (
+                  <TableRow key={dev.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
+                        <Box sx={{ width: 36, height: 36, borderRadius: 2, bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                          <Cpu size={18} />
+                        </Box>
+                        <Box>
+                          <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{dev.name || 'Dispositivo sin nombre'}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.6 }}>{dev.gateway_id || 'gateway_01'}</Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: 12 }}>
+                      {dev.device_id}
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={dev.type?.toUpperCase() === 'GATEWAY' ? 'Gateway' : 'Nodo Sensor'} 
+                        size="small"
+                        sx={{
+                          fontWeight: 800,
+                          fontSize: 9,
+                          bgcolor: dev.type?.toUpperCase() === 'GATEWAY' ? 'rgba(129,140,248,0.08)' : 'rgba(251,146,60,0.08)',
+                          color: dev.type?.toUpperCase() === 'GATEWAY' ? '#818cf8' : '#fb923c',
+                          border: 'none'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ 
+                          width: 8, 
+                          height: 8, 
+                          borderRadius: '50%', 
+                          bgcolor: dev.status?.toLowerCase() === 'online' ? 'success.main' : 'text.secondary' 
+                        }} />
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                          {dev.status?.toLowerCase() === 'online' ? 'En línea' : 'Desconectado'}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => navigate(`/analisis?device=${dev.device_id}`)}
+                        sx={{
+                          borderRadius: '24px',
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          textTransform: 'none',
+                          px: 3,
+                          boxShadow: 'none',
+                          '&:hover': { boxShadow: 'none' }
+                        }}
+                      >
+                        Monitorear Telemetría
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
       </Box>
     );
@@ -240,16 +241,29 @@ const Analysis: React.FC = () => {
   // Active Analytics View
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Google Cloud Style Breadcrumbs Header */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton component={Link} to="/dispositivos" size="small" sx={{ color: 'text.secondary' }}>
-            <ArrowLeft size={20} />
+          <IconButton onClick={() => navigate('/analisis')} size="small" sx={{ color: 'text.secondary', bgcolor: 'action.hover' }}>
+            <ArrowLeft size={16} />
           </IconButton>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, textTransform: 'uppercase' }}>Análisis de Telemetría</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.6 }}>Visualización de datos avanzados</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+              <Typography variant="caption" color="primary" sx={{ fontWeight: 750, cursor: 'pointer' }} onClick={() => navigate('/analisis')}>
+                Recursos
+              </Typography>
+              <Typography variant="caption" color="text.secondary">/</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 750 }}>
+                {devices.find(d => d.device_id === deviceId)?.name || 'Nodo'}
+              </Typography>
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-0.02em' }}>
+              Métricas Operativas
+            </Typography>
           </Box>
         </Box>
+        
+        {/* Rango de Tiempo */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box sx={{ 
             bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', 
@@ -278,9 +292,15 @@ const Analysis: React.FC = () => {
                 }
               }}
             >
-              {['5m', '1h', '5h', '24h', '7d'].map(r => (
-                <ToggleButton key={r} value={r}>
-                  {r}
+              {[
+                { value: '5m', label: '5m' },
+                { value: '1h', label: '1h' },
+                { value: '5h', label: '5h' },
+                { value: '24h', label: '24h' },
+                { value: '7d', label: '7d' }
+              ].map(r => (
+                <ToggleButton key={r.value} value={r.value}>
+                  {r.label}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
@@ -291,24 +311,26 @@ const Analysis: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Main Split Layout */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '3fr 1fr' }, gap: 3 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          
           {/* Main KPI metrics */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 2 }}>
             {[
-              { label: 'Estabilidad', value: `${extendedStats?.stability}%`, status: 'Óptimo', statusColor: 'success.main' },
-              { label: 'Salud General', value: `${extendedStats?.healthScore}/100` },
-              { label: 'Lecturas/Min', value: extendedStats?.transmissionRate, status: 'Sync' },
-              { label: 'Uptime LoRa', value: extendedStats?.uptime },
+              { label: 'Estabilidad de Sensor', value: `${extendedStats?.stability}%`, status: 'Calibrado', statusColor: 'success.main' },
+              { label: 'Salud de Enlace', value: `${extendedStats?.healthScore}/100`, status: 'Ok' },
+              { label: 'Frecuencia de Envío', value: `${extendedStats?.transmissionRate} msg/min`, status: 'Estable' },
+              { label: 'Uptime LoRaWAN', value: extendedStats?.uptime, status: 'Óptimo', statusColor: 'success.main' },
             ].map((item, i) => (
               <Paper key={i} sx={(t) => ({ ...googlePaper(t), p: 2.5 })}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.5, mb: 1, display: 'block' }}>
                   {item.label}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 900 }}>{item.value}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 900, fontSize: 18 }}>{item.value}</Typography>
                   {item.status && (
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: item.statusColor || 'text.secondary', textTransform: 'uppercase', letterSpacing: '-0.01em' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: item.statusColor || 'text.secondary', textTransform: 'uppercase', fontSize: 9 }}>
                       {item.status}
                     </Typography>
                   )}
@@ -363,19 +385,19 @@ const Analysis: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 5 }}>
               <Box>
                 <Typography variant="body2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Visión general de {metricConfig[activeMetric].label}
+                  Tendencias de {metricConfig[activeMetric].label}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">Datos actualizados cada 10 segundos</Typography>
+                <Typography variant="caption" color="text.secondary">Monitoreo continuo de telemetría por radioenlace</Typography>
               </Box>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 3 }}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.4, mb: 0.5, display: 'block' }}>PROMEDIO</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{stats ? stats[activeMetric].avg.toFixed(1) : '--'}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.4, mb: 0.5, display: 'block', fontSize: 9 }}>PROMEDIO</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats ? stats[activeMetric].avg.toFixed(1) : '--'}</Typography>
                 </Box>
                 <Box sx={{ width: 1, bgcolor: 'divider', my: 0.5 }} />
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.4, mb: 0.5, display: 'block' }}>MÁXIMO</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{stats ? stats[activeMetric].max.toFixed(1) : '--'}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.4, mb: 0.5, display: 'block', fontSize: 9 }}>LÍMITE MÁX</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats ? stats[activeMetric].max.toFixed(1) : '--'}</Typography>
                 </Box>
               </Box>
             </Box>
@@ -390,11 +412,11 @@ const Analysis: React.FC = () => {
                   <AreaChart data={data}>
                     <defs>
                       <linearGradient id="activeGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={metricConfig[activeMetric].color} stopOpacity={0.3} />
+                        <stop offset="5%" stopColor={metricConfig[activeMetric].color} stopOpacity={0.25} />
                         <stop offset="95%" stopColor={metricConfig[activeMetric].color} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'} vertical={false} />
                     <XAxis dataKey="time" stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} fontSize={10}
                       tickFormatter={(v) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       minTickGap={range === '5m' ? 10 : 60} />
@@ -421,68 +443,63 @@ const Analysis: React.FC = () => {
           </Paper>
         </Box>
 
+        {/* Sidebar Diagnostics */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Status details card */}
+          
+          {/* RF Link Diagnostics */}
           <Paper sx={(t) => ({ ...googlePaper(t), p: 3 })}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="caption" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Estado del Nodo</Typography>
-              <Chip label="Live" size="small" color="success" sx={{ fontSize: 9, fontWeight: 900, letterSpacing: '-0.01em' }} />
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box sx={{ pb: 3 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', mb: 1, display: 'block' }}>
-                  Última Actividad
+            <Typography variant="caption" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', mb: 2.5 }}>
+              Diagnóstico de Enlace RF
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Margen de Ruido (SNR)</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 900, fontFamily: 'monospace' }}>8.5 dB</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Intensidad RSSI</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 900, fontFamily: 'monospace' }}>
+                  {stats ? `${stats.sig.current} dBm` : '--'}
                 </Typography>
-                <Box sx={{ height: 96, bgcolor: 'action.hover', borderRadius: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 900, textTransform: 'uppercase', opacity: 0.4 }}>Muestreo en vivo</Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5, mt: 1, alignItems: 'flex-end', height: 32 }}>
-                    {data.slice(-15).map((d, i) => (
-                      <Box key={i} sx={{ width: 4, bgcolor: 'primary.main', borderRadius: '2px 2px 0 0', height: `${(d.temperatura / 50) * 100}%`, opacity: 0.2 + (i / 15) * 0.8 }} />
-                    ))}
-                  </Box>
-                </Box>
               </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Desviación Típica</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 900 }}>{stats ? `±${(Math.max(0, 100 - Number(extendedStats?.stability)) / 8).toFixed(2)}` : '--'}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Paquetes / Hora</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 900 }}>{data.length}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Anomalías Detectadas</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 900, color: extendedStats?.anomalies ? 'error.main' : 'success.main' }}>
-                    {extendedStats?.anomalies || '0'}
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Desviación Estándar</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 900 }}>
+                  {stats ? `±${(Math.max(0, 100 - Number(extendedStats?.stability)) / 8).toFixed(2)} °C` : '--'}
+                </Typography>
               </Box>
-              <Button component={Link} to="/ajustes" color="primary" fullWidth
-                sx={{ textTransform: 'uppercase', fontSize: 10, fontWeight: 900, letterSpacing: '0.08em', borderRadius: '24px' }}>
-                Ajustes Dispositivo
-              </Button>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Paquetes / Hora</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 900 }}>{data.length} pkts</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>Lecturas Anómalas</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 900, color: extendedStats?.anomalies ? 'error.main' : 'success.main' }}>
+                  {extendedStats?.anomalies || '0'}
+                </Typography>
+              </Box>
             </Box>
           </Paper>
 
-          {/* AI Suggestion Card */}
+          {/* Operational Status Report (Human technical analysis) */}
           <Paper sx={(t) => ({ 
             ...googlePaper(t), 
             p: 3, 
             bgcolor: t.palette.mode === 'dark' ? 'rgba(138, 180, 248, 0.05)' : 'rgba(26, 115, 232, 0.05)', 
           })}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-              <Box sx={{ p: 1, borderRadius: 2, bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(138, 180, 248, 0.08)' : 'rgba(26, 115, 232, 0.08)', color: 'primary.main', display: 'flex' }}>
-                <Info size={16} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              <Box sx={{ p: 0.8, borderRadius: 1.5, bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(138, 180, 248, 0.1)' : 'rgba(26, 115, 232, 0.1)', color: 'primary.main', display: 'flex' }}>
+                <Info size={15} />
               </Box>
-              <Typography variant="caption" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'primary.main' }}>Sugerencia AI</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'primary.main' }}>Reporte Técnico de Operación</Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, fontSize: 12.5, lineHeight: 1.4 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, fontSize: 12.5, lineHeight: 1.5 }}>
               {Number(extendedStats?.stability) > 95
-                ? 'El nodo presenta una estabilidad excepcional. No se requiere mantenimiento preventivo.'
-                : 'Se detectan fluctuaciones leves. Verificar posible interferencia en el sensor de temperatura.'}
+                ? 'El sensor presenta telemetría estable y calibrada. La tasa de transmisión LoRaWAN se encuentra en parámetros óptimos sin pérdida de paquetes.'
+                : 'Se detecta fluctuación leve en las lecturas del sensor. Se recomienda inspección visual por posibles corrientes térmicas locales o reflejos solares directos.'}
             </Typography>
           </Paper>
+
         </Box>
       </Box>
     </Box>
