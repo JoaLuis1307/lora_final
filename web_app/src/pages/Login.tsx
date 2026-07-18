@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, Mail, Lock, User as UserIcon, ShieldAlert, Sun, Moon, X } from 'lucide-react';
+import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, Mail, Lock, User as UserIcon, ShieldAlert, Sun, Moon, X, Grid } from 'lucide-react';
 import {
   Box, Paper, Typography, TextField, Button, IconButton, Checkbox, FormControlLabel, Divider, InputAdornment
 } from '@mui/material';
@@ -94,510 +94,446 @@ const Login: React.FC = () => {
         <MapPreview isPage={true} />
       </Box>
 
-      {/* Floating Glassmorphic Access Widget */}
-      <Box sx={{
-        position: 'absolute',
-        top: 24,
-        right: 24,
-        zIndex: 10,
-        width: showForm ? { xs: 'calc(100% - 48px)', sm: 420 } : 320,
-        maxHeight: 'calc(100vh - 48px)',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+      {/* Google Maps Style Top-Right Controls */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 16, 
+        right: 16, 
+        zIndex: 10, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 1.5,
+        pointerEvents: 'auto'
       }}>
-        {!showForm ? (
-          /* Public Widget (Compact View) */
-          <Paper elevation={0} sx={{
-            p: 3,
-            borderRadius: '16px',
-            bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.75)' : 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid',
-            borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            transition: 'all 0.3s ease'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box sx={{
-                width: 36,
-                height: 36,
-                borderRadius: '8px',
-                bgcolor: themeMode === 'dark' ? '#ffffff' : '#09090b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: themeMode === 'dark' ? '#09090b' : '#ffffff'
-              }}>
-                <Cpu size={18} />
-              </Box>
-              <Box>
-                <Typography sx={{ fontWeight: 800, fontSize: 16, color: 'text.primary', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                  EcoLoRa Arequipa
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 650, fontSize: 10, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                  Mapa Público Ciudadano
-                </Typography>
-              </Box>
-            </Box>
+        {/* Theme Toggle Button */}
+        <IconButton 
+          onClick={toggleTheme} 
+          sx={{
+            width: 40,
+            height: 40,
+            bgcolor: themeMode === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+            color: 'text.primary',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+            borderRadius: '50%',
+            transition: 'all 0.2s ease',
+            border: themeMode === 'dark' ? '1px solid #3c4043' : '1px solid #dadce0',
+            '&:hover': {
+              bgcolor: themeMode === 'dark' ? '#35363a' : '#f1f3f4',
+            }
+          }}
+          title={themeMode === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+        >
+          {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </IconButton>
 
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.4 }}>
-              Explora los contenedores inteligentes en tiempo real, verifica los niveles de llenado y alertas ambientales.
-            </Typography>
+        {/* Google Apps Style Launcher Icon (9 dots) */}
+        <IconButton 
+          sx={{
+            width: 40,
+            height: 40,
+            bgcolor: themeMode === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+            color: 'text.primary',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+            borderRadius: '50%',
+            transition: 'all 0.2s ease',
+            border: themeMode === 'dark' ? '1px solid #3c4043' : '1px solid #dadce0',
+            '&:hover': {
+              bgcolor: themeMode === 'dark' ? '#35363a' : '#f1f3f4',
+            }
+          }}
+          title="EcoLoRa Aplicaciones"
+        >
+          <Grid size={18} />
+        </IconButton>
 
-            <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() => setShowForm(true)}
-                startIcon={<Lock size={14} />}
-                sx={{
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 800,
-                  py: 1.2,
-                  fontSize: 12.5,
-                  bgcolor: themeMode === 'dark' ? '#ffffff' : '#18181b',
-                  color: themeMode === 'dark' ? '#09090b' : '#ffffff',
-                  '&:hover': {
-                    bgcolor: themeMode === 'dark' ? '#e4e4e7' : '#27272a',
-                  }
-                }}
-              >
-                Acceso Operador
-              </Button>
-              <IconButton 
-                onClick={toggleTheme} 
-                sx={{
-                  border: '1px solid',
-                  borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                  color: 'text.primary',
-                  bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.4)' : 'rgba(255, 255, 255, 0.4)',
-                  borderRadius: '10px',
-                  p: 1.2,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                  }
-                }}
-              >
-                {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-              </IconButton>
-            </Box>
-          </Paper>
-        ) : (
-          /* Full Login Card (Glassmorphic) */
+        {/* Google Maps Style Blue Iniciar Sesión Pill Button */}
+        <Button
+          variant="contained"
+          onClick={() => setShowForm(true)}
+          sx={{
+            borderRadius: '24px',
+            textTransform: 'none',
+            fontWeight: 550,
+            px: 2.8,
+            py: 1.2,
+            fontSize: '14px',
+            bgcolor: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+            color: themeMode === 'dark' ? '#131314' : '#ffffff',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+            transition: 'all 0.2s ease',
+            fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+            '&:hover': {
+              bgcolor: themeMode === 'dark' ? '#aecbfa' : '#1557b0',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.28)',
+            }
+          }}
+        >
+          Iniciar sesión
+        </Button>
+      </Box>
+
+      {/* Centered Google Accounts Style Login Dialog */}
+      {showForm && (
+        <Box sx={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 20,
+          bgcolor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 2,
+          animation: 'fadeIn 0.2s ease-out',
+          '@keyframes fadeIn': {
+            from: { opacity: 0 },
+            to: { opacity: 1 }
+          }
+        }}>
           <Paper elevation={0} sx={{
             width: '100%',
-            borderRadius: '16px',
-            bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.85)' : 'rgba(255, 255, 255, 0.92)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            maxWidth: 450,
+            borderRadius: '28px', // Large Material You / MD3 rounded corners
+            bgcolor: themeMode === 'dark' ? '#1e1f20' : '#ffffff', // Google account dark & light colors
             border: '1px solid',
-            borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-            p: { xs: 3, sm: 4 },
+            borderColor: themeMode === 'dark' ? '#3c4043' : '#dadce0',
+            p: { xs: 4, sm: 5 },
             display: 'flex',
             flexDirection: 'column',
             position: 'relative',
-            overflowY: 'auto',
-            maxHeight: 'calc(100vh - 48px)',
-            transition: 'all 0.3s ease'
+            boxShadow: '0 12px 32px rgba(0,0,0,0.12)',
+            animation: 'scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            '@keyframes scaleIn': {
+              from: { transform: 'scale(0.92)', opacity: 0 },
+              to: { transform: 'scale(1)', opacity: 1 }
+            }
           }}>
-            {/* Header controls (Close and Theme) */}
-            <Box sx={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 100 }}>
-              <IconButton onClick={toggleTheme} size="small" sx={{
-                border: '1px solid',
-                borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                color: 'text.primary',
-                bgcolor: 'transparent',
-                borderRadius: '8px',
-                p: 0.8,
-                '&:hover': { bgcolor: themeMode === 'dark' ? '#27272a' : '#f4f4f5' }
-              }}>
-                {themeMode === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-              </IconButton>
-              <IconButton onClick={() => setShowForm(false)} size="small" sx={{
-                border: '1px solid',
-                borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                color: 'text.primary',
-                bgcolor: 'transparent',
-                borderRadius: '8px',
-                p: 0.8,
-                '&:hover': { bgcolor: themeMode === 'dark' ? '#27272a' : '#f4f4f5' }
-              }}>
-                <X size={15} />
-              </IconButton>
-            </Box>
+            {/* Close Button X */}
+            <IconButton 
+              onClick={() => { setShowForm(false); setError(null); setMessage(null); }} 
+              sx={{
+                position: 'absolute',
+                top: 18,
+                right: 18,
+                color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368',
+                '&:hover': {
+                  bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
+                }
+              }}
+            >
+              <X size={18} />
+            </IconButton>
 
-            {/* Brand Header */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3, mt: 1, gap: 1.5 }}>
+            {/* Google Accounts Style Brand Header */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3.5, gap: 1 }}>
               <Box sx={{
-                width: 38,
-                height: 38,
-                borderRadius: '8px',
-                bgcolor: themeMode === 'dark' ? '#ffffff' : '#09090b',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                bgcolor: themeMode === 'dark' ? '#2d2e30' : '#f1f3f4',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: themeMode === 'dark' ? '#09090b' : '#ffffff'
+                color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                mb: 1
               }}>
-                <Cpu size={18} />
+                <Cpu size={24} />
               </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.02em' }}>
-                  EcoLoRa
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11.5 }}>
-                  {isRegister ? 'Crea una cuenta de operador' : 'Inicia sesión en tu panel de control'}
-                </Typography>
-              </Box>
+              <Typography variant="h5" sx={{ 
+                fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                fontWeight: 400, 
+                color: themeMode === 'dark' ? '#e3e3e3' : '#202124',
+                fontSize: '24px',
+                letterSpacing: '-0.01em',
+                textAlign: 'center'
+              }}>
+                {isRegister ? 'Crear tu cuenta' : 'Iniciar sesión'}
+              </Typography>
+              <Typography sx={{ 
+                fontFamily: 'Roboto, Arial, sans-serif',
+                color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368', 
+                fontWeight: 400, 
+                fontSize: '16px',
+                textAlign: 'center'
+              }}>
+                {isRegister ? 'para registrarte como operador' : 'para continuar en EcoLoRa'}
+              </Typography>
             </Box>
 
-
-        {/* Form */}
-        <Box component="form" onSubmit={handleAuth} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          
-          {isRegister && (
-            <Box>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.8, display: 'block' }}>
-                Nombre Completo
-              </Typography>
-              <TextField
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                fullWidth
-                required={isRegister}
-                placeholder="Nombre Completo"
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <UserIcon size={16} style={{ color: themeMode === 'dark' ? '#71717a' : '#a1a1aa' }} />
-                      </InputAdornment>
-                    )
-                  }
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    bgcolor: themeMode === 'dark' ? '#09090b' : '#ffffff',
-                    border: '1px solid',
-                    borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-                    transition: 'border-color 0.2s ease',
-                    '& fieldset': { border: 'none' },
-                    '&:hover': { borderColor: themeMode === 'dark' ? '#3f3f46' : '#cbd5e1' },
-                    '&.Mui-focused': { borderColor: 'primary.main', boxShadow: themeMode === 'dark' ? '0 0 0 2px rgba(138, 180, 248, 0.15)' : '0 0 0 2px rgba(11, 87, 208, 0.15)' }
-                  },
-                  '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#f4f4f5' : '#18181b', py: 1.4, fontSize: 14 }
-                }}
-              />
-            </Box>
-          )}
-
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.8, display: 'block' }}>
-              Correo Electrónico
-            </Typography>
-            <TextField
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              fullWidth
-              required
-              placeholder="nombre@empresa.com"
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Mail size={16} style={{ color: themeMode === 'dark' ? '#71717a' : '#a1a1aa' }} />
-                    </InputAdornment>
-                  )
-                }
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  bgcolor: themeMode === 'dark' ? '#09090b' : '#ffffff',
-                  border: '1px solid',
-                  borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-                  transition: 'border-color 0.2s ease',
-                  '& fieldset': { border: 'none' },
-                  '&:hover': { borderColor: themeMode === 'dark' ? '#3f3f46' : '#cbd5e1' },
-                  '&.Mui-focused': { borderColor: 'primary.main', boxShadow: themeMode === 'dark' ? '0 0 0 2px rgba(138, 180, 248, 0.15)' : '0 0 0 2px rgba(11, 87, 208, 0.15)' }
-                },
-                '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#f4f4f5' : '#18181b', py: 1.4, fontSize: 14 }
-              }}
-            />
-          </Box>
-
-          <Box>
-            <Box sx={{ display: 'flex', justifycontent: 'space-between', alignItems: 'center', mb: 0.8 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                Contraseña
-              </Typography>
-              {!isRegister && (
-                <Button variant="text" size="small" sx={{
-                  textTransform: 'none',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  p: 0,
-                  minWidth: 0,
-                  color: 'primary.main',
-                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
-                }}>
-                  ¿Olvidaste tu contraseña?
-                </Button>
+            {/* Form */}
+            <Box component="form" onSubmit={handleAuth} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              
+              {isRegister && (
+                <TextField
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  fullWidth
+                  required={isRegister}
+                  label="Nombre completo"
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      backgroundColor: 'transparent',
+                      '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
+                      '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
+                      '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                    },
+                    '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
+                    '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
+                    '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                  }}
+                />
               )}
-            </Box>
-            <TextField
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-              placeholder="••••••••"
-              required
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock size={16} style={{ color: themeMode === 'dark' ? '#71717a' : '#a1a1aa' }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={() => setShowPassword(!showPassword)} size="small" edge="end" sx={{ color: themeMode === 'dark' ? '#71717a' : '#a1a1aa' }}>
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  bgcolor: themeMode === 'dark' ? '#09090b' : '#ffffff',
-                  border: '1px solid',
-                  borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-                  transition: 'border-color 0.2s ease',
-                  '& fieldset': { border: 'none' },
-                  '&:hover': { borderColor: themeMode === 'dark' ? '#3f3f46' : '#cbd5e1' },
-                  '&.Mui-focused': { borderColor: 'primary.main', boxShadow: themeMode === 'dark' ? '0 0 0 2px rgba(138, 180, 248, 0.15)' : '0 0 0 2px rgba(11, 87, 208, 0.15)' }
-                },
-                '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#f4f4f5' : '#18181b', py: 1.4, fontSize: 14 }
-              }}
-            />
-          </Box>
 
-          {isRegister && (
-            <Box>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.8, display: 'block' }}>
-                Confirmar Contraseña
-              </Typography>
               <TextField
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 fullWidth
-                required={isRegister}
-                placeholder="••••••••"
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock size={16} style={{ color: themeMode === 'dark' ? '#71717a' : '#a1a1aa' }} />
-                      </InputAdornment>
-                    )
-                  }
-                }}
+                required
+                label="Correo electrónico"
+                variant="outlined"
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '8px',
-                    bgcolor: themeMode === 'dark' ? '#09090b' : '#ffffff',
-                    border: '1px solid',
-                    borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-                    transition: 'border-color 0.2s ease',
-                    '& fieldset': { border: 'none' },
-                    '&:hover': { borderColor: themeMode === 'dark' ? '#3f3f46' : '#cbd5e1' },
-                    '&.Mui-focused': { borderColor: 'primary.main', boxShadow: themeMode === 'dark' ? '0 0 0 2px rgba(138, 180, 248, 0.15)' : '0 0 0 2px rgba(11, 87, 208, 0.15)' }
+                    backgroundColor: 'transparent',
+                    '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
+                    '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
+                    '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
                   },
-                  '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#f4f4f5' : '#18181b', py: 1.4, fontSize: 14 }
+                  '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
+                  '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
+                  '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
                 }}
               />
+
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <TextField
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  fullWidth
+                  required
+                  label="Contraseña"
+                  variant="outlined"
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={() => setShowPassword(!showPassword)} size="small" edge="end" sx={{ color: themeMode === 'dark' ? '#c4c7c5' : '#444746' }}>
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      backgroundColor: 'transparent',
+                      '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
+                      '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
+                      '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                    },
+                    '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
+                    '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
+                    '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                  }}
+                />
+                
+                {!isRegister && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 0.5 }}>
+                    <Button variant="text" size="small" sx={{
+                      textTransform: 'none',
+                      fontSize: 14,
+                      fontWeight: 500,
+                      p: 0,
+                      minWidth: 0,
+                      color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                      fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                      '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+                    }}>
+                      ¿Olvidaste tu contraseña?
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+
+              {isRegister && (
+                <TextField
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  fullWidth
+                  required={isRegister}
+                  label="Confirmar contraseña"
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      backgroundColor: 'transparent',
+                      '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
+                      '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
+                      '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                    },
+                    '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
+                    '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
+                    '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                  }}
+                />
+              )}
+
+              {/* Error/Success message Panel */}
+              {error && (
+                <Paper sx={{
+                  p: 1.8,
+                  bgcolor: themeMode === 'dark' ? 'rgba(242, 139, 130, 0.12)' : 'rgba(179, 38, 30, 0.05)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  border: '1px solid rgba(242, 139, 130, 0.24)'
+                }}>
+                  <ShieldAlert size={18} color={themeMode === 'dark' ? '#f28b82' : '#b3261e'} />
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: 13, color: themeMode === 'dark' ? '#f28b82' : '#b3261e' }}>{error}</Typography>
+                </Paper>
+              )}
+
+              {message && (
+                <Paper sx={{
+                  p: 1.8,
+                  bgcolor: themeMode === 'dark' ? 'rgba(129, 201, 149, 0.12)' : 'rgba(20, 108, 46, 0.05)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  border: '1px solid rgba(129, 201, 149, 0.24)'
+                }}>
+                  <ShieldCheck size={18} color={themeMode === 'dark' ? '#81c995' : '#146c2e'} />
+                  <Typography variant="caption" sx={{ fontWeight: 500, fontSize: 13, color: themeMode === 'dark' ? '#81c995' : '#146c2e' }}>{message}</Typography>
+                </Paper>
+              )}
+
+              {/* Google style footer buttons (Left: Create account, Right: Next) */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1, minHeight: 48 }}>
+                <Button
+                  variant="text"
+                  onClick={() => { setIsRegister(!isRegister); setError(null); setMessage(null); }}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    fontSize: 14,
+                    color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                    fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                    '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
+                  }}
+                >
+                  {isRegister ? 'Iniciar sesión en su lugar' : 'Crear cuenta'}
+                </Button>
+                
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  variant="contained"
+                  startIcon={loading ? <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : undefined}
+                  sx={{
+                    borderRadius: '20px',
+                    textTransform: 'none',
+                    fontWeight: 550,
+                    px: 3.5,
+                    py: 1.2,
+                    fontSize: 14,
+                    bgcolor: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                    color: themeMode === 'dark' ? '#131314' : '#ffffff',
+                    fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                    '&:hover': {
+                      bgcolor: themeMode === 'dark' ? '#aecbfa' : '#1557b0',
+                    }
+                  }}
+                >
+                  {isRegister ? 'Registrarse' : 'Siguiente'}
+                </Button>
+              </Box>
+
             </Box>
-          )}
 
-          {!isRegister && (
-            <FormControlLabel
-              control={<Checkbox size="small" sx={{ color: themeMode === 'dark' ? '#27272a' : '#cbd5e1', '&.Mui-checked': { color: 'primary.main' } }} />}
-              label={<Typography variant="body2" sx={{ fontWeight: 500, color: 'text.secondary', userSelect: 'none' }}>Mantener sesión activa</Typography>}
-            />
-          )}
+            {/* Social logins & Guest login section */}
+            {!isRegister && (
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, my: 3.5 }}>
+                  <Divider sx={{ flex: 1, borderColor: themeMode === 'dark' ? '#3c4043' : '#dadce0' }} />
+                  <Typography variant="caption" sx={{
+                    fontWeight: 400,
+                    color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368',
+                    fontSize: 12,
+                    fontFamily: 'Roboto, Arial, sans-serif',
+                    userSelect: 'none'
+                  }}>
+                    o acceder con
+                  </Typography>
+                  <Divider sx={{ flex: 1, borderColor: themeMode === 'dark' ? '#3c4043' : '#dadce0' }} />
+                </Box>
 
-          {/* Error message Panel */}
-          {error && (
-            <Paper sx={{
-              p: 1.5,
-              bgcolor: themeMode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.2,
-              border: '1px solid rgba(239, 68, 68, 0.2)'
-            }}>
-              <ShieldAlert size={16} color="#ef4444" />
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#ef4444' }}>{error}</Typography>
-            </Paper>
-          )}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    {[
+                      { Icon: GoogleIcon, label: 'Google' },
+                      { Icon: GitHubIcon, label: 'GitHub' }
+                    ].map(({ Icon, label }, i) => (
+                      <Button
+                        key={i}
+                        fullWidth
+                        startIcon={<Icon sx={{ fontSize: 18 }} />}
+                        sx={{
+                          borderRadius: '8px',
+                          border: '1px solid',
+                          borderColor: themeMode === 'dark' ? '#3c4043' : '#dadce0',
+                          bgcolor: 'transparent',
+                          color: themeMode === 'dark' ? '#e3e3e3' : '#202124',
+                          fontWeight: 500,
+                          fontSize: 13,
+                          py: 1.2,
+                          textTransform: 'none',
+                          fontFamily: 'Roboto, Arial, sans-serif',
+                          '&:hover': {
+                            borderColor: themeMode === 'dark' ? '#5f6368' : '#18181b',
+                            bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                          }
+                        }}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </Box>
 
-          {/* Success message Panel */}
-          {message && (
-            <Paper sx={{
-              p: 1.5,
-              bgcolor: themeMode === 'dark' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(34, 197, 94, 0.05)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.2,
-              border: '1px solid rgba(34, 197, 94, 0.2)'
-            }}>
-              <ShieldCheck size={16} color="#22c55e" />
-              <Typography variant="caption" sx={{ fontWeight: 600, color: '#22c55e' }}>{message}</Typography>
-            </Paper>
-          )}
-
-          {/* High-Contrast Action Button */}
-          <Button
-            type="submit"
-            disabled={loading}
-            fullWidth
-            size="large"
-            startIcon={loading ? <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : undefined}
-            sx={{
-              borderRadius: '8px',
-              textTransform: 'none',
-              fontWeight: 600,
-              py: 1.5,
-              fontSize: 14,
-              bgcolor: themeMode === 'dark' ? '#ffffff' : '#18181b',
-              color: themeMode === 'dark' ? '#09090b' : '#ffffff',
-              border: '1px solid transparent',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                bgcolor: themeMode === 'dark' ? '#e4e4e7' : '#27272a',
-              },
-              '&:active': {
-                transform: 'scale(0.99)'
-              }
-            }}
-          >
-            {loading ? (isRegister ? 'Registrando...' : 'Ingresando...') : (isRegister ? 'Registrarse' : 'Ingresar')}
-          </Button>
-
-          {!isRegister && (
-            <Button
-              variant="outlined"
-              fullWidth
-              size="large"
-              disabled={loading}
-              onClick={handleGuestLogin}
-              sx={{
-                borderRadius: '8px',
-                textTransform: 'none',
-                fontWeight: 600,
-                py: 1.5,
-                fontSize: 14,
-                borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-                color: 'text.primary',
-                bgcolor: 'transparent',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  borderColor: themeMode === 'dark' ? '#3f3f46' : '#cbd5e1',
-                  bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                },
-                '&:active': {
-                  transform: 'scale(0.99)'
-                }
-              }}
-            >
-              Entrar como Invitado
-            </Button>
-          )}
-        </Box>
-
-        {/* Divider */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, my: 3.5 }}>
-          <Divider sx={{ flex: 1, borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7' }} />
-          <Typography variant="caption" sx={{
-            fontWeight: 500,
-            color: 'text.secondary',
-            fontSize: 12,
-            userSelect: 'none'
-          }}>
-            o continuar con
-          </Typography>
-          <Divider sx={{ flex: 1, borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7' }} />
-        </Box>
-
-        {/* Clean Outlined Social Login Buttons */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          {[
-            { Icon: GoogleIcon, label: 'Google' },
-            { Icon: GitHubIcon, label: 'GitHub' }
-          ].map(({ Icon, label }, i) => (
-            <Button
-              key={i}
-              fullWidth
-              startIcon={<Icon sx={{ fontSize: 18 }} />}
-              sx={{
-                borderRadius: '8px',
-                border: '1px solid',
-                borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-                bgcolor: 'transparent',
-                color: 'text.primary',
-                fontWeight: 500,
-                fontSize: 13,
-                py: 1.2,
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  borderColor: themeMode === 'dark' ? '#3f3f46' : '#cbd5e1',
-                  bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-                }
-              }}
-            >
-              {label}
-            </Button>
-          ))}
-        </Box>
-
-        {/* Switch Register/Login */}
-        <Box sx={{ mt: 4, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-            {isRegister ? '¿Ya tienes una cuenta?' : '¿No tienes una cuenta?'}{' '}
-            <Button
-              variant="text"
-              onClick={() => { setIsRegister(!isRegister); setError(null); setMessage(null); }}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                verticalAlign: 'baseline',
-                p: 0,
-                minWidth: 0,
-                fontSize: 'inherit',
-                color: 'primary.main',
-                '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' }
-              }}
-            >
-              {isRegister ? 'Iniciar Sesión' : 'Registrarse'}
-            </Button>
-          </Typography>
-        </Box>
+                  <Button
+                    variant="text"
+                    fullWidth
+                    disabled={loading}
+                    onClick={handleGuestLogin}
+                    sx={{
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      fontSize: 13,
+                      color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368',
+                      fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                      '&:hover': { 
+                        bgcolor: 'transparent', 
+                        color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                        textDecoration: 'underline' 
+                      }
+                    }}
+                  >
+                    Entrar como Invitado Operador
+                  </Button>
+                </Box>
+              </>
+            )}
 
           </Paper>
-        )}
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };
