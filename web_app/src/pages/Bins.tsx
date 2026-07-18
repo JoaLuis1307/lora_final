@@ -12,7 +12,7 @@ import { calculateFillPercentage } from '../utils/fillCalculator';
 import {
   Box, Paper, Typography, Button, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton,
-  Select, MenuItem, FormControl, InputLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ToggleButton, ToggleButtonGroup
+  Select, MenuItem, FormControl, InputLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ToggleButton, ToggleButtonGroup, CircularProgress
 } from '@mui/material';
 
 const defaultBins: any[] = [];
