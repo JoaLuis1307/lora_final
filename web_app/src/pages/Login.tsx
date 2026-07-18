@@ -126,25 +126,7 @@ const Login: React.FC = () => {
           {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </IconButton>
 
-        {/* Google Apps Style Launcher Icon (9 dots) */}
-        <IconButton 
-          sx={{
-            width: 40,
-            height: 40,
-            bgcolor: themeMode === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
-            color: 'text.primary',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-            borderRadius: '50%',
-            transition: 'all 0.2s ease',
-            border: themeMode === 'dark' ? '1px solid #3c4043' : '1px solid #dadce0',
-            '&:hover': {
-              bgcolor: themeMode === 'dark' ? '#35363a' : '#f1f3f4',
-            }
-          }}
-          title="EcoLoRa Aplicaciones"
-        >
-          <Grid size={18} />
-        </IconButton>
+
 
         {/* Google Maps Style Blue Iniciar Sesión Pill Button */}
         <Button
