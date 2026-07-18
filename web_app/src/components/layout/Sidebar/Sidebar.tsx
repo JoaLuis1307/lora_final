@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Home, Truck, Map as MapIcon, BarChart3, Settings, LogOut,
   Bell, ShieldCheck, Cpu, Route, Menu, Sun, Moon, Trash2, Activity
@@ -21,6 +21,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggleTheme }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await authService.logout();
@@ -63,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggl
       title: 'IA',
       items: [
         { icon: <BarChart3 size={20} strokeWidth={1.8} />, label: 'Análisis', path: '/analisis' },
-        { icon: <Bell size={20} strokeWidth={1.8} />, label: 'Notificaciones', path: '/alertas' },
+        { icon: <Bell size={20} strokeWidth={1.8} />, label: 'Alertas', path: '/alertas' },
       ],
     },
     {
@@ -216,7 +217,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggl
               <IconButton onClick={onToggleTheme} size="small" sx={{ flex: 1, borderRadius: 2, color: 'text.secondary' }}>
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
               </IconButton>
-              <IconButton size="small" sx={{ flex: 1, borderRadius: 2, color: 'text.secondary', position: 'relative' }}>
+              <IconButton onClick={() => navigate('/alertas')} size="small" sx={{ flex: 1, borderRadius: 2, color: 'text.secondary', position: 'relative' }}>
                 <Bell size={16} />
                 <Box sx={{ position: 'absolute', top: 6, right: 8, width: 6, height: 6, borderRadius: '50%', bgcolor: 'error.main' }} />
               </IconButton>
@@ -229,7 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggl
                 </IconButton>
               </Tooltip>
               <Tooltip title="Notificaciones" placement="right" arrow>
-                <IconButton size="small" sx={{ width: 36, height: 36, borderRadius: 2, color: 'text.secondary', position: 'relative' }}>
+                <IconButton onClick={() => navigate('/alertas')} size="small" sx={{ width: 36, height: 36, borderRadius: 2, color: 'text.secondary', position: 'relative' }}>
                   <Bell size={16} />
                   <Box sx={{ position: 'absolute', top: 6, right: 6, width: 6, height: 6, borderRadius: '50%', bgcolor: 'error.main' }} />
                 </IconButton>
