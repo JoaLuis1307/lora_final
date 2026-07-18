@@ -823,35 +823,24 @@ const totalBinsCount = combinedBins.length;
                             }}>
                               <Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                  <Thermometer size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                  <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                    Temp
-                                  </Typography>
-                                </Box>
-                                <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                  {bin.temp !== undefined ? `${Number(bin.temp).toFixed(1)}°C` : '--.-°C'}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                  <Droplets size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                  <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                    Humedad
-                                  </Typography>
-                                </Box>
-                                <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                  {bin.hum !== undefined ? `${Number(bin.hum).toFixed(0)}%` : '--%'}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
                                   <Wind size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
                                   <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                    Aire
+                                    Calidad Aire
                                   </Typography>
                                 </Box>
                                 <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
                                   {bin.aq !== undefined ? `${bin.aq} ppm` : '---'}
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
+                                  <Layers size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
+                                  <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
+                                    Satélites GPS
+                                  </Typography>
+                                </Box>
+                                <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
+                                  {bin.satellites !== undefined ? `${bin.satellites} sats` : '0 sats'}
                                 </Typography>
                               </Box>
                             </Box>
