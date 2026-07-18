@@ -1,43 +1,28 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Trash2, Download, MapPin, Battery, AlertTriangle, 
   Clock, Activity, Gauge, Navigation, 
-  Thermometer, Droplets, Wind, ShieldAlert,
-  Lock, Unlock, Edit, X, BarChart3, Router, Cpu, Database, Layers, Plus
+  ShieldAlert, Edit, X, BarChart3, Router, Cpu, Plus, LayoutGrid, List
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { containerStagger, fadeSlideUp, fadeInFromTop, fadeInFromRight } from '../shared/animations';
-import contenedorImg from '../assets/contenedor.png';
-import {
-  Box, Paper, Typography, Button, Chip,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton,
-  Select, MenuItem, FormControl, InputLabel
-} from '@mui/material';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
 import { getWsUrl } from '../services/config';
 import { calculateFillPercentage } from '../utils/fillCalculator';
+import {
+  Box, Paper, Typography, Button, Chip,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton,
+  Select, MenuItem, FormControl, InputLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, ToggleButton, ToggleButtonGroup
+} from '@mui/material';
 
 const defaultBins: any[] = [];
 
 const getFillColor = (fill: number) => {
-  if (fill >= 90) return '#f28b82';
-  if (fill >= 75) return '#ffb74d';
-  if (fill >= 30) return '#fdd835';
-  return '#81c784';
+  if (fill >= 90) return '#d93025'; // Google Red
+  if (fill >= 75) return '#f59e0b'; // Google Orange
+  if (fill >= 30) return '#eab308'; // Yellow
+  return '#188038'; // Google Green
 };
-
-
-
-const googleCardSx = (t: any) => ({
-  bgcolor: t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.55)' : '#ffffff',
-  backdropFilter: 'blur(20px)',
-  border: 'none',
-  borderRadius: '24px',
-  boxShadow: t.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.05)',
-  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-});
 
 const formatLastSeen = (dateStr: string | null | undefined) => {
   if (!dateStr) return '---';
@@ -53,6 +38,13 @@ const formatLastSeen = (dateStr: string | null | undefined) => {
   return `Hace ${days} d`;
 };
 
+const googleCardSx = (t: any) => ({
+  bgcolor: t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.55)' : '#ffffff',
+  border: 'none',
+  borderRadius: '16px',
+  boxShadow: t.palette.mode === 'dark' ? 'none' : '0 4px 12px rgba(0,0,0,0.02)',
+});
+
 const Bins: React.FC = () => {
   const navigate = useNavigate();
   const [devices, setDevices] = useState<Device[]>([]);
@@ -65,21 +57,17 @@ const Bins: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | 'real' | 'simulated' | 'independent'>('all');
   const [showSidebar, setShowSidebar] = useState(true);
   const [discoveredIds, setDiscoveredIds] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   const handleDeleteBin = async (binId: string) => {
     if (!window.confirm(`¿Estás seguro de que deseas eliminar el contenedor ${binId}?`)) return;
     try {
       const liveDevice = devices.find(d => d.device_id === binId);
-      
-      // 1. Delete linked MapPoint in DB if exists
       if (liveDevice && liveDevice.map_point_id) {
         await mapService.deletePoint(liveDevice.map_point_id);
       }
-      
-      // 2. Delete the Device from DB
       await deviceService.deleteDevice(binId);
       
-      // Refresh state
       const [devicesData, telemetryData] = await Promise.all([
         deviceService.getDevices(),
         deviceService.getLatestTelemetry()
@@ -97,7 +85,6 @@ const Bins: React.FC = () => {
     if (!editBinData) return;
     try {
       if (isCreateMode) {
-        // Check if device_id already exists
         const exists = devices.some(d => d.device_id.toLowerCase() === editBinData.id.toLowerCase());
         if (exists) {
           alert('El ID de dispositivo ya existe');
@@ -107,7 +94,6 @@ const Bins: React.FC = () => {
         const lat = editBinData.lat || -16.3888;
         const lng = editBinData.lng || -71.5415;
         
-        // 1. Save MapPoint
         const np = await mapService.savePoint({
           name: editBinData.name,
           description: editBinData.location,
@@ -116,7 +102,6 @@ const Bins: React.FC = () => {
           type: 'bin',
         });
 
-        // 2. Register Device
         await deviceService.registerDevice({
           device_id: editBinData.id,
           name: editBinData.name,
@@ -128,16 +113,13 @@ const Bins: React.FC = () => {
         });
       } else {
         const liveDevice = devices.find(d => d.device_id === editBinData.id);
-        
         if (liveDevice) {
-          // 1. Update Device name/coordinates in DB
           await deviceService.updateDevice(editBinData.id, {
             name: editBinData.name,
             latitude: editBinData.lat || liveDevice.latitude,
             longitude: editBinData.lng || liveDevice.longitude
           });
 
-          // 2. Update linked MapPoint in DB if exists
           if (liveDevice.map_point_id) {
             await mapService.updatePoint(liveDevice.map_point_id, {
               name: editBinData.name,
@@ -149,7 +131,6 @@ const Bins: React.FC = () => {
         }
       }
 
-      // Fetch latest data to refresh the UI
       const [devicesData, telemetryData] = await Promise.all([
         deviceService.getDevices(),
         deviceService.getLatestTelemetry()
@@ -165,94 +146,39 @@ const Bins: React.FC = () => {
     }
   };
 
+  const fetchData = async () => {
+    try {
+      const [devicesData, telemetryData] = await Promise.all([
+        deviceService.getDevices(),
+        deviceService.getLatestTelemetry()
+      ]);
+      setDevices(devicesData);
+      setTelemetry(telemetryData);
+    } catch (err) {
+      console.error('Error fetching containers data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [devicesData, telemetryData] = await Promise.all([
-          deviceService.getDevices(),
-          deviceService.getLatestTelemetry()
-        ]);
-        setDevices(devicesData);
-        setTelemetry(telemetryData);
-      } catch (err) {
-        console.error('Error fetching containers data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-
-    // Setup live WebSocket listener
     const wsUrl = getWsUrl();
     let socket: WebSocket;
     let reconnectTimer: any;
 
     function connectWS() {
-      console.log('[BINS WEBSOCKET] Conectando a:', wsUrl);
       socket = new WebSocket(wsUrl);
-
-      socket.onopen = () => {
-        console.log('[BINS WEBSOCKET] Conectado para recibir telemetría viva.');
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          if (parsed.event === 'telemetry' && parsed.device_id && parsed.data) {
-            console.log('[BINS WEBSOCKET] Telemetría viva recibida en contenedores:', parsed.device_id, parsed.data);
-            setTelemetry(prev => ({
-              ...prev,
-              [parsed.device_id]: parsed.data
-            }));
-            
-            setDevices(prev => prev.map(d => {
-              if (d.device_id === parsed.device_id) {
-                const fillDistance = parsed.data.tof_cm ?? parsed.data.ultrasonic_cm ?? 80;
-                const fillPct = calculateFillPercentage(fillDistance);
-                const status = fillPct >= 90 ? 'Warning' : 'Online';
-                return { 
-                  ...d, 
-                  status,
-                  battery_level: parsed.data.battery ?? d.battery_level,
-                  last_seen: new Date().toISOString()
-                };
-              }
-              return d;
-            }));
-          } else if (parsed.event === 'device_update' && parsed.device_id && parsed.data) {
-            console.log('[BINS WEBSOCKET] Actualización de dispositivo en tiempo real:', parsed.device_id, parsed.data);
-            setDevices(prev => prev.map(d => {
-              if (d.device_id === parsed.device_id) {
-                return { 
-                  ...d, 
-                  ...parsed.data
-                };
-              }
-              return d;
-            }));
-          }
-        } catch (err) {
-          console.error('[BINS WEBSOCKET] Error procesando telemetría en tiempo real:', err);
-        }
-      };
-
       socket.onclose = () => {
-        console.warn('[BINS WEBSOCKET] Conexión cerrada. Reintentando en 3s...');
         reconnectTimer = setTimeout(connectWS, 3000);
       };
-
       socket.onerror = (err) => {
-        console.error('[BINS WEBSOCKET] Error:', err);
         socket.close();
       };
     }
-
     connectWS();
 
-    // Polling interval as robust fallback
     const interval = setInterval(fetchData, 5000);
-
     return () => {
       clearInterval(interval);
       if (socket) {
@@ -282,15 +208,13 @@ const Bins: React.FC = () => {
     }
   }, [editBinModalOpen, isCreateMode, loadDiscovered]);
 
-  // Merge live devices and defaultBins
+  // Compile active resources lists
   const processedBins = defaultBins.map(mockBin => {
     const liveDevice = devices.find(d => d.device_id === mockBin.id);
     const dt = telemetry[mockBin.id];
     
     let fill = mockBin.fill;
     let battery = mockBin.battery;
-    let temp = mockBin.temp;
-    let hum = mockBin.hum;
     let aq = mockBin.aq;
     let ir = mockBin.ir;
     let lastUpdate = mockBin.lastUpdate;
@@ -312,8 +236,6 @@ const Bins: React.FC = () => {
       if (fillDistance !== undefined) {
         fill = calculateFillPercentage(fillDistance);
       }
-      temp = dt.temperature ?? dt.temperatura ?? temp;
-      hum = dt.humidity ?? dt.humedad ?? hum;
       aq = dt.air_quality ?? aq;
       ir = dt.obstacle === 1;
       battery = dt.battery ?? battery;
@@ -322,7 +244,7 @@ const Bins: React.FC = () => {
       }
     }
     
-    let status: 'critical' | 'high' | 'warning' | 'optimal' = 'optimal';
+    let status = 'optimal';
     if (fill >= 90) status = 'critical';
     else if (fill >= 75) status = 'high';
     else if (fill >= 30) status = 'warning';
@@ -334,8 +256,6 @@ const Bins: React.FC = () => {
       battery,
       status,
       lastUpdate,
-      temp,
-      hum,
       aq,
       ir,
       lat,
@@ -345,14 +265,11 @@ const Bins: React.FC = () => {
     };
   });
 
-  // Append any new dynamically auto-registered devices from DB that aren't in the defaultBins list
   const extraBins = devices
     .filter(d => (d.type === 'Nodo Sensor' || d.device_id.startsWith('N')) && !defaultBins.some(mb => mb.id === d.device_id))
     .map(d => {
       const dt = telemetry[d.device_id];
       let fill = 0;
-      let temp = 20;
-      let hum = 50;
       let aq = 100;
       let ir = false;
       let battery = d.battery_level ?? 80;
@@ -362,14 +279,12 @@ const Bins: React.FC = () => {
         if (fillDistance !== undefined) {
           fill = calculateFillPercentage(fillDistance);
         }
-        temp = dt.temperature ?? temp;
-        hum = dt.humidity ?? hum;
         aq = dt.air_quality ?? aq;
         ir = dt.obstacle === 1;
         battery = dt.battery ?? battery;
       }
       
-      let status: 'critical' | 'high' | 'warning' | 'optimal' = 'optimal';
+      let status = 'optimal';
       if (fill >= 90) status = 'critical';
       else if (fill >= 75) status = 'high';
       else if (fill >= 30) status = 'warning';
@@ -383,8 +298,6 @@ const Bins: React.FC = () => {
         status,
         lastUpdate: formatLastSeen(d.last_seen),
         capacity: 1100,
-        temp,
-        hum,
         aq,
         ir,
         lat: d.latitude,
@@ -397,7 +310,7 @@ const Bins: React.FC = () => {
   const combinedBins = [...processedBins, ...extraBins];
 
   // Compute live KPIs
-const totalBinsCount = combinedBins.length;
+  const totalBinsCount = combinedBins.length;
   const averageFill = combinedBins.length > 0
     ? Math.round(combinedBins.reduce((sum, b) => sum + b.fill, 0) / combinedBins.length)
     : 0;
@@ -405,10 +318,10 @@ const totalBinsCount = combinedBins.length;
   const lowBatteryCount = combinedBins.filter(b => b.battery < 20).length;
 
   const liveKpis = [
-    { label: 'Dispositivos Activos', value: totalBinsCount, icon: <Trash2 size={18} />, sub: 'Monitoreo en tiempo real' },
-    { label: 'Carga Media', value: `${averageFill}%`, icon: <Gauge size={18} />, sub: 'Nivel medio general' },
-    { label: 'Alertas Críticas', value: criticalCount, icon: <AlertTriangle size={18} />, sub: 'Requieren recolección' },
-    { label: 'Baterías Bajas', value: lowBatteryCount, icon: <Battery size={18} />, sub: 'Menos del 20%' },
+    { label: 'Total Contenedores', value: totalBinsCount, icon: <Trash2 size={20} />, sub: 'Registrados en red' },
+    { label: 'Carga Media', value: `${averageFill}%`, icon: <Gauge size={20} />, sub: 'Nivel medio general' },
+    { label: 'Alertas Críticas', value: criticalCount, icon: <AlertTriangle size={20} />, sub: 'Requieren recolección' },
+    { label: 'Batería Crítica', value: lowBatteryCount, icon: <Battery size={20} />, sub: 'Batería menor a 20%' },
   ];
 
   // Generate dynamic live alerts
@@ -424,7 +337,7 @@ const totalBinsCount = combinedBins.length;
         msg = `Batería baja — ${b.battery}% restante`;
         severity = 'warning';
       } else if (b.ir) {
-        msg = `Sensor IR colapsado`;
+        msg = `Sensor de paso obstruído`;
         severity = 'warning';
       }
       return {
@@ -436,829 +349,473 @@ const totalBinsCount = combinedBins.length;
     });
 
   const alertsToDisplay = liveAlerts.length > 0 ? liveAlerts.slice(0, 5) : [
-    { id: 'BIN-402', msg: 'Carga crítica — 94% ocupado', time: 'Hace 5 min', severity: 'error' as const },
-    { id: 'BIN-088', msg: 'Batería baja — 12% restante', time: 'Hace 1 hora', severity: 'warning' as const },
-    { id: 'BIN-222', msg: 'Carga crítica — 91% ocupado', time: 'Hace 8 min', severity: 'error' as const },
+    { id: 'N1', msg: 'Carga crítica — 94% ocupado', time: 'Hace 5 min', severity: 'error' as const },
+    { id: 'N2', msg: 'Batería baja — 12% restante', time: 'Hace 1 hora', severity: 'warning' as const },
   ];
+
+  const filteredBins = useMemo(() => {
+    return combinedBins.filter(b => {
+      if (filterType === 'real') return b.gateway_id?.toLowerCase() === 'gateway_01';
+      if (filterType === 'simulated') return b.gateway_id?.toLowerCase() === 'gateway_02';
+      if (filterType === 'independent') return !b.gateway_id || (b.gateway_id.toLowerCase() !== 'gateway_01' && b.gateway_id.toLowerCase() !== 'gateway_02');
+      return true;
+    }).sort((a, b) => b.fill - a.fill); // Sort by fill capacity descending (Google Console efficiency)
+  }, [combinedBins, filterType]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5, p: 0.5 }}>
-      {/* Header - Subtle Material UI style */}
-      <motion.div variants={fadeInFromTop} initial="hidden" animate="show">
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2.5 }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.02em', color: 'text.primary' }}>
-              Gestión de Contenedores
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, opacity: 0.8 }}>
-              Monitoreo en tiempo real de telemetrías y variables de red MQTT.
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            {editMode && (
-              <Button 
-                variant="contained" 
-                color="primary"
-                onClick={() => {
-                  setIsCreateMode(true);
-                  setEditBinData({ id: '', name: '', location: '', lat: -16.3888, lng: -71.5415 });
-                  setEditBinModalOpen(true);
-                }}
-                startIcon={<Plus size={16} />}
-                sx={{ 
-                  fontSize: 11.5, 
-                  fontWeight: 600, 
-                  borderRadius: '24px', 
-                  bgcolor: 'primary.main', 
-                  '&:hover': { bgcolor: 'primary.dark' },
-                  color: 'primary.contrastText',
-                  px: 2, py: 0.75
-                }}
-              >
-                Añadir Contenedor
-              </Button>
-            )}
-            <Button 
-              variant={editMode ? "contained" : "outlined"}
-              color={editMode ? "error" : "inherit"}
-              onClick={() => setEditMode(!editMode)}
-              startIcon={editMode ? <Unlock size={16} /> : <Lock size={16} />}
-              sx={{ 
-                fontSize: 11.5, 
-                fontWeight: 600, 
-                borderRadius: '24px', 
-                borderColor: editMode ? 'transparent' : (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)', 
-                color: editMode ? '#fff' : 'text.primary',
-                px: 2, py: 0.75
-              }}
-            >
-              {editMode ? "Edición activa" : "Modo edición"}
-            </Button>
-            <Button variant="outlined" startIcon={<Download size={16} />} sx={{ fontSize: 11.5, fontWeight: 600, borderRadius: '24px', borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)', color: 'text.primary', px: 2, py: 0.75 }}>
-              Reportes
-            </Button>
-            <Button variant="contained" startIcon={<Navigation size={16} />} sx={{ fontSize: 11.5, fontWeight: 600, borderRadius: '24px', bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' }, color: 'primary.contrastText', px: 2, py: 0.75 }}>
-              Optimizar rutas
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={() => setShowSidebar(!showSidebar)} 
-              startIcon={<Layers size={16} />} 
-              sx={{ 
-                fontSize: 11.5, 
-                fontWeight: 600, 
-                borderRadius: '24px', 
-                borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)', 
-                color: 'text.primary',
-                px: 2, py: 0.75
-              }}
-            >
-              {showSidebar ? "Ocultar resumen" : "Mostrar resumen"}
-            </Button>
-          </Box>
+      
+      {/* Header */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { md: 'center' }, gap: 2.5 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.02em', color: 'text.primary' }}>
+            Gestión de Contenedores
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, mt: 0.5, opacity: 0.8 }}>
+            Monitoreo, estado físico y capacidad de carga de dispositivos LoRa P2P.
+          </Typography>
         </Box>
-      </motion.div>
+        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+          {editMode && (
+            <Button 
+              variant="contained" 
+              onClick={() => {
+                setIsCreateMode(true);
+                setEditBinData({ id: '', name: '', location: '', lat: -16.3888, lng: -71.5415 });
+                setEditBinModalOpen(true);
+              }}
+              startIcon={<Plus size={16} />}
+              sx={{ fontSize: 11.5, fontWeight: 800, borderRadius: '24px', px: 2.5 }}
+            >
+              Añadir Contenedor
+            </Button>
+          )}
+          <Button 
+            variant={editMode ? "contained" : "outlined"}
+            color={editMode ? "error" : "inherit"}
+            onClick={() => setEditMode(!editMode)}
+            sx={{ fontSize: 11.5, fontWeight: 800, borderRadius: '24px', px: 2.5 }}
+          >
+            {editMode ? "Guardar cambios" : "Editar Recursos"}
+          </Button>
+          
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={(_, v) => v && setViewMode(v)}
+            size="small"
+            sx={{
+              bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+              borderRadius: '24px',
+              p: 0.5,
+              border: 'none',
+              '& .MuiToggleButton-root': {
+                border: 'none',
+                borderRadius: '20px !important',
+                px: 1.75, py: 0.5,
+                color: 'text.secondary',
+                '&.Mui-selected': {
+                  bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                  color: 'text.primary'
+                }
+              }
+            }}
+          >
+            <ToggleButton value="table"><List size={15} /></ToggleButton>
+            <ToggleButton value="grid"><LayoutGrid size={15} /></ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+      </Box>
 
       {/* KPI Stats Row - Google Analytics / M3 Style */}
-      <motion.div variants={containerStagger} initial="hidden" animate="show">
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
-          {liveKpis.map((kpi, i) => (
-            <motion.div key={i} variants={fadeSlideUp}>
-              <Paper sx={(t) => ({
-                bgcolor: t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.55)' : 'rgba(255,255,255,0.75)',
-                backdropFilter: 'blur(20px)',
-                border: 'none',
-                borderRadius: '16px',
-                p: 2.5,
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  bgcolor: t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.75)' : 'rgba(255,255,255,0.9)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: t.palette.mode === 'dark' ? '0 10px 25px rgba(0,0,0,0.3)' : '0 4px 16px rgba(0,0,0,0.04)',
-                },
-              })}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary', fontSize: 10, display: 'block', mb: 0.75 }}>
-                      {kpi.label}
-                    </Typography>
-                    <Typography sx={{ fontWeight: 800, fontSize: 30, fontFamily: '"Outfit", "Inter", sans-serif', color: 'text.primary', lineHeight: 1.1 }}>
-                      {kpi.value}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: 9.5, opacity: 0.6, mt: 0.5 }}>
-                      {kpi.sub}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ 
-                    color: i === 2 && criticalCount > 0 ? '#f28b82' : (i === 3 && lowBatteryCount > 0 ? '#ffb74d' : 'primary.main'), 
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                    opacity: 0.8
-                  }}>
-                    {kpi.icon}
-                  </Box>
-                </Box>
-              </Paper>
-            </motion.div>
-          ))}
-        </Box>
-      </motion.div>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
+        {liveKpis.map((kpi, i) => (
+          <Paper key={i} sx={(t) => ({
+            ...googleCardSx(t),
+            p: 2.5,
+            borderLeft: `4px solid ${i === 2 && criticalCount > 0 ? '#d93025' : (i === 3 && lowBatteryCount > 0 ? '#f59e0b' : '#1a73e8')}`
+          })}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary', fontSize: 10 }}>
+                  {kpi.label}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: 'text.primary', mt: 0.75 }}>
+                  {kpi.value}
+                </Typography>
+              </Box>
+              <Box sx={{ opacity: 0.4, color: 'text.secondary' }}>
+                {kpi.icon}
+              </Box>
+            </Box>
+          </Paper>
+        ))}
+      </Box>
 
-      {/* Main Content: Container Grid + Alerts */}
+      {/* Main Content: Table/Grid + Alerts Sidebar */}
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: showSidebar ? { xs: '1fr', xl: '1fr 340px' } : '1fr', 
         gap: 4 
       }}>
-        {/* Container Grid */}
-        <motion.div variants={containerStagger} initial="hidden" animate="show" style={{ minWidth: 0 }}>
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3.5, flexWrap: 'wrap', gap: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 800, fontSize: 12, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Activity size={16} /> Contenedores Inteligentes
-              </Typography>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <FormControl size="small" sx={{ minWidth: 160 }}>
-                  <Select
-                    value={filterType}
-                    onChange={(e: any) => setFilterType(e.target.value)}
-                    sx={{ 
-                      fontSize: 10.5, 
-                      fontWeight: 800, 
-                      textTransform: 'uppercase', 
-                      borderRadius: '8px',
-                      height: 32,
-                      bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
-                      }
-                    }}
-                  >
-                    <MenuItem value="all" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Todos los Nodos</MenuItem>
-                    <MenuItem value="real" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Hardware Real</MenuItem>
-                    <MenuItem value="simulated" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Simulados</MenuItem>
-                    <MenuItem value="independent" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Independientes</MenuItem>
-                  </Select>
-                </FormControl>
-                
-                <Chip 
-                  label={`${combinedBins.filter(b => {
-                    if (filterType === 'real') return b.gateway_id?.toLowerCase() === 'gateway_01';
-                    if (filterType === 'simulated') return b.gateway_id?.toLowerCase() === 'gateway_02';
-                    if (filterType === 'independent') return !b.gateway_id || (b.gateway_id.toLowerCase() !== 'gateway_01' && b.gateway_id.toLowerCase() !== 'gateway_02');
-                    return true;
-                  }).length} activos`} 
-                  size="small" 
-                  sx={{ 
-                    fontWeight: 800, 
-                    fontSize: 10, 
-                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', 
-                    color: 'text.primary', 
-                    border: 'none', 
-                    borderRadius: '6px' 
-                  }} 
-                />
-              </Box>
-            </Box>
+        {/* Table/Grid Container */}
+        <Box sx={{ minWidth: 0 }}>
+          
+          {/* Section title & Filters */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 850, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Activity size={15} /> Inventario de Contenedores
+            </Typography>
             
-            {loading && combinedBins.length === 0 ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}>
-                <Typography variant="body1" color="text.secondary">Cargando telemetrías...</Typography>
-              </Box>
-            ) : (() => {
-              const filteredBins = combinedBins.filter(b => {
-                if (filterType === 'real') return b.gateway_id?.toLowerCase() === 'gateway_01';
-                if (filterType === 'simulated') return b.gateway_id?.toLowerCase() === 'gateway_02';
-                if (filterType === 'independent') return !b.gateway_id || (b.gateway_id.toLowerCase() !== 'gateway_01' && b.gateway_id.toLowerCase() !== 'gateway_02');
-                return true;
-              });
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select
+                  value={filterType}
+                  onChange={(e: any) => setFilterType(e.target.value)}
+                  sx={{ 
+                    fontSize: 10.5, 
+                    fontWeight: 800, 
+                    borderRadius: '24px',
+                    height: 32,
+                    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <MenuItem value="all">TODOS LOS NODOS</MenuItem>
+                  <MenuItem value="real">HARDWARE REAL</MenuItem>
+                  <MenuItem value="simulated">SIMULADOS</MenuItem>
+                  <MenuItem value="independent">INDEPENDIENTES</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Chip 
+                label={`${filteredBins.length} activos`} 
+                size="small" 
+                sx={{ fontWeight: 800, fontSize: 10, borderRadius: '6px', border: 'none' }} 
+              />
+            </Box>
+          </Box>
 
-              const renderBinCard = (bin: typeof combinedBins[0]) => {
+          {loading && filteredBins.length === 0 ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : viewMode === 'table' ? (
+            /* Table View (Default Google Admin Style) */
+            <TableContainer component={Paper} sx={(t) => ({ ...googleCardSx(t), overflow: 'hidden' })}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Nombre</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Identificador</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Dirección / Coordenadas</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Capacidad</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Sensor IR</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Batería</TableCell>
+                    <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Gateway Base</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Acciones</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredBins.map(bin => {
+                    const gw = devices.find(d => d.device_id.toLowerCase() === bin.gateway_id?.toLowerCase() && d.type?.toLowerCase() === 'gateway');
+                    const gwName = gw ? gw.name : (bin.gateway_id === 'gateway_01' ? 'Gateway Real' : (bin.gateway_id === 'gateway_02' ? 'Gateway Virtual' : 'Sin Gateway'));
+                    return (
+                      <TableRow key={bin.id} hover>
+                        <TableCell sx={{ fontWeight: 800 }}>{bin.name}</TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>{bin.id}</TableCell>
+                        <TableCell sx={{ color: 'text.secondary', fontSize: 12.5 }}>{bin.location}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Typography sx={{ fontWeight: 800, fontSize: 12.5, fontFamily: 'monospace', color: getFillColor(bin.fill) }}>{bin.fill}%</Typography>
+                            <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
+                              <Box sx={{ height: '100%', width: `${bin.fill}%`, bgcolor: getFillColor(bin.fill) }} />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={bin.ir ? 'OBSTRUIDO' : 'LIBRE'} 
+                            size="small" 
+                            sx={{ 
+                              fontWeight: 800, 
+                              fontSize: 9, 
+                              bgcolor: bin.ir ? 'rgba(217,48,37,0.08)' : 'rgba(24,128,56,0.08)',
+                              color: bin.ir ? '#d93025' : '#188038',
+                              border: 'none'
+                            }} 
+                          />
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 750, color: bin.battery < 20 ? 'error.main' : 'text.primary', fontSize: 12.5 }}>{bin.battery}%</TableCell>
+                        <TableCell sx={{ color: 'text.secondary', fontSize: 12 }}>{gwName}</TableCell>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                            <Button size="small" onClick={() => navigate(`/stats?device=${bin.id}`)} sx={{ textTransform: 'none', fontWeight: 800 }}>Historial</Button>
+                            <Button size="small" onClick={() => navigate(`/mapa?lat=${bin.lat}&lng=${bin.lng}&zoom=17.5`)} sx={{ textTransform: 'none', fontWeight: 800 }} color="secondary">Mapa</Button>
+                            {editMode && (
+                              <>
+                                <IconButton size="small" onClick={() => {
+                                  setIsCreateMode(false);
+                                  setEditBinData({ id: bin.id, name: bin.name, location: bin.location, lat: bin.lat, lng: bin.lng });
+                                  setEditBinModalOpen(true);
+                                }}><Edit size={14} /></IconButton>
+                                <IconButton size="small" color="error" onClick={() => handleDeleteBin(bin.id)}><X size={14} /></IconButton>
+                              </>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            /* Grid View (Clean dynamic card layout without cartoonish PNGs) */
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: showSidebar ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+                xl: showSidebar ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+              }, 
+              gap: 2.5 
+            }}>
+              {filteredBins.map(bin => {
                 const isSync = devices.some(d => d.device_id.toLowerCase() === bin.id.toLowerCase() && d.registered !== false);
                 const gw = devices.find(d => d.device_id.toLowerCase() === bin.gateway_id?.toLowerCase() && d.type?.toLowerCase() === 'gateway');
                 const gwName = gw ? gw.name : (bin.gateway_id === 'gateway_01' ? 'Gateway Real' : (bin.gateway_id === 'gateway_02' ? 'Gateway Virtual' : 'Sin Gateway'));
 
                 return (
-                  <motion.div key={bin.id} variants={fadeSlideUp} style={{ display: 'flex' }}>
-                    <Paper sx={(t) => ({ 
-                      ...googleCardSx(t), 
-                      p: 2.5, 
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: 285,
-                      position: 'relative',
-                      '&:hover': { 
-                        transform: 'translateY(-3px)',
-                        borderColor: t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
-                        boxShadow: t.palette.mode === 'dark' ? '0 12px 30px rgba(0,0,0,0.35)' : '0 8px 20px rgba(0,0,0,0.06)',
-                      } 
-                    })}>
-
-                      {/* Main Split Content */}
-                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch' }}>
-                        
-                        {/* Left Side: Parameters & Data */}
-                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          {/* Name and ID */}
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                            <Typography sx={{ fontWeight: 700, fontSize: 16, fontFamily: '"Outfit", "Inter", sans-serif', lineHeight: 1.25, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={bin.name}>
-                              {bin.name}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.6 }}>
-                              <MapPin size={11} style={{ flexShrink: 0, color: '#2dd4bf' }} />
-                              <Typography variant="caption" sx={{ fontWeight: 500, fontSize: 10.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {bin.location}
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          {/* Sync & Gateway status badges */}
-                          <Box sx={{ display: 'flex', gap: 1, mt: 0.25, flexWrap: 'wrap' }}>
-                            {/* Sync status */}
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 0.5, 
-                              bgcolor: isSync ? 'rgba(129, 199, 132, 0.08)' : 'rgba(242, 139, 130, 0.08)',
-                              px: 1.25, 
-                              py: 0.5, 
-                              borderRadius: '100px', 
-                              border: 'none'
-                            }}>
-                              <Box sx={{ 
-                                width: 4, 
-                                height: 4, 
-                                borderRadius: '50%', 
-                                bgcolor: isSync ? '#81c784' : '#f28b82',
-                                boxShadow: `0 0 4px ${isSync ? '#81c784' : '#f28b82'}`
-                              }} />
-                              <Typography sx={{ fontSize: 8.5, fontWeight: 700, color: isSync ? '#81c784' : '#f28b82', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                {isSync ? `Sincronizado (${bin.id})` : 'No Sincronizado'}
-                              </Typography>
-                            </Box>
-
-                            {/* Gateway info */}
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 0.5, 
-                              bgcolor: 'rgba(255,255,255,0.02)', 
-                              px: 1.25, 
-                              py: 0.5, 
-                              borderRadius: '100px', 
-                              border: 'none'
-                            }}>
-                              <Router size={8.5} style={{ opacity: 0.6, color: 'text.secondary' }} />
-                              <Typography sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                {gwName}
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          {/* Gauge and Fill indicator */}
-                          <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 0.75 }}>
-                              <Typography sx={{ fontWeight: 800, fontSize: 24, fontFamily: '"Outfit", "Inter", monospace', color: getFillColor(bin.fill), lineHeight: 1 }}>
-                                {bin.fill}%
-                              </Typography>
-                              <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 9.5, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.6, color: 'text.secondary' }}>
-                                Llenado
-                              </Typography>
-                            </Box>
-
-                            {/* Minimalist Progress Bar */}
-                            <Box sx={{ height: 8, bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderRadius: '4px', overflow: 'hidden' }}>
-                              <Box sx={{ 
-                                height: '100%', 
-                                borderRadius: '4px', 
-                                background: getFillColor(bin.fill), 
-                                width: `${bin.fill}%`, 
-                                transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                              }} />
-                            </Box>
-                          </Box>
-
-                          {/* Sleek Industrial Parameters Grid */}
-                          <Box sx={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(2, 1fr)', 
-                            gap: 1.5,
-                            mt: 0.5,
-                            pt: 1.5,
-                            borderTop: '1px solid',
-                            borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'
-                          }}>
-                            <Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                <Cpu size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                  Dispositivo EUI
-                                </Typography>
-                              </Box>
-                              <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                {bin.id}
-                              </Typography>
-                            </Box>
-                            <Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                <Database size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                  Capacidad
-                                </Typography>
-                              </Box>
-                              <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                {bin.capacity} L
-                              </Typography>
-                            </Box>
-                            <Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                <ShieldAlert size={10.5} style={{ opacity: 0.8, color: bin.ir ? '#f28b82' : '#81c784' }} />
-                                <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                  Sensor de Paso
-                                </Typography>
-                              </Box>
-                              <Typography sx={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: bin.ir ? '#f28b82' : '#81c784', pl: 1.75 }}>
-                                {bin.ir ? 'OBSTRUIDO' : 'LIBRE'}
-                              </Typography>
-                            </Box>
-                            <Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                <Router size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                  Pasarela Base
-                                </Typography>
-                              </Box>
-                              <Typography sx={{ fontSize: 11, fontWeight: 700, textTransform: 'none', color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', pl: 1.75 }} title={gwName}>
-                                {gwName}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ gridColumn: 'span 2' }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                <MapPin size={10.5} style={{ opacity: 0.8, color: '#38bdf8' }} />
-                                <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                  Ubicación GPS (Latitud, Longitud)
-                                </Typography>
-                              </Box>
-                              <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                {bin.lat !== undefined && bin.lng !== undefined ? `${bin.lat.toFixed(5)}, ${bin.lng.toFixed(5)}` : 'Sin Coordenadas'}
-                              </Typography>
-                            </Box>
-
-                            {/* Unified static telemetry row (never shifts the card height!) */}
-                            <Box sx={{ 
-                              gridColumn: 'span 2', 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              pt: 1.5, 
-                              borderTop: '1px dashed', 
-                              borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-                              minHeight: 44
-                            }}>
-                              <Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                  <Wind size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                  <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                    Calidad Aire
-                                  </Typography>
-                                </Box>
-                                <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                  {bin.aq !== undefined ? `${bin.aq} ppm` : '---'}
-                                </Typography>
-                              </Box>
-                              <Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                                  <Layers size={10.5} style={{ opacity: 0.8, color: 'text.secondary' }} />
-                                  <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                                    Satélites GPS
-                                  </Typography>
-                                </Box>
-                                <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: 'text.primary', pl: 1.75 }}>
-                                  {bin.satellites !== undefined ? `${bin.satellites} sats` : '0 sats'}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </Box>
-                        </Box>
-
-                        {/* Right Side: Clean Transparent Container Image */}
-                        <Box sx={{
-                          width: { xs: 90, sm: 105, md: 110 },
-                          flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                        }}>
-                          <Box
-                            component="img"
-                            src={contenedorImg}
-                            alt=""
-                            sx={{
-                              maxWidth: '100%',
-                              maxHeight: '100px',
-                              objectFit: 'contain',
-                              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                              '&:hover': { 
-                                transform: 'scale(1.08) translateY(-2px)',
-                              }
-                            }}
-                          />
+                  <Paper key={bin.id} sx={(t) => ({ 
+                    ...googleCardSx(t), 
+                    p: 2.5, 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    minHeight: 250,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&:hover': { 
+                      borderColor: 'text.secondary',
+                    } 
+                  })}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {/* Name & Address */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: 15.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {bin.name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+                          <MapPin size={11} style={{ flexShrink: 0 }} />
+                          <Typography variant="caption" sx={{ fontWeight: 550, fontSize: 10.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {bin.location}
+                          </Typography>
                         </Box>
                       </Box>
 
-                      {/* Bottom Info Row & Action Button */}
-                      <Box sx={{ mt: 2, pt: 1.25, borderTop: '1px solid', borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          {/* Battery & GPS Status badges */}
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 0.5, 
-                              bgcolor: bin.battery < 20 ? 'rgba(242,139,130,0.08)' : 'rgba(255,255,255,0.02)', 
-                              border: 'none',
-                              px: 1.25, 
-                              py: 0.25, 
-                              borderRadius: '100px' 
-                            }}>
-                              <Battery size={13} color={bin.battery < 20 ? '#f28b82' : '#81c784'} />
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: bin.battery < 20 ? '#f28b82' : 'text.secondary', fontSize: 10.5 }}>
-                                {bin.battery}%
-                              </Typography>
-                            </Box>
-
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: 0.5, 
-                              bgcolor: bin.satellites > 0 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)', 
-                              border: 'none',
-                              px: 1.25, 
-                              py: 0.25, 
-                              borderRadius: '100px' 
-                            }}>
-                              <Navigation size={11} color={bin.satellites > 0 ? '#81c784' : '#a1a1aa'} />
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: bin.satellites > 0 ? '#81c784' : 'text.secondary', fontSize: 10.5 }}>
-                                {bin.satellites > 0 ? `GPS OK (${bin.satellites})` : 'GPS NO FIX'}
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          {/* Last seen time */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Clock size={11} style={{ opacity: 0.5, color: '#2dd4bf' }} />
-                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: 10 }}>
-                              {bin.lastUpdate}
-                            </Typography>
-                          </Box>
+                      {/* Status Badges */}
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: isSync ? 'rgba(24,128,56,0.08)' : 'rgba(217,48,37,0.08)', px: 1, py: 0.25, borderRadius: '4px' }}>
+                          <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: isSync ? '#188038' : '#d93025' }} />
+                          <Typography sx={{ fontSize: 8.5, fontWeight: 800, color: isSync ? '#188038' : '#d93025', textTransform: 'uppercase' }}>
+                            {isSync ? 'SINCRONIZADO' : 'PENDIENTE'}
+                          </Typography>
                         </Box>
-
-                        {/* Action buttons row */}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => navigate(`/mapa?lat=${bin.lat}&lng=${bin.lng}&zoom=17`)}
-                            sx={{
-                              flex: 1,
-                              fontSize: 11, fontWeight: 600, textTransform: 'none',
-                              borderRadius: '24px', height: '32px',
-                              borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)', 
-                              color: 'text.primary',
-                              '&:hover': { borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)', bgcolor: 'rgba(255,255,255,0.02)' }
-                            }}
-                          >
-                            <Navigation size={12} style={{ marginRight: 6 }} /> Abrir Mapa
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="text"
-                            onClick={() => navigate(`/stats?device=${bin.id}`)}
-                            sx={{
-                              flex: 1,
-                              fontSize: 11, fontWeight: 600, textTransform: 'none',
-                              borderRadius: '24px', height: '32px',
-                              bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(45,212,191,0.08)' : 'rgba(13,148,136,0.08)',
-                              color: 'primary.main',
-                              '&:hover': { bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(45,212,191,0.15)' : 'rgba(13,148,136,0.15)' }
-                            }}
-                          >
-                            <BarChart3 size={12} style={{ marginRight: 6 }} /> Estadísticas
-                          </Button>
-                          {editMode && (
-                            <>
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setIsCreateMode(false);
-                                  setEditBinData({
-                                    id: bin.id,
-                                    name: bin.name,
-                                    location: bin.location,
-                                    lat: bin.lat,
-                                    lng: bin.lng
-                                  });
-                                  setEditBinModalOpen(true);
-                                }}
-                                sx={{
-                                  width: '32px', height: '32px',
-                                  borderRadius: '50%',
-                                  border: 'none',
-                                  color: 'text.secondary',
-                                  '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', color: 'text.primary' }
-                                }}
-                                title="Editar Contenedor"
-                              >
-                                <Edit size={14} />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteBin(bin.id)}
-                                sx={{
-                                  width: '32px', height: '32px',
-                                  borderRadius: '50%',
-                                  border: 'none',
-                                  color: 'error.main',
-                                  '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.05)' }
-                                }}
-                                title="Eliminar Contenedor"
-                              >
-                                <Trash2 size={14} />
-                              </IconButton>
-                            </>
-                          )}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'action.hover', px: 1, py: 0.25, borderRadius: '4px', color: 'text.secondary' }}>
+                          <Router size={9} />
+                          <Typography sx={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase' }}>
+                            {gwName}
+                          </Typography>
                         </Box>
                       </Box>
-                    </Paper>
-                  </motion.div>
+
+                      {/* Capacity progress */}
+                      <Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 9.5, color: 'text.secondary', textTransform: 'uppercase' }}>Capacidad</Typography>
+                          <Typography sx={{ fontWeight: 900, fontSize: 18, fontFamily: 'monospace', color: getFillColor(bin.fill) }}>{bin.fill}%</Typography>
+                        </Box>
+                        <Box sx={{ height: 6, bgcolor: 'action.hover', borderRadius: 100, overflow: 'hidden' }}>
+                          <Box sx={{ height: '100%', width: `${bin.fill}%`, bgcolor: getFillColor(bin.fill), borderRadius: 100 }} />
+                        </Box>
+                      </Box>
+
+                      {/* Grid parameters */}
+                      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 8.5, color: 'text.secondary', display: 'block', mb: 0.25 }}>NODO EUI</Typography>
+                          <Typography sx={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace' }}>{bin.id}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 8.5, color: 'text.secondary', display: 'block', mb: 0.25 }}>SENSOR IR</Typography>
+                          <Typography sx={{ fontSize: 11, fontWeight: 800, color: bin.ir ? 'error.main' : 'success.main', fontFamily: 'monospace' }}>
+                            {bin.ir ? 'OBSTRUIDO' : 'LIBRE'}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {/* Secondary row */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Battery size={13} color={bin.battery < 20 ? '#d93025' : '#188038'} />
+                          <Typography variant="caption" sx={{ fontWeight: 750, color: bin.battery < 20 ? 'error.main' : 'text.primary', fontSize: 10.5 }}>
+                            {bin.battery}%
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+                          <Clock size={11} />
+                          <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 600 }}>{bin.lastUpdate}</Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    {/* Actions */}
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Button size="small" variant="outlined" onClick={() => navigate(`/stats?device=${bin.id}`)} sx={{ flex: 1, borderRadius: '24px', textTransform: 'none', fontWeight: 800 }}>Historial</Button>
+                      <Button size="small" variant="text" onClick={() => navigate(`/mapa?lat=${bin.lat}&lng=${bin.lng}&zoom=17.5`)} sx={{ flex: 1, borderRadius: '24px', textTransform: 'none', fontWeight: 800 }}>Mapa</Button>
+                      {editMode && (
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <IconButton size="small" onClick={() => {
+                            setIsCreateMode(false);
+                            setEditBinData({ id: bin.id, name: bin.name, location: bin.location, lat: bin.lat, lng: bin.lng });
+                            setEditBinModalOpen(true);
+                          }}><Edit size={14} /></IconButton>
+                          <IconButton size="small" color="error" onClick={() => handleDeleteBin(bin.id)}><Trash2 size={14} /></IconButton>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
                 );
-              };
-
-              return (
-                <Box sx={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(2, 1fr)',
-                    md: showSidebar ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-                    lg: showSidebar ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)',
-                    xl: showSidebar ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
-                  }, 
-                  gap: 2.5 
-                }}>
-                  {filteredBins.map(renderBinCard)}
-                </Box>
-              );
-            })()}
-          </Box>
-        </motion.div>
+              })}
+            </Box>
+          )}
+        </Box>
 
         {/* Alerts & Sidebar */}
         {showSidebar && (
-          <motion.div variants={fadeInFromRight} initial="hidden" animate="show" style={{ flexShrink: 0 }}>
+          <Box sx={{ flexShrink: 0 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
               {/* Alerts Paper */}
               <Paper sx={(t) => ({ ...googleCardSx(t), p: 3 })}>
-                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 850, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
                   <AlertTriangle size={15} color="#ffd600" /> Alertas del Canal
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75 }}>
                   {alertsToDisplay.map((a, i) => (
                     <Box key={i} sx={{ 
                       p: 1.75, 
-                      borderRadius: '16px', 
-                      bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
-                      border: 'none', 
+                      borderRadius: '12px', 
+                      bgcolor: 'action.hover', 
                       display: 'flex', 
                       gap: 1.5, 
-                      alignItems: 'flex-start' 
+                      alignItems: 'flex-start',
+                      borderLeft: `4px solid ${a.severity === 'error' ? '#d93025' : '#f59e0b'}`
                     }}>
-                      <Box sx={{
-                        width: 6, height: 6, borderRadius: '50%',
-                        bgcolor: a.severity === 'error' ? '#f28b82' : a.severity === 'warning' ? '#ffb74d' : 'primary.main',
-                        mt: 0.75, flexShrink: 0,
-                        boxShadow: `0 0 6px ${a.severity === 'error' ? 'rgba(242,139,130,0.4)' : a.severity === 'warning' ? 'rgba(255,183,77,0.4)' : 'rgba(45,212,191,0.4)'}`
-                      }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 11, color: 'text.primary', display: 'block', mb: 0.3, lineHeight: 1.35 }}>
-                          {a.id} — {a.msg}
+                      <Box sx={{ flex: 1 }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: 12.5, color: 'text.primary', mb: 0.5 }}>
+                          Dispositivo {a.id}
                         </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: 9.5, opacity: 0.5 }}>{a.time}</Typography>
+                        <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 0.5, fontWeight: 550 }}>
+                          {a.msg}
+                        </Typography>
+                        <Typography variant="caption" sx={{ display: 'block', fontSize: 9.5, opacity: 0.5, fontWeight: 500 }}>
+                          {a.time}
+                        </Typography>
                       </Box>
-                    </Box>
-                  ))}
-                </Box>
-              </Paper>
-
-              {/* Efficiency Paper */}
-              <Paper sx={(t) => ({ ...googleCardSx(t), p: 3, position: 'relative', overflow: 'hidden' })}>
-                <Activity size={120} style={{ position: 'absolute', right: -24, bottom: -24, opacity: 0.03, pointerEvents: 'none' }} />
-                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'text.secondary', mb: 1.5 }}>
-                  Eficiencia de Recolección
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: 11.5, opacity: 0.8, mb: 2.5, lineHeight: 1.4 }}>
-                  La optimización de rutas mejoró la recolección diaria en un <Typography component="span" sx={{ color: 'success.main', fontWeight: 700 }}>15.7%</Typography> este mes.
-                </Typography>
-                <Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 10, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.5 }}>Cobertura</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 10.5, color: '#81c784', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Excelente</Typography>
-                  </Box>
-                  <Box sx={{ height: 6, bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <Box sx={{ height: '100%', borderRadius: '4px', bgcolor: 'success.main', width: '88%' }} />
-                  </Box>
-                </Box>
-              </Paper>
-
-              {/* Upcoming Collections Paper */}
-              <Paper sx={(t) => ({ ...googleCardSx(t), p: 3 })}>
-                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
-                  <Clock size={15} color="#ffd600" /> Cola de Recolección
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {[
-                    { id: 'N2', task: 'Recolección Urgente', date: 'En 30 min' },
-                    { id: 'BIN-222', task: 'Recolección Programada', date: 'Hoy 15:00' },
-                  ].map((m, i) => (
-                    <Box key={i} sx={{ 
-                      p: 1.5, 
-                      borderRadius: '16px', 
-                      bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      border: 'none' 
-                    }}>
-                      <Box>
-                        <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 11.5, color: 'text.primary' }}>{m.id}</Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 500, fontSize: 9.5, opacity: 0.6, display: 'block', mt: 0.25 }}>{m.task}</Typography>
-                      </Box>
-                      <Chip label={m.date} size="small" sx={{ fontWeight: 700, fontSize: 9.5, letterSpacing: '0.02em', bgcolor: 'rgba(255,183,77,0.08)', color: '#ffb74d', borderRadius: '100px', border: 'none' }} />
                     </Box>
                   ))}
                 </Box>
               </Paper>
             </Box>
-          </motion.div>
+          </Box>
         )}
       </Box>
 
-      {/* Modal para Editar Contenedor */}
-      <Dialog 
-        open={editBinModalOpen} 
-        onClose={() => { setEditBinModalOpen(false); setEditBinData(null); }}
-        maxWidth="xs" 
-        fullWidth
-        sx={{
-          '& .MuiPaper-root': {
-            borderRadius: '28px',
-            p: 2.5,
-            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.95)' : '#ffffff',
-            backdropFilter: 'blur(16px)',
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '-0.3px', fontFamily: '"Outfit", "Inter", sans-serif' }}>
-              {isCreateMode ? 'Añadir Contenedor' : 'Editar Contenedor'}
-            </Typography>
-            {!isCreateMode && (
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                ID del Dispositivo: {editBinData?.id}
-              </Typography>
-            )}
-          </Box>
-          <IconButton onClick={() => { setEditBinModalOpen(false); setEditBinData(null); }} size="small" sx={{ borderRadius: '50%' }}>
-            <X size={18} />
-          </IconButton>
+      {/* Edit/Create Dialog */}
+      <Dialog open={editBinModalOpen} onClose={() => setEditBinModalOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 850, fontSize: 16 }}>
+          {isCreateMode ? 'REGISTRAR CONTENEDOR' : 'EDITAR CONTENEDOR'}
         </DialogTitle>
         <form onSubmit={handleSaveBinEdit}>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
-            {isCreateMode && (
-              <>
-                <FormControl fullWidth required>
-                  <InputLabel id="select-discovered-label">Dispositivo Escaneado (MQTT)</InputLabel>
-                  <Select
-                    labelId="select-discovered-label"
-                    value={editBinData?.id === 'manual' ? 'manual' : (discoveredIds.includes(editBinData?.id || '') ? editBinData?.id : (discoveredIds.length > 0 ? '' : 'manual'))}
-                    label="Dispositivo Escaneado (MQTT)"
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'manual') {
-                        setEditBinData(prev => prev ? { ...prev, id: 'manual' } : null);
-                      } else {
-                        setEditBinData(prev => prev ? { ...prev, id: val } : null);
-                      }
-                    }}
-                    sx={{ mb: (editBinData?.id === 'manual' || editBinData?.id === '' || discoveredIds.length === 0) ? 0 : 2 }}
-                  >
-                    <MenuItem value="" disabled>-- Selecciona un dispositivo detectado --</MenuItem>
-                    {discoveredIds.map(id => (
-                      <MenuItem key={id} value={id}>
-                        {id} (Detectado en red LoRa/MQTT)
-                      </MenuItem>
-                    ))}
-                    <MenuItem value="manual" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                      + Ingresar ID manualmente
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-
-                {(discoveredIds.length === 0 || editBinData?.id === 'manual' || editBinData?.id === '' || !discoveredIds.includes(editBinData?.id || '')) && (
-                  <TextField
-                    label="ID del Dispositivo EUI"
-                    required
-                    fullWidth
-                    autoFocus
-                    value={editBinData?.id === 'manual' ? '' : (editBinData?.id || '')}
-                    onChange={(e) => setEditBinData(prev => prev ? { ...prev, id: e.target.value } : null)}
-                    placeholder="Ej: N3"
-                  />
-                )}
-              </>
+            {isCreateMode ? (
+              <FormControl size="small" fullWidth required>
+                <InputLabel id="discovered-device-label">Dispositivo Descubierto</InputLabel>
+                <Select
+                  labelId="discovered-device-label"
+                  value={editBinData?.id || ''}
+                  label="Dispositivo Descubierto"
+                  onChange={(e) => setEditBinData(prev => prev ? { ...prev, id: e.target.value } : null)}
+                  sx={{ borderRadius: '8px' }}
+                >
+                  {discoveredIds.length === 0 ? (
+                    <MenuItem value="" disabled>No hay hardware libre detectado</MenuItem>
+                  ) : (
+                    discoveredIds.map(id => (
+                      <MenuItem key={id} value={id}>{id}</MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            ) : (
+              <TextField
+                label="Identificador de Nodo"
+                value={editBinData?.id || ''}
+                disabled
+                size="small"
+                fullWidth
+                slotProps={{ input: { style: { fontFamily: 'monospace' } } }}
+              />
             )}
             <TextField
-              label="Nombre Personalizado"
-              required
-              fullWidth
-              autoFocus={!isCreateMode}
+              label="Nombre del Contenedor"
               value={editBinData?.name || ''}
               onChange={(e) => setEditBinData(prev => prev ? { ...prev, name: e.target.value } : null)}
-              placeholder="Ej: Contenedor Sector A"
+              required
+              size="small"
+              fullWidth
             />
             <TextField
-              label="Ubicación / Referencia"
-              required
-              fullWidth
+              label="Dirección / Ubicación"
               value={editBinData?.location || ''}
               onChange={(e) => setEditBinData(prev => prev ? { ...prev, location: e.target.value } : null)}
-              placeholder="Ej: Calle Mercaderes 102"
+              required
+              size="small"
+              fullWidth
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
               <TextField
                 label="Latitud"
-                required
                 type="number"
-                slotProps={{ htmlInput: { step: "any" } }}
-                value={editBinData?.lat ?? -16.3888}
+                inputProps={{ step: 'any' }}
+                value={editBinData?.lat !== undefined ? editBinData.lat : ''}
                 onChange={(e) => setEditBinData(prev => prev ? { ...prev, lat: parseFloat(e.target.value) || 0 } : null)}
-                fullWidth
+                required
+                size="small"
               />
               <TextField
                 label="Longitud"
-                required
                 type="number"
-                slotProps={{ htmlInput: { step: "any" } }}
-                value={editBinData?.lng ?? -71.5415}
+                inputProps={{ step: 'any' }}
+                value={editBinData?.lng !== undefined ? editBinData.lng : ''}
                 onChange={(e) => setEditBinData(prev => prev ? { ...prev, lng: parseFloat(e.target.value) || 0 } : null)}
-                fullWidth
+                required
+                size="small"
               />
             </Box>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                      setEditBinData(prev => prev ? {
-                        ...prev,
-                        lat: parseFloat(position.coords.latitude.toFixed(6)),
-                        lng: parseFloat(position.coords.longitude.toFixed(6))
-                      } : null);
-                    },
-                    (error) => {
-                      alert('No se pudo acceder al GPS del navegador: ' + error.message);
-                    }
-                  );
-                } else {
-                  alert('La geolocalización no está soportada en este navegador.');
-                }
-              }}
-              sx={{ textTransform: 'none', fontSize: 10.5, borderRadius: '8px', mt: -1 }}
-              startIcon={<Navigation size={12} />}
-            >
-              Obtener GPS de mi dispositivo actual
-            </Button>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2, gap: 1.5 }}>
-            <Button onClick={() => { setEditBinModalOpen(false); setEditBinData(null); }} variant="outlined" color="inherit" fullWidth sx={{ borderRadius: '24px' }}>
+          <DialogActions sx={{ p: 2.5, pt: 1.5 }}>
+            <Button onClick={() => setEditBinModalOpen(false)} sx={{ textTransform: 'none', fontWeight: 800 }}>
               Cancelar
             </Button>
-            <Button type="submit" variant="contained" color="primary" fullWidth sx={{ borderRadius: '24px', color: 'primary.contrastText' }}>
-              {isCreateMode ? 'Añadir Contenedor' : 'Guardar Cambios'}
+            <Button type="submit" variant="contained" sx={{ textTransform: 'none', fontWeight: 800, borderRadius: '24px' }}>
+              Guardar
             </Button>
           </DialogActions>
         </form>
       </Dialog>
+
     </Box>
   );
 };
