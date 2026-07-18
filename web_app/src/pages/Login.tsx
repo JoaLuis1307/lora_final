@@ -9,6 +9,12 @@ import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
 
+// =========================================================================
+// CONFIGURACIÓN DE LA IMAGEN DE REGISTRO
+// Reemplaza esta URL con la imagen que deseas mostrar durante el registro:
+// =========================================================================
+const REGISTER_IMAGE_URL = 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
+
 const Login: React.FC = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -158,8 +164,17 @@ const Login: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'flex-start',
+              position: 'relative',
               bgcolor: themeMode === 'dark' ? '#1a1b1c' : '#f8f9fa',
-              borderRight: { md: `1px solid ${themeMode === 'dark' ? '#2d2e30' : '#dadce0'}` }
+              borderRight: { md: `1px solid ${themeMode === 'dark' ? '#2d2e30' : '#dadce0'}` },
+              transition: 'all 0.3s ease',
+              ...(isRegister ? {
+                backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.8)), url(${REGISTER_IMAGE_URL})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                color: '#ffffff',
+                borderRight: 'none',
+              } : {})
             }}>
               {/* Logo / Brand */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 4 }}>
@@ -167,11 +182,16 @@ const Login: React.FC = () => {
                   width: 40,
                   height: 40,
                   borderRadius: '12px',
-                  bgcolor: themeMode === 'dark' ? '#2d2e30' : '#e8f0fe',
+                  bgcolor: isRegister 
+                    ? 'rgba(255,255,255,0.15)' 
+                    : (themeMode === 'dark' ? '#2d2e30' : '#e8f0fe'),
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                  color: isRegister 
+                    ? '#ffffff' 
+                    : (themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'),
+                  transition: 'all 0.3s ease'
                 }}>
                   <Cpu size={20} />
                 </Box>
@@ -180,7 +200,10 @@ const Login: React.FC = () => {
                   fontWeight: 600,
                   fontSize: 20,
                   letterSpacing: '-0.02em',
-                  color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
+                  color: isRegister 
+                    ? '#ffffff' 
+                    : (themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'),
+                  transition: 'all 0.3s ease'
                 }}>
                   EcoLoRa
                 </Typography>
@@ -190,21 +213,27 @@ const Login: React.FC = () => {
               <Typography variant="h5" sx={{ 
                 fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
                 fontWeight: 500, 
-                color: themeMode === 'dark' ? '#e3e3e3' : '#202124',
+                color: isRegister 
+                  ? '#ffffff' 
+                  : (themeMode === 'dark' ? '#e3e3e3' : '#202124'),
                 fontSize: '24px',
                 lineHeight: 1.25,
-                mb: 2
+                mb: 2,
+                transition: 'all 0.3s ease'
               }}>
                 {isRegister ? 'Crear tu cuenta' : 'Iniciar sesión'}
               </Typography>
 
               <Typography sx={{ 
                 fontFamily: 'Roboto, Arial, sans-serif',
-                color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368', 
+                color: isRegister 
+                  ? 'rgba(255,255,255,0.85)' 
+                  : (themeMode === 'dark' ? '#9aa0a6' : '#5f6368'), 
                 fontWeight: 400, 
                 fontSize: '14.5px',
                 lineHeight: 1.6,
-                pr: { md: 2 }
+                pr: { md: 2 },
+                transition: 'all 0.3s ease'
               }}>
                 {isRegister 
                   ? 'Regístrate para obtener acceso al panel de control de EcoLoRa como operador de red municipal.' 
@@ -219,8 +248,11 @@ const Login: React.FC = () => {
                   fontSize: 12,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
-                  color: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
-                  mb: 1
+                  color: isRegister 
+                    ? '#ffffff' 
+                    : (themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'),
+                  mb: 1,
+                  transition: 'all 0.3s ease'
                 }}>
                   Descripción del Sistema
                 </Typography>
@@ -228,8 +260,11 @@ const Login: React.FC = () => {
                   fontFamily: 'Roboto, Arial, sans-serif',
                   fontSize: '13px',
                   lineHeight: 1.5,
-                  color: themeMode === 'dark' ? '#80868b' : '#70757a',
-                  fontStyle: 'italic'
+                  color: isRegister 
+                    ? 'rgba(255,255,255,0.7)' 
+                    : (themeMode === 'dark' ? '#80868b' : '#70757a'),
+                  fontStyle: 'italic',
+                  transition: 'all 0.3s ease'
                 }}>
                   Sistema IoT para contenedores municipales utilizando tecnología LoRa P2P en la manzana del Mercado San Camilo.
                 </Typography>
