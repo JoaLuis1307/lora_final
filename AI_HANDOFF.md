@@ -57,6 +57,11 @@ graph TD
   * **Modo Noche / Claro**: CartoDB (`dark_all` / `light_all`).
   * **Satélite / Híbrido**: ESRI World Imagery y etiquetas de CartoDB.
   * **Modo Terreno**: Consumido directamente desde los servidores de **Google Terrain (`lyrs=p`)**, proporcionando relieve topográfico real.
+* **Optimizador de Ruta Inteligente por IA (EcoRoute)**:
+  * Se implementó una pestaña adicional en el sidebar de Rutas para alternar entre "Manual" y "IA EcoRoute".
+  * **Algoritmo TSP (Nearest Neighbor)**: Evalúa las coordenadas de los contenedores casi desbordados (capacidad ≥ 70%, o los top 3 con mayor nivel como fallback) y los ordena partiendo del Depósito Municipal (`[-71.5375, -16.4090]`) para minimizar la distancia Euclidiana total.
+  * **Sincronización OSRM**: Inyecta los puntos ordenados a `RouteMap.tsx` a través de refs expuestas (`setPoints`), gatillando la generación del trayecto óptimo por calles reales.
+  * **Deducción de Ahorros Ecológicos**: Permite seleccionar camiones Compactadores (12 km/gal) o Urbanos (18 km/gal). Deduce la reducción de combustible y calcula el ahorro de CO₂ utilizando el factor estándar de emisiones de diésel de la EPA (~10.15 kg de CO₂ por galón salvado).
 * **Panel de Red del Mapa 3D**: El panel derecho (`Drawer`) fue rediseñado. Se removieron sus bordes, su fondo se integró con la variable del menú lateral (`var(--bg-sidebar)`) con desenfoque de fondo (`backdropFilter`) para un acabado transparente armónico. 
 * **Corrección de Batería 0%**: Se reparó el bug en la barra lateral del mapa 3D donde la batería siempre leía `0%` por fallback indefinido; ahora lee correctamente la telemetría viva y la base de datos.
 * **Capa Terreno Desbloqueada**: Se eliminó un efecto colateral de sincronización automática de temas en `MapPreview.tsx` que pisaba la capa "Terreno" devolviéndola al modo nocturno inmediatamente después de seleccionarla.

@@ -99,9 +99,15 @@ Cuando ingreses a la dirección IP de tu servidor (`http://145.79.1.173`) en tu 
 * Permite activar el **Modo edición** para registrar, modificar coordenadas o eliminar contenedores físicamente.
 
 ### 3. Sección de Rutas (Logística)
-* El mapa te permite planificar las rutas del camión recolector.
-* **Dibujar Ruta**: Activa el botón `+` (modo dibujo) y haz clics en el mapa. El sistema trazará de forma inteligente la ruta óptima por las calles de Arequipa (usando el motor OSRM), calculando la distancia en kilómetros y el tiempo estimado del recorrido.
-* **Capas del Mapa**: En el icono de capas, puedes cambiar el estilo del mapa. La capa **Terreno** cargará directamente el mapa topográfico oficial de Google Maps (`lyrs=p`) con relieves de montañas y valles.
+* El mapa te permite planificar las rutas del camión recolector. Dispone de dos modos:
+  * **Modo Manual**: Activa el botón `+` (modo dibujo) y haz clics en el mapa. El sistema trazará de forma inteligente la ruta óptima por las calles de Arequipa (usando el motor OSRM), calculando la distancia en kilómetros y el tiempo estimado del recorrido.
+  * **Modo IA EcoRoute (Optimización Automática)**:
+    * Selecciona el **Tipo de Camión** (Compactador Pesado de 12 km/gal o Urbano Ligero de 18 km/gal).
+    * Haz clic en **"Calcular Ruta Inteligente IA"**. El sistema recopilará en tiempo real los contenedores casi desbordados (capacidad ≥ 70%) y resolverá el **Problema del Viajante (TSP)** mediante un algoritmo de vecindad más cercana partiendo desde el Depósito Municipal de Yanahuara.
+    * Trazará automáticamente la ruta óptima en el mapa y deducirá el **consumo de combustible en galones**, el **combustible ahorrado** y la **reducción en emisiones de CO₂** (en base a la métrica diésel estándar de la EPA).
+    * Enlistará la secuencia ordenada de paradas con chips coloreados según el nivel de llenado actual.
+    * Podrás asignarle un nombre y guardar la ruta directamente en la base de datos.
+  * **Capas del Mapa**: En el icono de capas, puedes cambiar el estilo del mapa. La capa **Terreno** cargará directamente el mapa topográfico oficial de Google Maps (`lyrs=p`) con relieves de montañas y valles.
 
 ### 4. Sección de Mapa 3D
 * Permite visualizar la ciudad de Arequipa con inclinación 3D.

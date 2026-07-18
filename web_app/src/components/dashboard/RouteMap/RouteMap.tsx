@@ -541,7 +541,8 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   };
 
   useImperativeHandle(ref, () => ({
-    clearRoute
+    clearRoute,
+    setPoints
   }));
 
   return (
