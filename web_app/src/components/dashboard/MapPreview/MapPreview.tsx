@@ -1083,18 +1083,20 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           onClose={() => setShowNetworkPanel(false)}
           variant="persistent"
           sx={{
+            zIndex: 1200,
             '& .MuiDrawer-paper': {
               width: 340, 
-              top: 80, 
+              top: 0, 
               right: 0, 
-              height: 'calc(100% - 100px)',
+              height: '100%',
               bgcolor: 'var(--bg-sidebar)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
               border: 'none',
-              borderRadius: '24px 0 0 24px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+              borderRadius: 0,
+              boxShadow: '0 0 20px rgba(0,0,0,0.3)',
               pt: 1,
+              zIndex: 1200
             },
           }}
         >
