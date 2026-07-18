@@ -25,6 +25,10 @@ import { calculateFillPercentage } from '../../../utils/fillCalculator';
 interface MapPreviewProps {
   isPage?: boolean;
   focusVehicleId?: string | null;
+  showSignInButton?: boolean;
+  onSignInClick?: () => void;
+  currentThemeProp?: 'light' | 'dark';
+  onToggleThemeProp?: () => void;
 }
 
 const binsData: any[] = [];
@@ -248,7 +252,14 @@ const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
   };
 };
 
-const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId = null }) => {
+const MapPreview: React.FC<MapPreviewProps> = ({ 
+  isPage = false, 
+  focusVehicleId = null,
+  showSignInButton = false,
+  onSignInClick,
+  currentThemeProp,
+  onToggleThemeProp
+}) => {
   const { user } = useAuth();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -258,6 +269,27 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() =>
     (localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark'
   );
+  
+  const [filterType, setFilterType] = useState<'all' | 'critical' | 'near' | 'recycling'>('all');
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    if (currentThemeProp) {
+      setCurrentTheme(currentThemeProp);
+    }
+  }, [currentThemeProp]);
+
+  const handleToggleTheme = () => {
+    if (onToggleThemeProp) {
+      onToggleThemeProp();
+    } else {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setCurrentTheme(nextTheme);
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('theme', nextTheme);
+    }
+  };
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -557,6 +589,34 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       </div>`;
   }, [currentTheme, editMode]);
 
+  const handleNearMeFilter = () => {
+    if (!navigator.geolocation) {
+      alert("La geolocalización no es soportada por tu navegador.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLngLat: [number, number] = [position.coords.longitude, position.coords.latitude];
+        setUserLocation(userLngLat);
+        setFilterType('near');
+
+        map.current?.flyTo({
+          center: userLngLat,
+          zoom: 15,
+          pitch: 45,
+          essential: true,
+          duration: 2000
+        });
+
+        setSelectedSearchPoint(userLngLat);
+      },
+      (error) => {
+        console.error(error);
+        alert("No se pudo obtener tu ubicación. Por favor, concede permisos de GPS.");
+      }
+    );
+  };
+
   const addMarkers = useCallback(() => {
     if (!map.current) return;
     const isDark = currentTheme === 'dark';
@@ -599,7 +659,32 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       }
     });
 
-    dbPoints.forEach(point => {
+    let filteredPoints = dbPoints;
+    if (filterType === 'critical') {
+      filteredPoints = dbPoints.filter(point => {
+        const linkedDevice = devices.find(d => d.map_point_id === point.id);
+        const dt = linkedDevice ? telemetry[linkedDevice.device_id] : null;
+        const fillDistance = dt?.tof_cm ?? dt?.ultrasonic_cm ?? dt?.fill;
+        let fillPct = 24;
+        if (fillDistance !== undefined) {
+          fillPct = calculateFillPercentage(fillDistance);
+        }
+        return fillPct >= 75 || dt?.is_full === 1;
+      });
+    } else if (filterType === 'recycling') {
+      filteredPoints = dbPoints.filter(point => point.type === 'reciclaje');
+    } else if (filterType === 'near' && userLocation) {
+      const getDistance = (p: MapPoint) => {
+        const dx = p.longitude - userLocation[0];
+        const dy = p.latitude - userLocation[1];
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+      filteredPoints = [...dbPoints]
+        .sort((a, b) => getDistance(a) - getDistance(b))
+        .slice(0, 3);
+    }
+
+    filteredPoints.forEach(point => {
       const id = `point-${point.id}`;
       currentMarkerIds.add(id);
       const linkedDevice = devices.find(d => d.map_point_id === point.id);
@@ -668,7 +753,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     }
 
     markersCache.current.forEach((v, id) => { if (!currentMarkerIds.has(id)) { v.marker.remove(); markersCache.current.delete(id); } });
-  }, [dbPoints, devices, telemetry, currentTheme, selectedSearchPoint, getPopupHTML, editMode]);
+  }, [dbPoints, devices, telemetry, currentTheme, selectedSearchPoint, getPopupHTML, editMode, filterType, userLocation]);
 
 
 
@@ -1393,6 +1478,137 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
               {routePoints.length === 0 ? 'Selecciona punto de origen' : `Añadir punto #${routePoints.length + 1} o cerrar`}
             </Typography>
           </Paper>
+        )}
+
+        {/* Google Maps Style Filter Pills */}
+        {!routingMode && !routeData && (
+          <Box sx={{
+            position: 'absolute',
+            top: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+            display: 'flex',
+            gap: 1,
+            pointerEvents: 'auto',
+            bgcolor: 'transparent',
+            maxWidth: 'calc(100% - 32px)',
+            overflowX: 'auto',
+            '&::-webkit-scrollbar': { display: 'none' },
+          }}>
+            {[
+              { id: 'all', label: 'Todos' },
+              { id: 'critical', label: 'Llenos (>75%)' },
+              { id: 'near', label: 'Cerca de mí' },
+              { id: 'recycling', label: 'Puntos Limpios (Reciclaje)' }
+            ].map(filter => {
+              const isActive = filterType === filter.id;
+              return (
+                <Button
+                  key={filter.id}
+                  onClick={() => {
+                    if (filter.id === 'near') {
+                      handleNearMeFilter();
+                    } else {
+                      setFilterType(filter.id as any);
+                      if (filter.id === 'all') {
+                        setUserLocation(null);
+                        setSelectedSearchPoint(null);
+                      }
+                    }
+                  }}
+                  sx={{
+                    borderRadius: '20px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    px: 2.2,
+                    py: 0.8,
+                    bgcolor: isActive 
+                      ? (currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8') 
+                      : (currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff'),
+                    color: isActive 
+                      ? (currentTheme === 'dark' ? '#131314' : '#ffffff') 
+                      : 'text.primary',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                    border: 'none', // Borderless as requested!
+                    backdropFilter: 'blur(8px)',
+                    '&:hover': {
+                      bgcolor: isActive
+                        ? (currentTheme === 'dark' ? '#aecbfa' : '#1557b0')
+                        : (currentTheme === 'dark' ? '#35363a' : '#f1f3f4'),
+                    }
+                  }}
+                >
+                  {filter.label}
+                </Button>
+              );
+            })}
+          </Box>
+        )}
+
+        {/* Top-right float controls (Theme Toggle and Sign In Button) */}
+        {(showSignInButton || !user) && (
+          <Box sx={{ 
+            position: 'absolute', 
+            top: 16, 
+            right: showNetworkPanel ? 356 : 16, // Dynamic shift when drawer is open!
+            zIndex: 10, 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1.5,
+            pointerEvents: 'auto',
+            transition: 'right 0.22s cubic-bezier(0, 0, 0.2, 1)' // Matches the drawer smooth sliding transition!
+          }}>
+            {/* Theme Toggle Button */}
+            <IconButton 
+              onClick={handleToggleTheme} 
+              sx={{
+                width: 40,
+                height: 40,
+                bgcolor: currentTheme === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
+                color: 'text.primary',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                borderRadius: '50%',
+                transition: 'all 0.2s ease',
+                border: 'none', // Borderless as requested!
+                '&:hover': {
+                  bgcolor: currentTheme === 'dark' ? '#35363a' : '#f1f3f4',
+                }
+              }}
+              title={currentTheme === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
+            >
+              {currentTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </IconButton>
+
+            {showSignInButton && (
+              /* Google Maps Style Blue Iniciar Sesión Pill Button (Borderless/Shadow-only) */
+              <Button
+                variant="contained"
+                onClick={onSignInClick}
+                sx={{
+                  borderRadius: '24px',
+                  textTransform: 'none',
+                  fontWeight: 550,
+                  px: 2.8,
+                  py: 1.2,
+                  fontSize: '14px',
+                  bgcolor: currentTheme === 'dark' ? '#8ab4f8' : '#1a73e8',
+                  color: currentTheme === 'dark' ? '#131314' : '#ffffff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+                  transition: 'all 0.2s ease',
+                  border: 'none', // Borderless as requested!
+                  fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
+                  '&:hover': {
+                    bgcolor: currentTheme === 'dark' ? '#aecbfa' : '#1557b0',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.28)',
+                  }
+                }}
+              >
+                Iniciar sesión
+              </Button>
+            )}
+          </Box>
         )}
 
         {/* Point Modal */}

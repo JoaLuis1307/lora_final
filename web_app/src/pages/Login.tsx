@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, Mail, Lock, User as UserIcon, ShieldAlert, Sun, Moon, X, Grid } from 'lucide-react';
+import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, ShieldAlert, X } from 'lucide-react';
 import {
-  Box, Paper, Typography, TextField, Button, IconButton, Checkbox, FormControlLabel, Divider, InputAdornment
+  Box, Paper, Typography, TextField, Button, IconButton, Divider, InputAdornment
 } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
-import XIcon from '@mui/icons-material/X';
-import AppleIcon from '@mui/icons-material/Apple';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
 
 const Login: React.FC = () => {
@@ -91,67 +89,13 @@ const Login: React.FC = () => {
     }}>
       {/* 3D Map Background (Public View for Citizens) */}
       <Box sx={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-        <MapPreview isPage={true} />
-      </Box>
-
-      {/* Google Maps Style Top-Right Controls */}
-      <Box sx={{ 
-        position: 'absolute', 
-        top: 16, 
-        right: 16, 
-        zIndex: 10, 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 1.5,
-        pointerEvents: 'auto'
-      }}>
-        {/* Theme Toggle Button */}
-        <IconButton 
-          onClick={toggleTheme} 
-          sx={{
-            width: 40,
-            height: 40,
-            bgcolor: themeMode === 'dark' ? 'rgba(30, 31, 32, 0.9)' : '#ffffff',
-            color: 'text.primary',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-            borderRadius: '50%',
-            transition: 'all 0.2s ease',
-            border: themeMode === 'dark' ? '1px solid #3c4043' : '1px solid #dadce0',
-            '&:hover': {
-              bgcolor: themeMode === 'dark' ? '#35363a' : '#f1f3f4',
-            }
-          }}
-          title={themeMode === 'dark' ? 'Modo Claro' : 'Modo Oscuro'}
-        >
-          {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </IconButton>
-
-
-
-        {/* Google Maps Style Blue Iniciar Sesión Pill Button */}
-        <Button
-          variant="contained"
-          onClick={() => setShowForm(true)}
-          sx={{
-            borderRadius: '24px',
-            textTransform: 'none',
-            fontWeight: 550,
-            px: 2.8,
-            py: 1.2,
-            fontSize: '14px',
-            bgcolor: themeMode === 'dark' ? '#8ab4f8' : '#1a73e8',
-            color: themeMode === 'dark' ? '#131314' : '#ffffff',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-            transition: 'all 0.2s ease',
-            fontFamily: '"Google Sans", Roboto, Arial, sans-serif',
-            '&:hover': {
-              bgcolor: themeMode === 'dark' ? '#aecbfa' : '#1557b0',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.28)',
-            }
-          }}
-        >
-          Iniciar sesión
-        </Button>
+        <MapPreview 
+          isPage={true} 
+          showSignInButton={true} 
+          onSignInClick={() => setShowForm(true)}
+          currentThemeProp={themeMode}
+          onToggleThemeProp={toggleTheme}
+        />
       </Box>
 
       {/* Centered Google Accounts Style Login Dialog */}
