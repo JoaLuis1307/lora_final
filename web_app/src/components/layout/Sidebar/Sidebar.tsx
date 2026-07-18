@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggl
       title: 'IA',
       items: [
         { icon: <BarChart3 size={20} strokeWidth={1.8} />, label: 'Análisis', path: '/analisis' },
-        { icon: <Bell size={20} strokeWidth={1.8} />, label: 'Alerta', path: '/alertas', badge: 3 },
+        { icon: <Bell size={20} strokeWidth={1.8} />, label: 'Alertas', path: '/alertas' },
       ],
     },
     {

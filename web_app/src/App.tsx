@@ -12,8 +12,9 @@ const Devices = lazy(() => import('./pages/Devices'));
 const Analysis = lazy(() => import('./pages/Analysis'));
 const Settings = lazy(() => import('./pages/Settings'));
 const RoutesPage = lazy(() => import('./pages/Routes'));
-const StatsPage = lazy(() => import('./pages/Stats'));
 const Login = lazy(() => import('./pages/Login'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const StatsPage = lazy(() => import('./pages/Stats'));
 
 const LoadingScreen = () => (
   <Box sx={{ minHeight: '100vh', bgcolor: '#131314', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -196,6 +197,7 @@ function AppContent() {
                 <Route path="ajustes" element={<Settings />} />
                 <Route path="rutas" element={<RoutesPage />} />
                 <Route path="stats" element={<StatsPage />} />
+                <Route path="alertas" element={<Alerts />} />
               </Route>
             </Routes>
           </Suspense>
