@@ -37,7 +37,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle, theme, onToggl
         { icon: <Home size={20} strokeWidth={1.8} />, label: 'Panel', path: '/' },
         { icon: <MapIcon size={20} strokeWidth={1.8} />, label: 'Mapa 3D', path: '/mapa' },
         { icon: <Trash2 size={20} strokeWidth={1.8} />, label: 'Contenedor', path: '/contenedores' },
-        { icon: <Truck size={20} strokeWidth={1.8} />, label: 'Flota', path: '/flota' },
         { icon: <Route size={20} strokeWidth={1.8} />, label: 'Rutas', path: '/rutas' },
         { icon: <Activity size={20} strokeWidth={1.8} />, label: 'Stats', path: '/stats' },
       ],

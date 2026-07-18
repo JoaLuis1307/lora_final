@@ -8,7 +8,6 @@ import './styles/global.css';
 const Overview = lazy(() => import('./pages/Overview'));
 const Mapa = lazy(() => import('./pages/Mapa'));
 const Bins = lazy(() => import('./pages/Bins'));
-const Fleet = lazy(() => import('./pages/Fleet'));
 const Devices = lazy(() => import('./pages/Devices'));
 const Analysis = lazy(() => import('./pages/Analysis'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -192,7 +191,6 @@ function AppContent() {
                 <Route index element={<Overview />} />
                 <Route path="mapa" element={<Mapa />} />
                 <Route path="contenedores" element={<Bins />} />
-                <Route path="flota" element={<Fleet />} />
                 <Route path="dispositivos" element={<Devices />} />
                 <Route path="analisis" element={<Analysis />} />
                 <Route path="ajustes" element={<Settings />} />

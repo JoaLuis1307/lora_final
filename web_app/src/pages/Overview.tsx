@@ -4,11 +4,10 @@ import {
   Box, Paper, Typography, Button, Divider, Chip, CircularProgress, List, ListItem, ListItemText
 } from '@mui/material';
 import {
-  Trash2, Truck, Cpu, AlertTriangle, Activity, Clock,
+  Trash2, Cpu, AlertTriangle, Activity, Clock,
   ShieldAlert, ArrowUpRight
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
-import { fleetService, VehicleData, MaintenanceLogData } from '../services/fleetService';
 import { mapService, MapPoint } from '../services/mapService';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
 import { calculateFillPercentage } from '../utils/fillCalculator';
@@ -26,26 +25,20 @@ const Overview: React.FC = () => {
   
   // Data State
   const [devices, setDevices] = useState<Device[]>([]);
-  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [points, setPoints] = useState<MapPoint[]>([]);
-  const [logs, setLogs] = useState<MaintenanceLogData[]>([]);
   const [telemetry, setTelemetry] = useState<Record<string, any>>({});
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [deviceList, vehicleList, pointList, logList, telemetryData] = await Promise.all([
+      const [deviceList, pointList, telemetryData] = await Promise.all([
         deviceService.getDevices(),
-        fleetService.getVehicles(),
         mapService.getPoints(),
-        fleetService.getLogs(),
         deviceService.getLatestTelemetry()
       ]);
       
       setDevices(deviceList);
-      setVehicles(vehicleList);
       setPoints(pointList);
-      setLogs(logList);
       setTelemetry(telemetryData);
     } catch (err) {
       console.error("[OVERVIEW] Error loading dashboard stats: ", err);
@@ -88,19 +81,28 @@ const Overview: React.FC = () => {
 
   const avgFill = filledBinsCount > 0 ? Math.round(totalFill / filledBinsCount) : 48; // fallback to 48% if no telemetries
 
-  // Fleet stats
-  const activeVehiclesCount = vehicles.length;
-  const vehiclesInRoute = vehicles.filter(v => v.status === 'In Route').length;
-  const avgFuel = activeVehiclesCount > 0 
-    ? Math.round(vehicles.reduce((acc, curr) => acc + curr.fuel, 0) / activeVehiclesCount) 
-    : 85;
-
   // IoT stats
   const onlineDevices = devices.filter(d => d.status?.toLowerCase() === 'online').length;
   const totalDevices = devices.length;
 
-  // Alertas
-  const criticalLogs = logs.filter(l => l.severity === 'error' || l.severity === 'warning').slice(0, 5);
+  // Alertas de contenedores críticos (con nivel >= 75%)
+  const criticalBins = binsList.map(bin => {
+    const associatedDevice = devices.find(d => d.map_point_id === bin.id && d.registered);
+    let fill = 0;
+    if (associatedDevice) {
+      const dt = telemetry[associatedDevice.device_id] || {};
+      const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+      if (fillDistance !== undefined) {
+        fill = calculateFillPercentage(fillDistance);
+      }
+    }
+    return {
+      id: bin.id,
+      name: bin.name,
+      fill,
+      severity: fill >= 90 ? 'error' : 'warning'
+    };
+  }).filter(b => b.fill >= 75).slice(0, 5);
 
   const kpis = [
     {
@@ -112,14 +114,6 @@ const Overview: React.FC = () => {
       path: '/contenedores'
     },
     {
-      label: 'Flota Vehicular',
-      value: `${vehiclesInRoute} / ${activeVehiclesCount} En Ruta`,
-      sub: `${avgFuel}% Combustible Promedio`,
-      icon: <Truck size={24} />,
-      color: 'info.main',
-      path: '/flota'
-    },
-    {
       label: 'Sensores IoT',
       value: `${onlineDevices} / ${totalDevices} En Línea`,
       sub: `${totalDevices - onlineDevices} Fuera de línea`,
@@ -129,11 +123,11 @@ const Overview: React.FC = () => {
     },
     {
       label: 'Alertas Críticas',
-      value: `${criticalBinsCount + logs.filter(l => l.severity === 'error').length} Pendientes`,
-      sub: `${logs.filter(l => l.severity === 'warning').length} Advertencias`,
+      value: `${criticalBinsCount} Pendientes`,
+      sub: 'Llenado mayor a 90%',
       icon: <AlertTriangle size={24} />,
       color: 'error.main',
-      path: '/flota'
+      path: '/contenedores'
     }
   ];
 
@@ -170,7 +164,7 @@ const Overview: React.FC = () => {
       {/* KPIs Grid */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(4, 1fr)' }, 
+        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(3, 1fr)' }, 
         gap: 3 
       }}>
         {kpis.map((kpi, index) => (
@@ -222,7 +216,7 @@ const Overview: React.FC = () => {
                 Mapa Operativo en Tiempo Real
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
-                Visualización de contenedores, camiones y puntos de red IoT
+                Visualización de contenedores y puntos de red IoT
               </Typography>
             </Box>
             <Button
@@ -275,7 +269,7 @@ const Overview: React.FC = () => {
               <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <CircularProgress size={20} color="primary" />
               </Box>
-            ) : criticalLogs.length === 0 ? (
+            ) : criticalBins.length === 0 ? (
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4, gap: 1 }}>
                 <ShieldAlert size={28} style={{ opacity: 0.3 }} />
                 <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', fontWeight: 600 }}>
@@ -284,7 +278,7 @@ const Overview: React.FC = () => {
               </Box>
             ) : (
               <List dense disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {criticalLogs.map((log, i) => (
+                {criticalBins.map((bin, i) => (
                   <ListItem 
                     key={i} 
                     disablePadding
@@ -293,28 +287,20 @@ const Overview: React.FC = () => {
                       borderRadius: '8px',
                       bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
                       borderLeft: '4px solid',
-                      borderLeftColor: log.severity === 'error' ? 'error.main' : 'warning.main'
+                      borderLeftColor: bin.severity === 'error' ? 'error.main' : 'warning.main'
                     }}
                   >
                     <ListItemText
                       primary={
                         <Typography sx={{ fontWeight: 800, fontSize: 11.5, color: 'text.primary', display: 'block' }}>
-                          {log.vehicle_id ? `Vehículo ${log.vehicle_id}` : 'Dispositivo'}
+                          Contenedor {bin.name}
                         </Typography>
                       }
                       secondary={
                         <Box sx={{ display: 'flex', flexDirection: 'column', mt: 0.25 }}>
-                          <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', fontWeight: 650, display: 'block', mb: 0.25 }}>
-                            {log.description}
+                          <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', fontWeight: 650, display: 'block' }}>
+                            Nivel de llenado crítico: {bin.fill}%
                           </Typography>
-                          {log.date && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, opacity: 0.5 }}>
-                              <Clock size={10} />
-                              <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 700 }}>
-                                {new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </Typography>
-                            </Box>
-                          )}
                         </Box>
                       }
                     />

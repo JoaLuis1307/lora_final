@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
-import { fleetService, VehicleData } from '../../../services/fleetService';
 import { getWsUrl } from '../../../services/config';
 import { calculateFillPercentage } from '../../../utils/fillCalculator';
 
@@ -267,7 +266,6 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   const [dbPoints, setDbPoints] = useState<MapPoint[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [telemetry, setTelemetry] = useState<Record<string, any>>({});
-  const [vehicles, setVehicles] = useState<Record<string, VehicleData>>({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingPointId, setEditingPointId] = useState<number | null>(null);
   const [formAddData, setFormAddData] = useState({ name: '', description: '', type: 'node', lat: 0, lng: 0, deviceId: '' });
@@ -281,22 +279,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
 
   const effectiveExpanded = isPage ? false : isExpanded;
 
-  // Load vehicles initially and connect WebSocket for live fleet updates
+  // Connect WebSocket for live telemetry updates
   useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const list = await fleetService.getVehicles();
-        const map: Record<string, VehicleData> = {};
-        list.forEach(v => {
-          map[v.id] = v;
-        });
-        setVehicles(map);
-      } catch (err) {
-        console.error('[MAP] Error fetching initial vehicles:', err);
-      }
-    };
-    fetchVehicles();
-
     const wsUrl = getWsUrl();
     let socket: WebSocket;
     let reconnectTimer: any;
@@ -312,14 +296,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       socket.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data);
-          if (parsed.event === 'fleet_update' && parsed.data) {
-            const updatedVehicle = parsed.data as VehicleData;
-            console.log('[MAP WEBSOCKET] Actualización viva recibida en el mapa:', updatedVehicle);
-            setVehicles(prev => ({
-              ...prev,
-              [updatedVehicle.id]: updatedVehicle
-            }));
-          } else if (parsed.event === 'telemetry' && parsed.device_id && parsed.data) {
+          if (parsed.event === 'telemetry' && parsed.device_id && parsed.data) {
             console.log('[MAP WEBSOCKET] Telemetría viva recibida en mapa:', parsed.device_id, parsed.data);
             setTelemetry(prev => ({
               ...prev,
@@ -434,21 +411,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     if (!map.current?.loaded()) return;
     const routes = [
       { id: 'route-north', color: '#3b82f6', coords: [[-71.545, -16.390], [-71.540, -16.395], [-71.535, -16.400], [-71.530, -16.408], [-71.525, -16.415]] },
-      { id: 'route-center', color: '#10b981', coords: [[-71.537, -16.410], [-71.530, -16.415], [-71.525, -16.420], [-71.520, -16.425]] },
-      {
-        id: 'route-fleet',
-        color: '#06b6d4',
-        coords: [
-          [-71.5370, -16.4090], // Base Central
-          [-71.5360, -16.4120], // Plaza de Armas
-          [-71.5300, -16.4050], // Calle Mercaderes
-          [-71.5350, -16.4000], // Av. Ejército 402
-          [-71.5420, -16.3920], // Mirador Yanahuara
-          [-71.5450, -16.3850], // Taller Mantenimiento
-          [-71.5390, -16.3950], // Estación de Servicio
-          [-71.5370, -16.4090]  // Retorno a Base
-        ]
-      }
+      { id: 'route-center', color: '#10b981', coords: [[-71.537, -16.410], [-71.530, -16.415], [-71.525, -16.420], [-71.520, -16.425]] }
     ];
     routes.forEach(r => {
       if (map.current?.getSource(r.id)) return;
@@ -690,158 +653,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       } else cached.marker.setLngLat(selectedSearchPoint);
     }
 
-    // Render vehicles dynamically on the map
-    Object.values(vehicles).forEach(v => {
-      if (!v.location) return;
-      const match = v.location.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
-      if (!match) return;
-
-      const lat = parseFloat(match[1]);
-      const lng = parseFloat(match[2]);
-      const coords: [number, number] = [lng, lat];
-
-      const id = `vehicle-${v.id}`;
-      currentMarkerIds.add(id);
-
-      const cached = markersCache.current.get(id);
-      const el = cached?.element || document.createElement('div');
-      if (!cached) el.className = 'vehicle-marker';
-
-      // Status colors
-      let markerColor = '#06b6d4'; // default cyan
-      let glowColor = 'rgba(6,182,212,0.6)';
-      let ledColor = '#2dd4bf';
-
-      if (v.status === 'Low Fuel') {
-        markerColor = '#ef4444'; // Red
-        glowColor = 'rgba(239,68,68,0.6)';
-        ledColor = '#f87171';
-      } else if (v.status === 'Maintenance') {
-        markerColor = '#f59e0b'; // Orange
-        glowColor = 'rgba(245,158,11,0.6)';
-        ledColor = '#fbbf24';
-      } else if (v.status === 'Available') {
-        markerColor = '#10b981'; // Green
-        glowColor = 'rgba(16,185,129,0.6)';
-        ledColor = '#34d399';
-      }
-
-      el.innerHTML = `<div style="background:${markerColor};width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 0 15px ${glowColor};position:relative;cursor:pointer;transition:transform 0.2s">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
-          <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
-          <circle cx="7.5" cy="18.5" r="2.5" />
-          <circle cx="16.5" cy="18.5" r="2.5" />
-          <path d="M13 16h9v-4h-5l-3-4h-1" />
-        </svg>
-        <div style="position:absolute;top:-1px;right:-1px;width:9px;height:9px;background:${ledColor};border:2px solid white;border-radius:50%;animation:pulse 2s infinite"></div>
-      </div>`;
-
-      // HTML for popup
-      const getVehiclePopupHTML = (vehicle: VehicleData) => {
-        const isDark = currentTheme === 'dark';
-        const bg = isDark ? 'rgba(10, 18, 30, 0.95)' : '#ffffff';
-        const tc = isDark ? '#f8fafc' : '#0f172a';
-        const mc = isDark ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)';
-        const bc = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
-        const dividerColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-
-        let statusText = 'En Ruta';
-        let statusTextColor = '#06b6d4';
-        let statusBgColor = 'rgba(6,182,212,0.08)';
-        let statusBorderColor = 'rgba(6,182,212,0.18)';
-
-        if (vehicle.status === 'Low Fuel') {
-          statusText = 'Bajo Combustible';
-          statusTextColor = '#ef4444';
-          statusBgColor = 'rgba(239,68,68,0.08)';
-          statusBorderColor = 'rgba(239,68,68,0.18)';
-        } else if (vehicle.status === 'Maintenance') {
-          statusText = 'Mantenimiento';
-          statusTextColor = '#f59e0b';
-          statusBgColor = 'rgba(245,158,11,0.08)';
-          statusBorderColor = 'rgba(245,158,11,0.18)';
-        } else if (vehicle.status === 'Available') {
-          statusText = 'Disponible';
-          statusTextColor = '#10b981';
-          statusBgColor = 'rgba(16,185,129,0.08)';
-          statusBorderColor = 'rgba(16,185,129,0.18)';
-        }
-
-        // Extract coordinates safely
-        const match = vehicle.location.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
-        const latStr = match ? parseFloat(match[1]).toFixed(5) : '-16.40900';
-        const lngStr = match ? parseFloat(match[2]).toFixed(5) : '-71.53700';
-
-        return `
-          <div style="background:${bg};border-radius:16px;padding:20px;color:${tc};min-width:290px;font-family:'Google Sans', Roboto, Arial, sans-serif;box-shadow:0 8px 30px rgba(0,0,0,0.12);display:flex;flex-direction:column;gap:14px">
-            
-            <!-- Header: Badges & Plates -->
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div style="padding:4px 10px;border-radius:100px;background:${statusBgColor};color:${statusTextColor};display:flex;align-items:center;gap:5px;font-weight:700;font-size:10px;letter-spacing:0.02em">
-                <div style="width:5px;height:5px;border-radius:50%;background:${statusTextColor}"></div>
-                <span>${statusText.toUpperCase()}</span>
-              </div>
-              <span style="font-size:11px;font-family:monospace;font-weight:700;color:${mc};background:${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'};padding:2px 8px;border-radius:6px">${vehicle.plate}</span>
-            </div>
-
-            <!-- Name and Subtitle -->
-            <div style="display:flex;flex-direction:column;gap:4px">
-              <h4 style="margin:0;font-size:16px;font-weight:700;color:${tc};line-height:1.2;text-transform:uppercase">${vehicle.id}</h4>
-              <span style="font-size:10px;font-weight:500;color:${mc};text-transform:uppercase;letter-spacing:0.05em">Chofer: ${vehicle.driver}</span>
-            </div>
-
-            <!-- Fuel Progress Bar -->
-            <div style="display:flex;flex-direction:column;gap:6px;margin:2px 0">
-              <div style="display:flex;justify-content:space-between;align-items:baseline">
-                <span style="font-size:11px;font-weight:500;color:${mc}">Nivel de combustible</span>
-                <span style="font-size:22px;font-weight:700;color:${vehicle.fuel < 20 ? '#d93025' : (isDark ? '#81c995' : '#137333')}">${vehicle.fuel}%</span>
-              </div>
-              <div style="height:6px;background:${isDark ? '#3c4043' : '#f1f3f4'};border-radius:100px;overflow:hidden">
-                <div style="width:${vehicle.fuel}%;height:100%;background:${vehicle.fuel < 20 ? '#d93025' : (isDark ? '#81c995' : '#137333')};border-radius:100px;transition:width 1s"></div>
-              </div>
-            </div>
-
-            <!-- Parameters Grid (Clean, minimalist list) -->
-            <div style="display:flex;flex-direction:column;gap:10px;padding-top:14px;border-top:1px solid ${dividerColor};font-size:11.5px">
-              
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:${mc}">Velocidad</span>
-                <span style="font-weight:700;color:${tc}">${vehicle.speed || 0} km/h</span>
-              </div>
-              
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:${mc}">Carga recolectada</span>
-                <span style="font-weight:700;color:${tc}">${vehicle.capacity}%</span>
-              </div>
-
-              <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:${mc}">Coordenadas GPS</span>
-                <span style="font-family:monospace;font-weight:700;color:${tc}">${latStr}, ${lngStr}</span>
-              </div>
-
-              <div style="display:flex;flex-direction:column;gap:4px;padding-top:4px;border-top:1px dashed ${dividerColor}">
-                <span style="color:${mc};font-size:10px;text-transform:uppercase;letter-spacing:0.02em">Última Dirección</span>
-                <span style="font-weight:700;color:${tc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${vehicle.location.split(' (')[0]}">${vehicle.location.split(' (')[0]}</span>
-              </div>
-
-          </div>`;
-      };
-
-      if (!cached) {
-        const marker = new maplibregl.Marker({ element: el }).setLngLat(coords)
-          .setPopup(new maplibregl.Popup({ offset: 25, maxWidth: 'none' }).setHTML(getVehiclePopupHTML(v)))
-          .addTo(map.current!);
-        markersCache.current.set(id, { marker, element: el });
-      } else {
-        cached.marker.setLngLat(coords);
-        if (cached.marker.getPopup().isOpen()) {
-          cached.marker.getPopup().setHTML(getVehiclePopupHTML(v));
-        }
-      }
-    });
-
     markersCache.current.forEach((v, id) => { if (!currentMarkerIds.has(id)) { v.marker.remove(); markersCache.current.delete(id); } });
-  }, [dbPoints, devices, telemetry, currentTheme, selectedSearchPoint, getPopupHTML, vehicles, editMode]);
+  }, [dbPoints, devices, telemetry, currentTheme, selectedSearchPoint, getPopupHTML, editMode]);
 
 
 
@@ -1021,42 +834,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
   useEffect(() => { if (showAddModal) return; loadDbPoints(); loadDevices(); loadTelemetry(); const i = setInterval(() => { loadDbPoints(); loadDevices(); loadTelemetry(); }, 5000); return () => clearInterval(i); }, [loadDbPoints, loadDevices, loadTelemetry, showAddModal]);
   useEffect(() => { const h = () => map.current?.resize(); window.addEventListener('resize', h); const t = setTimeout(h, 500); return () => { window.removeEventListener('resize', h); clearTimeout(t); }; }, [isExpanded]);
 
-  // Focus on vehicle passed via prop (e.g. from Fleet page)
-  useEffect(() => {
-    if (!map.current || !focusVehicleId) return;
-    if (hasFocusedRef.current === focusVehicleId) return;
 
-    const v = vehicles[focusVehicleId];
-    if (!v || !v.location) return;
-
-    const match = v.location.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
-    if (!match) return;
-
-    const lat = parseFloat(match[1]);
-    const lng = parseFloat(match[2]);
-    const coords: [number, number] = [lng, lat];
-
-    hasFocusedRef.current = focusVehicleId;
-
-    map.current.flyTo({
-      center: coords,
-      zoom: 16.5,
-      pitch: 50,
-      bearing: -15,
-      essential: true,
-      duration: 1500
-    });
-
-    setTimeout(() => {
-      const id = `vehicle-${focusVehicleId}`;
-      const cached = markersCache.current.get(id);
-      if (cached) {
-        if (!cached.marker.getPopup().isOpen()) {
-          cached.marker.togglePopup();
-        }
-      }
-    }, 1600);
-  }, [focusVehicleId, vehicles]);
 
   const searchResults = searchQuery.trim().length > 0 ? [
     ...binsData.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.id.toLowerCase().includes(searchQuery.toLowerCase())).map(b => ({ ...b, type: 'bin' as const })),
@@ -1132,66 +910,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
           </Box>
           <Divider />
           <Box sx={{ flex: 1, overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Camiones en Ruta */}
-            {Object.values(vehicles).length > 0 && (
-              <>
-                <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em', color: 'primary.main', mb: 0.5, display: 'block' }}>
-                  Flota Activa ({Object.values(vehicles).length})
-                </Typography>
-                {Object.values(vehicles).map((vehicle) => {
-                  let statusColor = 'info.main';
-                  if (vehicle.status === 'Low Fuel') statusColor = 'error.main';
-                  else if (vehicle.status === 'Maintenance') statusColor = 'warning.main';
-                  else if (vehicle.status === 'Available') statusColor = 'success.main';
 
-                  return (
-                    <Paper
-                      key={vehicle.id}
-                      onClick={() => {
-                        const match = vehicle.location.match(/\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/);
-                        if (match) {
-                          const lat = parseFloat(match[1]);
-                          const lng = parseFloat(match[2]);
-                          map.current?.flyTo({ center: [lng, lat], zoom: 16, pitch: 45, essential: true, duration: 1500 });
-                          setTimeout(() => {
-                            const cached = markersCache.current.get(`vehicle-${vehicle.id}`);
-                            if (cached && !cached.marker.getPopup().isOpen()) {
-                              cached.marker.togglePopup();
-                            }
-                          }, 1600);
-                        }
-                      }}
-                      sx={{ p: 2, borderRadius: 3, cursor: 'pointer', transition: '0.2s', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: 1 }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Box>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: statusColor, animation: vehicle.status === 'In Route' ? 'pulse 2s infinite' : 'none' }} />
-                            <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.1em', color: statusColor, textTransform: 'uppercase' }}>
-                              {vehicle.status}
-                            </Typography>
-                          </Box>
-                          <Typography variant="body2" sx={{ fontWeight: 900, lineHeight: 1.2 }}>{vehicle.id}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: 'block', mt: 0.5 }}>
-                            Chofer: {vehicle.driver}
-                          </Typography>
-                        </Box>
-                        <Chip label={vehicle.plate} size="small" variant="outlined" sx={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.65rem' }} />
-                      </Box>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>
-                          Combustible: {vehicle.fuel}%
-                        </Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>
-                          {vehicle.speed} km/h
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  );
-                })}
-                <Divider sx={{ my: 1 }} />
-              </>
-            )}
 
             {dbPoints.map((point) => {
               const linkedDevice = devices.find(d => d.map_point_id === point.id);

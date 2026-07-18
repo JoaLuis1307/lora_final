@@ -171,7 +171,7 @@ const Settings: React.FC = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {[
                   { title: 'Alertas Críticas', desc: 'Contenedores al 100% o fallos de sensor.', color: 'error.main' },
-                  { title: 'Mantenimiento de Flota', desc: 'Avisos de revisiones programadas.', color: 'warning.main' },
+                  { title: 'Mantenimiento de Sensores', desc: 'Avisos de calibración o batería baja.', color: 'warning.main' },
                   { title: 'Reportes Diarios', desc: 'Resumen de recolección al final del día.', color: 'primary.main' },
                   { title: 'Seguridad IoT', desc: 'Intentos de acceso no autorizados a gateways.', color: 'success.main' },
                 ].map((item, idx) => (
