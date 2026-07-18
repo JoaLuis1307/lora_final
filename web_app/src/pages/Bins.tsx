@@ -514,11 +514,11 @@ const Bins: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ 
-                    color: i === 2 && criticalCount > 0 ? '#d93025' : (i === 3 && lowBatteryCount > 0 ? '#f59e0b' : '#1a73e8'), 
+                    color: 'text.secondary', 
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    opacity: 0.8
+                    opacity: 0.6
                   }}>
                     {kpi.icon}
                   </Box>
