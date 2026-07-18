@@ -177,7 +177,7 @@ const Alerts: React.FC = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.02em', color: 'text.primary' }}>
-            Consola de Incidentes
+            Notificaciones y Alertas
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, opacity: 0.8 }}>
             Monitoreo en tiempo real de anomalías de red, sensores y capacidad de contenedores.
