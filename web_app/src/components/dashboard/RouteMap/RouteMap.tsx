@@ -11,6 +11,7 @@ import { Box } from '@mui/material';
 import { RouteData } from '../../../services/routeService';
 import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
+import { calculateFillPercentage } from '../../../utils/fillCalculator';
 
 interface RouteMapProps {
   onRouteCreated: (data: any) => void;
@@ -135,6 +136,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   const [telemetry, setTelemetry] = useState<Record<string, any>>({});
   const markersCache = useRef<Map<string, { marker: maplibregl.Marker, element: HTMLDivElement }>>(new Map());
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   // Initialize Map
   useEffect(() => {
@@ -154,6 +156,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
     });
 
     map.current.on('load', () => {
+      setMapLoaded(true);
       if (!map.current) return;
       
       // Add 3D buildings only if vector source exists
@@ -179,9 +182,14 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       }
     });
 
+    map.current.on('style.load', () => {
+      setMapLoaded(true);
+    });
+
     setCurrentTheme(initialTheme);
 
     return () => {
+      setMapLoaded(false);
       map.current?.remove();
       map.current = null;
     };
@@ -226,6 +234,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   // Sync Map Style with prop
   useEffect(() => {
     if (!map.current) return;
+    setMapLoaded(false);
     const nextStyle = getMapStyle(mapStyle, currentTheme) as any;
     map.current.setStyle(nextStyle);
   }, [mapStyle, currentTheme]);
@@ -274,10 +283,36 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
           distance: parseFloat((route.distance / 1000).toFixed(2)),
           duration: Math.round(route.duration / 60)
         });
+        return;
       }
     } catch (error) {
-      console.error('Error calculating route:', error);
+      console.warn('Error calculating OSRM route, falling back to straight lines:', error);
     }
+
+    // Straight line fallback if OSRM is offline or blocked
+    const fallbackGeometry = {
+      type: 'LineString',
+      coordinates: pts
+    };
+    
+    let totalDist = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i];
+      const p2 = pts[i+1];
+      const d = Math.sqrt(Math.pow(p1[0] - p2[0], 2) + Math.pow(p1[1] - p2[1], 2)) * 111.12;
+      totalDist += d;
+    }
+    
+    setRouteData({
+      distance: totalDist.toFixed(2),
+      duration: Math.round(totalDist * 2), // roughly 2 mins per km
+      geometry: fallbackGeometry
+    });
+    onRouteCreated({
+      points: pts,
+      distance: parseFloat(totalDist.toFixed(2)),
+      duration: Math.round(totalDist * 2)
+    });
   }, [onRouteCreated]);
 
   useEffect(() => {
@@ -299,9 +334,17 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
     }
   }, [activeRoute, calculateRoute]);
 
+  // Clean markers Cache on style change/unload
+  useEffect(() => {
+    if (!mapLoaded) {
+      markersCache.current.forEach(m => m.marker.remove());
+      markersCache.current.clear();
+    }
+  }, [mapLoaded]);
+
   // Add Bin/Point Markers (Same as 3D Map)
   useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !mapLoaded) return;
 
     const isDark = currentTheme === 'dark';
     const bgColor = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)';
@@ -318,10 +361,15 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       const linkedDevice = devices.find(d => (d as any).map_point_id === point.id);
       const deviceTelemetry = linkedDevice ? telemetry[linkedDevice.device_id] : null;
       const isOnline = linkedDevice?.status?.toLowerCase() === 'online';
-      const bat = deviceTelemetry?.battery ?? deviceTelemetry?.bateria;
-      const isFull = deviceTelemetry?.is_full === 1 || deviceTelemetry?.status_text === 'FULL';
-      const level = isFull ? 100 : (deviceTelemetry?.fill_level || 24);
-      const color = isFull ? '#ef4444' : (isOnline ? '#10b981' : (isDark ? '#334155' : '#94a3b8'));
+      
+      // Calculate fill level using dynamic utility
+      const dist = deviceTelemetry ? (deviceTelemetry.tof_cm ?? deviceTelemetry.ultrasonic_cm) : undefined;
+      const level = isOnline && dist !== undefined ? calculateFillPercentage(dist) : 0;
+      
+      // Match Google Colors for consistency with main MapPreview
+      const isFull = level >= 90;
+      const stateColor = level >= 90 ? '#ea4335' : (level >= 70 ? '#f9ab00' : '#34a853');
+      const color = isOnline ? stateColor : (isDark ? '#3c4043' : '#cbd5e1');
 
       const cached = markersCache.current.get(markerId);
       const markerEl = cached ? cached.element : document.createElement('div');
@@ -399,11 +447,11 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
         markersCache.current.delete(id);
       }
     });
-  }, [dbPoints, devices, telemetry, currentTheme]);
+  }, [dbPoints, devices, telemetry, currentTheme, mapLoaded]);
 
   // Update Route Layers
   useEffect(() => {
-    if (!map.current || !map.current.loaded()) return;
+    if (!map.current || !mapLoaded) return;
 
     const currentColor = activeRoute?.color || selectedColor;
 
@@ -531,7 +579,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       if (map.current.getLayer('route-glow')) map.current.removeLayer('route-glow');
       if (map.current.getSource('route')) map.current.removeSource('route');
     }
-  }, [points, routeData, selectedColor, activeRoute]);
+  }, [points, routeData, selectedColor, activeRoute, mapLoaded]);
 
   const clearRoute = () => {
     setPoints([]);
