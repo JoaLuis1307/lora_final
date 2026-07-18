@@ -4,13 +4,14 @@ import { useTheme } from '@mui/material/styles';
 import {
   Box, Paper, Typography, Chip, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, CircularProgress,
-  Alert, Button, IconButton, ToggleButton, ToggleButtonGroup, alpha
+  Alert, Button, IconButton, ToggleButton, ToggleButtonGroup, alpha, TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
 import {
   Activity, Clock, RefreshCw, TrendingUp, TrendingDown,
-  Download, ArrowLeft, Minus, ChevronDown, ChevronUp, Zap, History, Cpu
+  Download, ArrowLeft, Minus, ChevronDown, ChevronUp, Zap, History, Cpu, Search, MapPin, Filter
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
+import { mapService, MapPoint } from '../services/mapService';
 import { calculateFillPercentage } from '../utils/fillCalculator';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
@@ -35,14 +36,6 @@ const calcFill = (e: any) => {
   return calculateFillPercentage(d);
 };
 
-const fillColor = (v: number | null) => {
-  if (v === null) return '#94a3b8';
-  if (v >= 90) return '#d93025'; // Google Red
-  if (v >= 75) return '#f59e0b'; // Google Orange
-  if (v >= 30) return '#eab308'; // Yellow
-  return '#188038'; // Google Green
-};
-
 const RANGES = [
   { value: '15m', label: '15 min' },
   { value: '1h', label: '1 hora' },
@@ -54,7 +47,6 @@ const RANGES = [
 // Clean Google-style color constants
 const GOOGLE_BLUE_DARK = '#8ab4f8';
 const GOOGLE_BLUE_LIGHT = '#1a73e8';
-const TEXT_MUTED = '#5f6368';
 
 const getMetrics = (isDark: boolean) => [
   { key: 'fill', label: 'Nivel Llenado', unit: '%', color: isDark ? '#81c995' : '#188038' },
@@ -63,6 +55,14 @@ const getMetrics = (isDark: boolean) => [
   { key: 'rssi', label: 'Señal RSSI', unit: 'dBm', color: isDark ? GOOGLE_BLUE_DARK : GOOGLE_BLUE_LIGHT },
   { key: 'snr', label: 'Ruido SNR', unit: 'dB', color: isDark ? '#d7aefb' : '#8430c5' },
 ];
+
+const fillColor = (v: number | null) => {
+  if (v === null) return '#94a3b8';
+  if (v >= 90) return '#d93025'; // Google Red
+  if (v >= 75) return '#f59e0b'; // Google Orange
+  if (v >= 30) return '#eab308'; // Yellow
+  return '#188038'; // Google Green
+};
 
 function calcStats(arr: number[]) {
   if (!arr.length) return null;
@@ -410,9 +410,15 @@ const Stats: React.FC = () => {
   const mode = sp.get('mode') || 'realtime';
   const isRealtime = mode === 'realtime';
 
+  // Filters & Sorting States (lightweight)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'critical' | 'warning' | 'normal' | 'offline'>('all');
+  const [sortBy, setSortBy] = useState<'fill' | 'name' | 'signal'>('fill');
+
   // State
   const [data, setData] = useState<Record<string, any[]>>({});
   const [devices, setDevices] = useState<Device[]>([]);
+  const [mapPoints, setMapPoints] = useState<MapPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveRange, setLiveRange] = useState('15m');
@@ -421,11 +427,26 @@ const Stats: React.FC = () => {
   const effectiveRange = isRealtime ? liveRange : currentRange;
   const rangeLabel = RANGES.find(r => r.value === effectiveRange)?.label || effectiveRange;
 
-  // Load devices list once
+  // Map representation
+  const pointMap = useMemo(() => {
+    const m = new Map<number, MapPoint>();
+    mapPoints.forEach(p => {
+      if (p.id !== undefined) m.set(p.id, p);
+    });
+    return m;
+  }, [mapPoints]);
+
+  // Load resources once
   useEffect(() => {
-    deviceService.getDevices()
-      .then(setDevices)
-      .catch(err => console.error('Error loading devices list:', err));
+    Promise.all([
+      deviceService.getDevices(),
+      mapService.getPoints()
+    ]).then(([devs, pts]) => {
+      setDevices(devs);
+      setMapPoints(pts);
+    }).catch(err => {
+      console.error('Error loading stats resources:', err);
+    });
   }, []);
 
   // Fetch telemetry stats
@@ -456,12 +477,97 @@ const Stats: React.FC = () => {
   useEffect(() => {
     fetchStats(effectiveRange);
     if (isRealtime) {
-      intervalRef.current = setInterval(() => fetchStats(effectiveRange), 12000); // 12 seconds live interval
+      intervalRef.current = setInterval(() => fetchStats(effectiveRange), 12000); // 12s live interval
     }
     return () => {
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
   }, [mode, effectiveRange, fetchStats]);
+
+  // Top level summary calculation
+  const summary = useMemo(() => {
+    let total = devices.length;
+    let critical = 0;
+    let warning = 0;
+    let offline = 0;
+
+    devices.forEach(dev => {
+      const isOnline = dev.status?.toLowerCase() === 'online';
+      if (!isOnline) {
+        offline++;
+      }
+      
+      const devData = data[dev.device_id] || [];
+      const latestEntry = devData[devData.length - 1] || {};
+      const fillVal = calcFill(latestEntry);
+
+      if (fillVal !== null && isOnline) {
+        if (fillVal >= 90) {
+          critical++;
+        } else if (fillVal >= 75) {
+          warning++;
+        }
+      }
+    });
+
+    return { total, critical, warning, offline };
+  }, [devices, data]);
+
+  // Filtering & Sorting logic
+  const processedDevices = useMemo(() => {
+    return devices.map(dev => {
+      const devData = data[dev.device_id] || [];
+      const latestEntry = devData[devData.length - 1] || {};
+      const fillVal = calcFill(latestEntry);
+      const rssiVal = latestEntry.rssi ?? -85;
+      const snrVal = latestEntry.snr ?? 8.5;
+      const battVal = dev.battery_level ?? latestEntry.battery ?? 100;
+      
+      const point = dev.map_point_id ? pointMap.get(dev.map_point_id) : null;
+      const locationLabel = point ? point.name : 'Ubicación sin asignar';
+      const isOnline = dev.status?.toLowerCase() === 'online';
+
+      let statusGroup: 'critical' | 'warning' | 'normal' | 'offline' = 'normal';
+      if (!isOnline) {
+        statusGroup = 'offline';
+      } else if (fillVal !== null) {
+        if (fillVal >= 90) statusGroup = 'critical';
+        else if (fillVal >= 75) statusGroup = 'warning';
+      }
+
+      return {
+        ...dev,
+        fill: fillVal,
+        rssi: rssiVal,
+        snr: snrVal,
+        battery: battVal,
+        locationLabel,
+        statusGroup,
+        latestEntry
+      };
+    }).filter(dev => {
+      // 1. Search Query
+      const matchesSearch = dev.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            dev.device_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            dev.locationLabel.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // 2. Status Group Filter
+      const matchesStatus = statusFilter === 'all' || dev.statusGroup === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    }).sort((a, b) => {
+      // 3. Sorting logic
+      if (sortBy === 'fill') {
+        const fillA = a.fill ?? -1;
+        const fillB = b.fill ?? -1;
+        return fillB - fillA; // Descending (highest fill capacity first!)
+      }
+      if (sortBy === 'signal') {
+        return b.rssi - a.rssi; // Best signal (dBm) first
+      }
+      return a.name.localeCompare(b.name); // Alphabetical
+    });
+  }, [devices, data, pointMap, searchQuery, statusFilter, sortBy]);
 
   const selectDevice = (deviceId: string) => {
     setSp(prev => {
@@ -484,7 +590,7 @@ const Stats: React.FC = () => {
     const b = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const u = URL.createObjectURL(b);
     const a = document.createElement('a'); a.href = u;
-    a.download = `telemetry-report-${mode}-${effectiveRange}.json`;
+    a.download = `reporte-telemetria-${mode}-${effectiveRange}.json`;
     a.click(); URL.revokeObjectURL(u);
   }, [data, mode, effectiveRange]);
 
@@ -504,7 +610,7 @@ const Stats: React.FC = () => {
               </IconButton>
             )}
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-0.02em' }}>
+              <Typography variant="h5" sx={{ fontWeight: 950, letterSpacing: '-0.02em' }}>
                 {filterDevice ? `Estadísticas de Nodo` : 'Historial de Señal LoRa P2P'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -590,82 +696,189 @@ const Stats: React.FC = () => {
           </Paper>
         )
       ) : (
-        // Main Resource Overview List (Table style) — lightweight & prevents chart lag
-        <TableContainer component={Paper} sx={glassSx}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Dispositivo</TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>ID (EUI)</TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Llenado Contenedor</TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Calidad de Señal</TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Margen SNR</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Estadísticas</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {devices.map(dev => {
-                const devData = data[dev.device_id] || [];
-                const latestEntry = devData[devData.length - 1] || {};
-                const fillVal = calcFill(latestEntry);
-                const rssiVal = latestEntry.rssi ?? -85;
-                const snrVal = latestEntry.snr ?? 8.5;
+        // Resource Manager (Lightweight Overview list with filters + sorting)
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          
+          {/* Summary counters bar */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2.5 }}>
+            {[
+              { label: 'Total Contenedores', value: summary.total, color: 'text.primary', border: 'rgba(255,255,255,0.08)' },
+              { label: 'Críticos (>= 90%)', value: summary.critical, color: 'error.main', border: '#d93025' },
+              { label: 'Advertencias (75%-90%)', value: summary.warning, color: 'warning.main', border: '#f59e0b' },
+              { label: 'Sensores Inactivos', value: summary.offline, color: 'text.secondary', border: '#5f6368' }
+            ].map((card, idx) => (
+              <Paper key={idx} sx={{ ...glassSx, p: 2.5, borderLeft: `4px solid ${card.border}` }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {card.label}
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900, mt: 1, color: card.color }}>
+                  {card.value}
+                </Typography>
+              </Paper>
+            ))}
+          </Box>
 
-                return (
-                  <TableRow key={dev.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
-                          <Cpu size={16} />
-                        </Box>
-                        <Typography sx={{ fontWeight: 800, fontSize: 13.5 }}>{dev.name || 'Sin nombre'}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>
-                      {dev.device_id}
-                    </TableCell>
-                    <TableCell>
-                      {fillVal !== null ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(fillVal) }}>{fillVal}%</Typography>
-                          <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
-                            <Box sx={{ height: '100%', width: `${fillVal}%`, bgcolor: fillColor(fillVal) }} />
-                          </Box>
-                        </Box>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">--</Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace', fontSize: 12.5 }}>
-                      {rssiVal} dBm
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 700, fontFamily: 'monospace', fontSize: 12.5, color: 'text.secondary' }}>
-                      {Number(snrVal).toFixed(1)} dB
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => selectDevice(dev.device_id)}
-                        sx={{
-                          borderRadius: '24px',
-                          fontSize: 10.5,
-                          fontWeight: 800,
-                          textTransform: 'none',
-                          px: 2.5,
-                          boxShadow: 'none',
-                          '&:hover': { boxShadow: 'none' }
-                        }}
-                      >
-                        Ver Gráficos
-                      </Button>
+          {/* Filtering, Search and Sort Panel */}
+          <Paper sx={{ ...glassSx, p: 2.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+              
+              {/* Search bar */}
+              <TextField
+                placeholder="Buscar por nombre, ID o dirección..."
+                size="small"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                slotProps={{
+                  input: {
+                    startAdornment: <InputAdornment position="start"><Search size={16} /></InputAdornment>
+                  }
+                }}
+                sx={{ flex: 2, minWidth: 260, '& .MuiOutlinedInput-root': { borderRadius: '24px' } }}
+              />
+
+              {/* Status Filter */}
+              <FormControl size="small" sx={{ flex: 1, minWidth: 160 }}>
+                <InputLabel id="status-filter-label">Filtrar por Estado</InputLabel>
+                <Select
+                  labelId="status-filter-label"
+                  value={statusFilter}
+                  label="Filtrar por Estado"
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  sx={{ borderRadius: '24px' }}
+                >
+                  <MenuItem value="all">Todos los estados</MenuItem>
+                  <MenuItem value="critical">Crítico (>= 90%)</MenuItem>
+                  <MenuItem value="warning">Advertencia (75%-90%)</MenuItem>
+                  <MenuItem value="normal">Normal (&lt; 75%)</MenuItem>
+                  <MenuItem value="offline">Offline</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Sorting Filter */}
+              <FormControl size="small" sx={{ flex: 1, minWidth: 160 }}>
+                <InputLabel id="sort-filter-label">Ordenar por</InputLabel>
+                <Select
+                  labelId="sort-filter-label"
+                  value={sortBy}
+                  label="Ordenar por"
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  sx={{ borderRadius: '24px' }}
+                >
+                  <MenuItem value="fill">Capacidad (Mayor a Menor)</MenuItem>
+                  <MenuItem value="signal">Intensidad de Señal</MenuItem>
+                  <MenuItem value="name">Nombre Alfabético</MenuItem>
+                </Select>
+              </FormControl>
+
+            </Box>
+          </Paper>
+
+          {/* Table Container */}
+          <TableContainer component={Paper} sx={glassSx}>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Contenedor</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>ID EUI</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Dirección / Ubicación</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Nivel de Llenado</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Señal LoRa</TableCell>
+                  <TableCell sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Batería</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 800, fontSize: 11, textTransform: 'uppercase', color: 'text.secondary' }}>Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {processedDevices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} sx={{ py: 6, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>No se encontraron dispositivos que coincidan con la búsqueda.</Typography>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  processedDevices.map(dev => (
+                    <TableRow key={dev.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                      
+                      {/* Name */}
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
+                            <Cpu size={16} />
+                          </Box>
+                          <Typography sx={{ fontWeight: 800, fontSize: 13.5 }}>{dev.name || 'Sin nombre'}</Typography>
+                        </Box>
+                      </TableCell>
+
+                      {/* EUI */}
+                      <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>
+                        {dev.device_id}
+                      </TableCell>
+
+                      {/* Address */}
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.secondary' }}>
+                          <MapPin size={13} style={{ flexShrink: 0 }} />
+                          <Typography variant="body2" sx={{ fontWeight: 550, fontSize: 12.5 }}>
+                            {dev.locationLabel}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+
+                      {/* Fill Progress */}
+                      <TableCell>
+                        {dev.fill !== null ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>{dev.fill}%</Typography>
+                            <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
+                              <Box sx={{ height: '100%', width: `${dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
+                            </Box>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">--</Typography>
+                        )}
+                      </TableCell>
+
+                      {/* RSSI & SNR */}
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'monospace', fontSize: 12.5 }}>
+                          {dev.rssi} dBm
+                          <Typography component="span" sx={{ fontSize: 10, opacity: 0.6, ml: 0.5, fontWeight: 550 }}>({Number(dev.snr).toFixed(1)} dB)</Typography>
+                        </Typography>
+                      </TableCell>
+
+                      {/* Battery */}
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 750, color: dev.battery < 20 ? 'error.main' : 'text.primary', fontSize: 12.5 }}>
+                          {dev.battery}%
+                        </Typography>
+                      </TableCell>
+
+                      {/* Action */}
+                      <TableCell align="right">
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => selectDevice(dev.device_id)}
+                          sx={{
+                            borderRadius: '24px',
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                            textTransform: 'none',
+                            px: 2.5,
+                            boxShadow: 'none',
+                            '&:hover': { boxShadow: 'none' }
+                          }}
+                        >
+                          Ver Gráficos
+                        </Button>
+                      </TableCell>
+
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       )}
 
     </Box>
