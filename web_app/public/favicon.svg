@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Beautiful Google-Green sprout/leaf representing Eco -->
+  <path d="M16 4C16 4 23 9 23 16C23 20.4183 19.866 24 16 24C12.134 24 9 20.4183 9 16C9 9 16 4 16 4Z" fill="#34a853" />
+  <!-- IoT signal concentric waves in white representing LoRa P2P wireless telemetry -->
+  <path d="M16 11A3 3 0 0 1 19 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <path d="M16 7A7 7 0 0 1 23 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+  <circle cx="16" cy="16" r="2.5" fill="#ffffff" />
+</svg>
