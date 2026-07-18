@@ -20,6 +20,7 @@ import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
 import { fleetService, VehicleData } from '../../../services/fleetService';
 import { getWsUrl } from '../../../services/config';
+import { calculateFillPercentage } from '../../../utils/fillCalculator';
 
 interface MapPreviewProps {
   isPage?: boolean;
@@ -327,7 +328,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
             setDevices(prev => prev.map(d => {
               if (d.device_id === parsed.device_id) {
                 const fillDistance = parsed.data.tof_cm ?? parsed.data.ultrasonic_cm ?? 80;
-                const fillPct = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
+                const fillPct = calculateFillPercentage(fillDistance);
                 const status = fillPct >= 90 ? 'Warning' : 'Online';
                 return { ...d, status, last_seen: new Date().toISOString() };
               }
@@ -481,11 +482,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
     const fillDistance = deviceTelemetry?.tof_cm ?? deviceTelemetry?.ultrasonic_cm ?? deviceTelemetry?.fill;
     let fillPct = 24;
     if (fillDistance !== undefined) {
-      if (fillDistance <= 120) {
-        fillPct = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
-      } else {
-        fillPct = Math.min(100, Math.max(0, fillDistance));
-      }
+      fillPct = calculateFillPercentage(fillDistance);
     }
     const showBinIndicator = point.type === 'bin' || point.type === 'Reciclaje' || linkedDevice?.type === 'Nodo Sensor';
     const isHardwareReal = linkedDevice?.gateway_id?.toLowerCase() === 'gateway_01';
@@ -628,11 +625,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ isPage = false, focusVehicleId 
       const fillDistance = dt?.tof_cm ?? dt?.ultrasonic_cm ?? dt?.fill;
       let fillPct = 24;
       if (fillDistance !== undefined) {
-        if (fillDistance <= 120) {
-          fillPct = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
-        } else {
-          fillPct = Math.min(100, Math.max(0, fillDistance));
-        }
+        fillPct = calculateFillPercentage(fillDistance);
       }
       const isFull = fillPct >= 90 || dt?.is_full === 1;
       const batt = dt?.battery ?? dt?.battery_level ?? linkedDevice?.battery_level ?? 0;

@@ -11,6 +11,7 @@ import { deviceService, Device } from '../services/deviceService';
 import { fleetService, VehicleData, MaintenanceLogData } from '../services/fleetService';
 import { mapService, MapPoint } from '../services/mapService';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
+import { calculateFillPercentage } from '../utils/fillCalculator';
 
 const googlePaper = (t: any) => ({
   bgcolor: t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.55)' : '#ffffff',
@@ -75,11 +76,7 @@ const Overview: React.FC = () => {
       const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
       let fill = 0;
       if (fillDistance !== undefined) {
-        if (fillDistance <= 120) {
-          fill = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
-        } else {
-          fill = Math.min(100, Math.max(0, fillDistance));
-        }
+        fill = calculateFillPercentage(fillDistance);
         totalFill += fill;
         filledBinsCount++;
         if (fill >= 90) {

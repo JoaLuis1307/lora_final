@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { deviceService } from '../services/deviceService';
+import { calculateFillPercentage } from '../utils/fillCalculator';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, Legend, Area, AreaChart, ReferenceLine
@@ -35,7 +36,7 @@ const formatFull = (ts: string) => {
 const calcFill = (e: any) => {
   const d = e.tof_cm ?? e.ultrasonic_cm;
   if (d === undefined || d === null) return null;
-  return Math.round(Math.max(0, Math.min(100, ((120 - d) / 120) * 100)));
+  return calculateFillPercentage(d);
 };
 
 const fillColor = (v: number | null) => {

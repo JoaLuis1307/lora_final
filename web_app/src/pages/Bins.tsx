@@ -17,6 +17,7 @@ import {
 import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
 import { getWsUrl } from '../services/config';
+import { calculateFillPercentage } from '../utils/fillCalculator';
 
 const defaultBins: any[] = [];
 
@@ -208,7 +209,7 @@ const Bins: React.FC = () => {
             setDevices(prev => prev.map(d => {
               if (d.device_id === parsed.device_id) {
                 const fillDistance = parsed.data.tof_cm ?? parsed.data.ultrasonic_cm ?? 80;
-                const fillPct = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
+                const fillPct = calculateFillPercentage(fillDistance);
                 const status = fillPct >= 90 ? 'Warning' : 'Online';
                 return { 
                   ...d, 
@@ -309,11 +310,7 @@ const Bins: React.FC = () => {
     if (dt) {
       const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
       if (fillDistance !== undefined) {
-        if (fillDistance <= 120) {
-          fill = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
-        } else {
-          fill = Math.min(100, Math.max(0, fillDistance));
-        }
+        fill = calculateFillPercentage(fillDistance);
       }
       temp = dt.temperature ?? dt.temperatura ?? temp;
       hum = dt.humidity ?? dt.humedad ?? hum;
@@ -363,11 +360,7 @@ const Bins: React.FC = () => {
       if (dt) {
         const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
         if (fillDistance !== undefined) {
-          if (fillDistance <= 120) {
-            fill = Math.round(Math.max(0, Math.min(100, ((120 - fillDistance) / 120) * 100)));
-          } else {
-            fill = Math.min(100, Math.max(0, fillDistance));
-          }
+          fill = calculateFillPercentage(fillDistance);
         }
         temp = dt.temperature ?? temp;
         hum = dt.humidity ?? hum;

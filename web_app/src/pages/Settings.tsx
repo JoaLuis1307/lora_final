@@ -13,6 +13,8 @@ const Settings: React.FC = () => {
   const [name, setName] = useState(user?.user_metadata?.full_name || '');
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [containerHeight, setContainerHeight] = useState(localStorage.getItem('container_height') || '100');
+  const [containerFullDistance, setContainerFullDistance] = useState(localStorage.getItem('container_full_distance') || '10');
 
   const tabs = [
     { id: 'perfil', label: 'Mi Perfil', icon: <User size={18} /> },
@@ -23,6 +25,8 @@ const Settings: React.FC = () => {
 
   const handleSave = () => {
     setSaving(true);
+    localStorage.setItem('container_height', containerHeight);
+    localStorage.setItem('container_full_distance', containerFullDistance);
     setTimeout(() => {
       setSaving(false);
       setSaveStatus('Configuración actualizada con éxito');
@@ -219,7 +223,36 @@ const Settings: React.FC = () => {
                     Afecta el consumo de datos de los Gateways LoRaWAN.
                   </Typography>
                 </Box>
-
+                <Box sx={{ gridColumn: 'span 2', mt: 2, pt: 4, borderTop: (t) => `1px solid ${t.palette.divider}` }}>
+                  <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 900, opacity: 0.4, mb: 2, display: 'block' }}>Calibración de Contenedores</Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+                    <TextField
+                      label="Altura del Contenedor (cm)"
+                      type="number"
+                      size="small"
+                      value={containerHeight}
+                      onChange={(e) => setContainerHeight(e.target.value)}
+                      helperText="Distancia desde el sensor hasta el fondo del contenedor vacío (ej: 100 cm)."
+                      fullWidth
+                    />
+                    <TextField
+                      label="Distancia para Contenedor Lleno (cm)"
+                      type="number"
+                      size="small"
+                      value={containerFullDistance}
+                      onChange={(e) => setContainerFullDistance(e.target.value)}
+                      helperText="Distancia desde el sensor hasta la basura cuando está 100% lleno (ej: 10 cm)."
+                      fullWidth
+                    />
+                  </Box>
+                  <Button
+                    variant="contained"
+                    onClick={handleSave}
+                    sx={{ mt: 3, textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.15em' }}
+                  >
+                    Guardar Parámetros de Calibración
+                  </Button>
+                </Box>
               </Box>
             </Paper>
           )}
