@@ -9,6 +9,7 @@ import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
 import { getWsUrl } from '../services/config';
 import { calculateFillPercentage } from '../utils/fillCalculator';
+import contenedorImg from '../assets/contenedor.png';
 import {
   Box, Paper, Typography, Button, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton,
@@ -593,7 +594,7 @@ const Bins: React.FC = () => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    minHeight: 250,
+                    minHeight: 280,
                     border: '1px solid',
                     borderColor: 'divider',
                     '&:hover': { 
@@ -601,43 +602,75 @@ const Bins: React.FC = () => {
                     } 
                   })}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {/* Name & Address */}
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: 15.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {bin.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
-                          <MapPin size={11} style={{ flexShrink: 0 }} />
-                          <Typography variant="caption" sx={{ fontWeight: 550, fontSize: 10.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {bin.location}
-                          </Typography>
-                        </Box>
-                      </Box>
+                      {/* Main Split Content */}
+                      <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch' }}>
+                        
+                        {/* Left Side: Parameters & Data */}
+                        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {/* Name & Address */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Typography sx={{ fontWeight: 800, fontSize: 15.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {bin.name}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+                              <MapPin size={11} style={{ flexShrink: 0 }} />
+                              <Typography variant="caption" sx={{ fontWeight: 550, fontSize: 10.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {bin.location}
+                              </Typography>
+                            </Box>
+                          </Box>
 
-                      {/* Status Badges */}
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: isSync ? 'rgba(24,128,56,0.08)' : 'rgba(217,48,37,0.08)', px: 1, py: 0.25, borderRadius: '4px' }}>
-                          <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: isSync ? '#188038' : '#d93025' }} />
-                          <Typography sx={{ fontSize: 8.5, fontWeight: 800, color: isSync ? '#188038' : '#d93025', textTransform: 'uppercase' }}>
-                            {isSync ? 'SINCRONIZADO' : 'PENDIENTE'}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'action.hover', px: 1, py: 0.25, borderRadius: '4px', color: 'text.secondary' }}>
-                          <Router size={9} />
-                          <Typography sx={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase' }}>
-                            {gwName}
-                          </Typography>
-                        </Box>
-                      </Box>
+                          {/* Status Badges */}
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: isSync ? 'rgba(24,128,56,0.08)' : 'rgba(217,48,37,0.08)', px: 1, py: 0.25, borderRadius: '4px' }}>
+                              <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: isSync ? '#188038' : '#d93025' }} />
+                              <Typography sx={{ fontSize: 8.5, fontWeight: 800, color: isSync ? '#188038' : '#d93025', textTransform: 'uppercase' }}>
+                                {isSync ? 'SINCRONIZADO' : 'PENDIENTE'}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'action.hover', px: 1, py: 0.25, borderRadius: '4px', color: 'text.secondary' }}>
+                              <Router size={9} />
+                              <Typography sx={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase' }}>
+                                {gwName}
+                              </Typography>
+                            </Box>
+                          </Box>
 
-                      {/* Capacity progress */}
-                      <Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.5 }}>
-                          <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 9.5, color: 'text.secondary', textTransform: 'uppercase' }}>Capacidad</Typography>
-                          <Typography sx={{ fontWeight: 900, fontSize: 18, fontFamily: 'monospace', color: getFillColor(bin.fill) }}>{bin.fill}%</Typography>
+                          {/* Capacity progress */}
+                          <Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 0.5 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 9.5, color: 'text.secondary', textTransform: 'uppercase' }}>Capacidad</Typography>
+                              <Typography sx={{ fontWeight: 900, fontSize: 18, fontFamily: 'monospace', color: getFillColor(bin.fill) }}>{bin.fill}%</Typography>
+                            </Box>
+                            <Box sx={{ height: 6, bgcolor: 'action.hover', borderRadius: 100, overflow: 'hidden' }}>
+                              <Box sx={{ height: '100%', width: `${bin.fill}%`, bgcolor: getFillColor(bin.fill), borderRadius: 100 }} />
+                            </Box>
+                          </Box>
                         </Box>
-                        <Box sx={{ height: 6, bgcolor: 'action.hover', borderRadius: 100, overflow: 'hidden' }}>
-                          <Box sx={{ height: '100%', width: `${bin.fill}%`, bgcolor: getFillColor(bin.fill), borderRadius: 100 }} />
+
+                        {/* Right Side: Clean Transparent Container Image */}
+                        <Box sx={{
+                          width: { xs: 80, sm: 90, md: 100 },
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                        }}>
+                          <Box
+                            component="img"
+                            src={contenedorImg}
+                            alt=""
+                            sx={{
+                              maxWidth: '100%',
+                              maxHeight: '100px',
+                              objectFit: 'contain',
+                              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                              '&:hover': { 
+                                transform: 'scale(1.08) translateY(-2px)',
+                              }
+                            }}
+                          />
                         </Box>
                       </Box>
 
@@ -656,7 +689,7 @@ const Bins: React.FC = () => {
                       </Box>
 
                       {/* Secondary row */}
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 1.5, borderTop: '1px dashed', borderColor: 'divider' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Battery size={13} color={bin.battery < 20 ? '#d93025' : '#188038'} />
                           <Typography variant="caption" sx={{ fontWeight: 750, color: bin.battery < 20 ? 'error.main' : 'text.primary', fontSize: 10.5 }}>
