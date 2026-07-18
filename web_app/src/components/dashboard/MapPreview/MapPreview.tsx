@@ -1084,13 +1084,16 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           variant="persistent"
           sx={{
             '& .MuiDrawer-paper': {
-              width: 340, top: 0, right: 0, height: '100%',
+              width: 340, 
+              top: 80, 
+              right: 0, 
+              height: 'calc(100% - 100px)',
               bgcolor: 'var(--bg-sidebar)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
               border: 'none',
-              borderLeft: 'none',
-              boxShadow: 'none',
+              borderRadius: '24px 0 0 24px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
               pt: 1,
             },
           }}
@@ -1610,13 +1613,12 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           <Box sx={{ 
             position: 'absolute', 
             top: 16, 
-            right: showNetworkPanel ? 356 : 16, // Dynamic shift when drawer is open!
+            right: 16, // Static position!
             zIndex: 10, 
             display: 'flex', 
             alignItems: 'center', 
             gap: 1.5,
-            pointerEvents: 'auto',
-            transition: 'right 0.22s cubic-bezier(0, 0, 0.2, 1)' // Matches the drawer smooth sliding transition!
+            pointerEvents: 'auto'
           }}>
             {/* Theme Toggle Button */}
             <IconButton 
