@@ -25,6 +25,92 @@ interface RouteMapProps {
 
 const center: [number, number] = [-71.537, -16.409]; // Arequipa default
 
+const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
+  if (layer === 'satellite') {
+    return {
+      version: 8,
+      sources: {
+        'satellite-tiles': {
+          type: 'raster',
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+          tileSize: 256,
+          attribution: 'Esri'
+        }
+      },
+      layers: [
+        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 }
+      ]
+    };
+  }
+
+  if (layer === 'hybrid') {
+    return {
+      version: 8,
+      sources: {
+        'satellite-tiles': {
+          type: 'raster',
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+          tileSize: 256,
+          attribution: 'Esri'
+        },
+        'carto-labels': {
+          type: 'raster',
+          tiles: [
+            'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
+            'https://d.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png'
+          ],
+          tileSize: 256,
+          attribution: '© CARTO'
+        }
+      },
+      layers: [
+        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 },
+        { id: 'labels-layer', type: 'raster', source: 'carto-labels', minzoom: 0, maxzoom: 19 }
+      ]
+    };
+  }
+
+  if (layer === 'liberty') {
+    return {
+      version: 8,
+      sources: {
+        'osm-tiles': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors'
+        }
+      },
+      layers: [
+        { id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }
+      ]
+    };
+  }
+
+  const styleName = (layer === 'bright' || (layer === 'dark' && theme === 'light')) ? 'light_all' : 'dark_all';
+  return {
+    version: 8,
+    sources: {
+      'carto-tiles': {
+        type: 'raster',
+        tiles: [
+          `https://a.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
+          `https://b.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
+          `https://c.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
+          `https://d.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`
+        ],
+        tileSize: 256,
+        attribution: '© OpenStreetMap contributors, © CARTO'
+      }
+    },
+    layers: [
+      { id: 'carto-layer', type: 'raster', source: 'carto-tiles', minzoom: 0, maxzoom: 19 }
+    ]
+  };
+};
+
 const RouteMap = forwardRef<any, RouteMapProps>(({ 
   onRouteCreated, 
   activeRoute, 
@@ -45,19 +131,16 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   const markersCache = useRef<Map<string, { marker: maplibregl.Marker, element: HTMLDivElement }>>(new Map());
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
 
-
-
-
   // Initialize Map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    const currentTheme = localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark';
-    const mapStyle = currentTheme === 'light' ? 'bright' : 'dark';
+    const initialTheme = (localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark';
+    const initStyle = getMapStyle(mapStyle, initialTheme) as any;
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: `https://tiles.openfreemap.org/styles/${mapStyle}`,
+      style: initStyle,
       center: center,
       zoom: 14,
       pitch: 45,
@@ -68,36 +151,29 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
     map.current.on('load', () => {
       if (!map.current) return;
       
-      // Add Satellite Source
-      map.current.addSource('arcgis-satellite', {
-        'type': 'raster',
-        'tiles': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-        'tileSize': 256,
-        'attribution': 'Esri'
-      });
+      // Add 3D buildings only if vector source exists
+      if (map.current.getSource('openmaptiles')) {
+        const layers = map.current.getStyle().layers;
+        const labelLayerId = layers?.find(
+          (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
+        )?.id;
 
-      // Add 3D buildings
-      const layers = map.current.getStyle().layers;
-      const labelLayerId = layers?.find(
-        (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
-      )?.id;
-
-      map.current.addLayer({
-        'id': '3d-buildings',
-        'source': 'openmaptiles',
-        'source-layer': 'building',
-        'type': 'fill-extrusion',
-        'minzoom': 15,
-        'paint': {
-          'fill-extrusion-color': currentTheme === 'light' ? '#cbd5e1' : '#1e293b',
-          'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_height']],
-          'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_min_height']],
-          'fill-extrusion-opacity': currentTheme === 'light' ? 0.7 : 0.5
-        }
-      }, labelLayerId);
+        map.current.addLayer({
+          'id': '3d-buildings',
+          'source': 'openmaptiles',
+          'source-layer': 'building',
+          'type': 'fill-extrusion',
+          'minzoom': 15,
+          'paint': {
+            'fill-extrusion-color': initialTheme === 'light' ? '#cbd5e1' : '#1e293b',
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_height']],
+            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_min_height']],
+            'fill-extrusion-opacity': initialTheme === 'light' ? 0.7 : 0.5
+          }
+        }, labelLayerId);
+      }
     });
 
-    const initialTheme = (localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark';
     setCurrentTheme(initialTheme);
 
     return () => {
@@ -145,50 +221,9 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   // Sync Map Style with prop
   useEffect(() => {
     if (!map.current) return;
-    
-    if (mapStyle === 'satellite' || mapStyle === 'hybrid') {
-      if (!map.current.getLayer('satellite-layer')) {
-        const firstLayerId = map.current.getStyle().layers?.[0]?.id;
-        map.current.addLayer({
-          id: 'satellite-layer',
-          type: 'raster',
-          source: 'arcgis-satellite',
-          paint: { 'raster-opacity': 1 }
-        }, firstLayerId);
-      }
-      
-      map.current.setLayoutProperty('satellite-layer', 'visibility', 'visible');
-      
-      // Toggle labels for hybrid
-      map.current.getStyle().layers?.forEach(layer => {
-        if (layer.id !== 'satellite-layer') {
-          const isLabelOrRoad = layer.id.includes('label') || layer.id.includes('road') || layer.id.includes('place') || layer.id.includes('border') || layer.id === '3d-buildings';
-          const shouldShow = mapStyle === 'hybrid' ? isLabelOrRoad : false;
-          try {
-            map.current?.setLayoutProperty(layer.id, 'visibility', shouldShow ? 'visible' : 'none');
-          } catch (e) {}
-        }
-      });
-    } else {
-      if (map.current.getLayer('satellite-layer')) {
-        map.current.setLayoutProperty('satellite-layer', 'visibility', 'none');
-      }
-      
-      const targetStyle = `https://tiles.openfreemap.org/styles/${mapStyle}`;
-      if ((map.current as any)._currentStyleUrl !== targetStyle) {
-        (map.current as any)._currentStyleUrl = targetStyle;
-        map.current.setStyle(targetStyle);
-      } else {
-        map.current.getStyle().layers?.forEach(layer => {
-          if (layer.id !== 'satellite-layer') {
-            try {
-              map.current?.setLayoutProperty(layer.id, 'visibility', 'visible');
-            } catch (e) {}
-          }
-        });
-      }
-    }
-  }, [mapStyle]);
+    const nextStyle = getMapStyle(mapStyle, currentTheme) as any;
+    map.current.setStyle(nextStyle);
+  }, [mapStyle, currentTheme]);
 
   // Sync Pitch with prop
   useEffect(() => {
