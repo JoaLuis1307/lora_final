@@ -10,10 +10,13 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
 
 // =========================================================================
-// CONFIGURACIÓN DE LA IMAGEN DE REGISTRO
-// Reemplaza esta URL con la imagen que deseas mostrar durante el registro:
+// CONFIGURACIÓN DE LAS IMÁGENES DEL PANEL DE INICIO DE SESIÓN
 // =========================================================================
-const REGISTER_IMAGE_URL = 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
+// Imagen mostrada al INICIAR SESIÓN (Vista de Login - Paisaje de Arequipa)
+const LOGIN_IMAGE_URL = 'https://media.vogue.mx/photos/5e5c5b1f25623100081c437c/master/w_1600%2Cc_limit/Arequipa--paisaje.jpg';
+
+// Imagen mostrada al REGISTRARSE (Vista de Registro - Municipalidad de Arequipa)
+const REGISTER_IMAGE_URL = 'https://www.muniarequipa.gob.pe/wp-content/uploads/2025/10/WhatsApp-Image-2025-10-02-at-15.47.58.jpeg';
 
 const Login: React.FC = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -165,12 +168,12 @@ const Login: React.FC = () => {
               flexDirection: 'column',
               justifyContent: 'flex-start',
               position: 'relative',
-              backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.8)), url(${REGISTER_IMAGE_URL})`,
+              backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0.8)), url(${isRegister ? REGISTER_IMAGE_URL : LOGIN_IMAGE_URL})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               color: '#ffffff',
               borderRight: 'none',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
             }}>
               {/* Logo / Brand */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 4 }}>
