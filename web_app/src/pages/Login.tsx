@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, ShieldAlert, X } from 'lucide-react';
+import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, ShieldAlert, X, User, Mail, Lock } from 'lucide-react';
 import {
   Box, Paper, Typography, TextField, Button, IconButton, Divider, InputAdornment
 } from '@mui/material';
@@ -267,19 +267,31 @@ const Login: React.FC = () => {
                     onChange={(e) => setFullName(e.target.value)}
                     fullWidth
                     required={isRegister}
-                    label="Nombre completo"
+                    placeholder="Nombre completo"
                     variant="outlined"
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start" sx={{ color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368', mr: 1.5 }}>
+                            <User size={18} />
+                          </InputAdornment>
+                        )
+                      }
+                    }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px',
-                        backgroundColor: 'transparent',
-                        '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
-                        '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
-                        '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                        borderRadius: '12px',
+                        backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.035)',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                        },
+                        '&.Mui-focused': {
+                          backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.04)' : '#ffffff',
+                          boxShadow: `0 0 0 2px ${themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'}`
+                        }
                       },
-                      '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
-                      '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                      '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 1.8, fontSize: 15 }
                     }}
                   />
                 )}
@@ -290,19 +302,31 @@ const Login: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   fullWidth
                   required
-                  label="Correo electrónico"
+                  placeholder="Correo electrónico"
                   variant="outlined"
+                  slotProps={{
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start" sx={{ color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368', mr: 1.5 }}>
+                          <Mail size={18} />
+                        </InputAdornment>
+                      )
+                    }
+                  }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      backgroundColor: 'transparent',
-                      '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
-                      '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
-                      '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                      borderRadius: '12px',
+                      backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.035)',
+                      '& fieldset': { border: 'none' },
+                      '&:hover': {
+                        backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.04)' : '#ffffff',
+                        boxShadow: `0 0 0 2px ${themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'}`
+                      }
                     },
-                    '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
-                    '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
-                    '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                    '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 1.8, fontSize: 15 }
                   }}
                 />
 
@@ -313,10 +337,15 @@ const Login: React.FC = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     fullWidth
                     required
-                    label="Contraseña"
+                    placeholder="Contraseña"
                     variant="outlined"
                     slotProps={{
                       input: {
+                        startAdornment: (
+                          <InputAdornment position="start" sx={{ color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368', mr: 1.5 }}>
+                            <Lock size={18} />
+                          </InputAdornment>
+                        ),
                         endAdornment: (
                           <InputAdornment position="end">
                             <IconButton onClick={() => setShowPassword(!showPassword)} size="small" edge="end" sx={{ color: themeMode === 'dark' ? '#c4c7c5' : '#444746' }}>
@@ -328,15 +357,18 @@ const Login: React.FC = () => {
                     }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px',
-                        backgroundColor: 'transparent',
-                        '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
-                        '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
-                        '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                        borderRadius: '12px',
+                        backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.035)',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                        },
+                        '&.Mui-focused': {
+                          backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.04)' : '#ffffff',
+                          boxShadow: `0 0 0 2px ${themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'}`
+                        }
                       },
-                      '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
-                      '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                      '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 1.8, fontSize: 15 }
                     }}
                   />
                   
@@ -365,19 +397,31 @@ const Login: React.FC = () => {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     fullWidth
                     required={isRegister}
-                    label="Confirmar contraseña"
+                    placeholder="Confirmar contraseña"
                     variant="outlined"
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start" sx={{ color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368', mr: 1.5 }}>
+                            <Lock size={18} />
+                          </InputAdornment>
+                        )
+                      }
+                    }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: '8px',
-                        backgroundColor: 'transparent',
-                        '& fieldset': { border: '1px solid', borderColor: themeMode === 'dark' ? '#8e918f' : '#747775' },
-                        '&:hover fieldset': { borderColor: themeMode === 'dark' ? '#c4c7c5' : '#1f1f1f' },
-                        '&.Mui-focused fieldset': { borderColor: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0', borderWidth: '2px' }
+                        borderRadius: '12px',
+                        backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.035)',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'
+                        },
+                        '&.Mui-focused': {
+                          backgroundColor: themeMode === 'dark' ? 'rgba(255,255,255,0.04)' : '#ffffff',
+                          boxShadow: `0 0 0 2px ${themeMode === 'dark' ? '#8ab4f8' : '#1a73e8'}`
+                        }
                       },
-                      '& .MuiInputLabel-root': { color: themeMode === 'dark' ? '#c4c7c5' : '#444746' },
-                      '& .MuiInputLabel-root.Mui-focused': { color: themeMode === 'dark' ? '#a8c7fa' : '#0b57d0' },
-                      '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 2, fontSize: 16 }
+                      '& .MuiInputBase-input': { color: themeMode === 'dark' ? '#e3e3e3' : '#1f1f1f', py: 1.8, fontSize: 15 }
                     }}
                   />
                 )}
