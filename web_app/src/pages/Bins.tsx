@@ -788,7 +788,7 @@ const Bins: React.FC = () => {
               <TextField
                 label="Latitud"
                 type="number"
-                inputProps={{ step: 'any' }}
+                slotProps={{ htmlInput: { step: 'any' } }}
                 value={editBinData?.lat !== undefined ? editBinData.lat : ''}
                 onChange={(e) => setEditBinData(prev => prev ? { ...prev, lat: parseFloat(e.target.value) || 0 } : null)}
                 required
@@ -797,7 +797,7 @@ const Bins: React.FC = () => {
               <TextField
                 label="Longitud"
                 type="number"
-                inputProps={{ step: 'any' }}
+                slotProps={{ htmlInput: { step: 'any' } }}
                 value={editBinData?.lng !== undefined ? editBinData.lng : ''}
                 onChange={(e) => setEditBinData(prev => prev ? { ...prev, lng: parseFloat(e.target.value) || 0 } : null)}
                 required
