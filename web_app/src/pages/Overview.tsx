@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, Paper, Typography, Button, Divider, Chip, CircularProgress, List, ListItem, ListItemText
+  Box, Paper, Typography, Button, Divider, Chip, CircularProgress, List, ListItem, ListItemText, alpha
 } from '@mui/material';
 import {
-  Trash2, Cpu, AlertTriangle, Activity, Clock,
-  ShieldAlert, ArrowUpRight
+  Trash2, Cpu, AlertTriangle, Activity, MapPin, ArrowUpRight, Signal
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
@@ -54,110 +53,137 @@ const Overview: React.FC = () => {
   }, []);
 
   // 1. Calculations
-  const binsList = points.filter(p => p.type === 'bin');
+  const binsList = useMemo(() => points.filter(p => p.type === 'bin'), [points]);
   
   // Calculate average fill level of bins using latest telemetry
-  let totalFill = 0;
-  let filledBinsCount = 0;
-  let criticalBinsCount = 0;
+  const { avgFill, filledBinsCount, criticalBinsCount } = useMemo(() => {
+    let totalFill = 0;
+    let filledCount = 0;
+    let criticalCount = 0;
 
-  binsList.forEach(bin => {
-    // Find associated device
-    const associatedDevice = devices.find(d => d.map_point_id === bin.id && d.registered);
-    if (associatedDevice) {
-      const dt = telemetry[associatedDevice.device_id] || {};
-      const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
-      let fill = 0;
-      if (fillDistance !== undefined) {
-        fill = calculateFillPercentage(fillDistance);
-        totalFill += fill;
-        filledBinsCount++;
-        if (fill >= 90) {
-          criticalBinsCount++;
+    binsList.forEach(bin => {
+      // Find associated device
+      const associatedDevice = devices.find(d => d.map_point_id === bin.id && d.registered);
+      if (associatedDevice) {
+        const dt = telemetry[associatedDevice.device_id] || {};
+        const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+        if (fillDistance !== undefined) {
+          const fill = calculateFillPercentage(fillDistance);
+          totalFill += fill;
+          filledCount++;
+          if (fill >= 90) {
+            criticalCount++;
+          }
         }
       }
-    }
-  });
+    });
 
-  const avgFill = filledBinsCount > 0 ? Math.round(totalFill / filledBinsCount) : 48; // fallback to 48% if no telemetries
+    const avg = filledCount > 0 ? Math.round(totalFill / filledCount) : 48; // fallback
+    return { avgFill: avg, filledBinsCount: filledCount, criticalBinsCount: criticalCount };
+  }, [binsList, devices, telemetry]);
 
   // IoT stats
-  const onlineDevices = devices.filter(d => d.status?.toLowerCase() === 'online').length;
+  const onlineDevices = useMemo(() => devices.filter(d => d.status?.toLowerCase() === 'online').length, [devices]);
   const totalDevices = devices.length;
 
+  // Real-time network RF link calculations from database telemetry
+  const avgRssi = useMemo(() => {
+    const rssiValues = Object.values(telemetry)
+      .map(t => t.rssi ?? t.signal_strength)
+      .filter(v => typeof v === 'number');
+    
+    return rssiValues.length > 0 ? Math.round(rssiValues.reduce((a, b) => a + b, 0) / rssiValues.length) : -76;
+  }, [telemetry]);
+
   // Alertas de contenedores críticos (con nivel >= 75%)
-  const criticalBins = binsList.map(bin => {
-    const associatedDevice = devices.find(d => d.map_point_id === bin.id && d.registered);
-    let fill = 0;
-    if (associatedDevice) {
-      const dt = telemetry[associatedDevice.device_id] || {};
-      const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
-      if (fillDistance !== undefined) {
-        fill = calculateFillPercentage(fillDistance);
+  const criticalBins = useMemo(() => {
+    return binsList.map(bin => {
+      const associatedDevice = devices.find(d => d.map_point_id === bin.id && d.registered);
+      let fill = 0;
+      if (associatedDevice) {
+        const dt = telemetry[associatedDevice.device_id] || {};
+        const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+        if (fillDistance !== undefined) {
+          fill = calculateFillPercentage(fillDistance);
+        }
       }
-    }
-    return {
-      id: bin.id,
-      name: bin.name,
-      fill,
-      severity: fill >= 90 ? 'error' : 'warning'
-    };
-  }).filter(b => b.fill >= 75).slice(0, 5);
+      return {
+        id: bin.id,
+        name: bin.name,
+        fill,
+        severity: fill >= 90 ? 'error' : 'warning' as 'error' | 'warning'
+      };
+    }).filter(b => b.fill >= 75)
+      .sort((a, b) => b.fill - a.fill)
+      .slice(0, 5);
+  }, [binsList, devices, telemetry]);
+
+  // Theme-aware Google Brand colors
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  
+  const googleColors = {
+    green: isDark ? '#81c995' : '#188038',
+    blue: isDark ? '#8ab4f8' : '#1a73e8',
+    red: isDark ? '#f28b82' : '#d93025'
+  };
 
   const kpis = [
     {
-      label: 'Contenedores',
-      value: `${binsList.length} Activos`,
+      label: 'Contenedores de Residuos',
+      value: `${binsList.length} Puntos`,
       sub: `${avgFill}% Ocupación Promedio`,
-      icon: <Trash2 size={24} />,
-      color: 'warning.main',
+      icon: <Trash2 size={22} />,
+      color: googleColors.green,
       path: '/contenedores'
     },
     {
-      label: 'Sensores IoT',
-      value: `${onlineDevices} / ${totalDevices} En Línea`,
-      sub: `${totalDevices - onlineDevices} Fuera de línea`,
-      icon: <Cpu size={24} />,
-      color: 'primary.main',
+      label: 'Nodos Sensores LoRa P2P',
+      value: `${onlineDevices} / ${totalDevices} Activos`,
+      sub: `${totalDevices - onlineDevices} Nodos desconectados`,
+      icon: <Cpu size={22} />,
+      color: googleColors.blue,
       path: '/dispositivos'
     },
     {
-      label: 'Alertas Críticas',
-      value: `${criticalBinsCount} Pendientes`,
-      sub: 'Llenado mayor a 90%',
-      icon: <AlertTriangle size={24} />,
-      color: 'error.main',
-      path: '/contenedores'
+      label: 'Incidentes de Capacidad',
+      value: `${criticalBinsCount} Alertas`,
+      sub: 'Llenado mayor al 90%',
+      icon: <AlertTriangle size={22} />,
+      color: googleColors.red,
+      path: '/alertas'
     }
   ];
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5, p: 0.5 }}>
+      
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.02em', color: 'text.primary' }}>
-            Panel de Control Principal
+          <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.02em', color: 'text.primary' }}>
+            Consola de Operaciones
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5, opacity: 0.8 }}>
-            EcoSmart IoT • Gestión Inteligente de Residuos Urbanos
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 550, mt: 0.5, opacity: 0.8 }}>
+            Red Sensorizada LoRa P2P · Gestión e Indicadores de Residuos Urbanos
           </Typography>
         </Box>
         <Button
           variant="outlined"
           size="small"
           onClick={loadData}
-          startIcon={loading ? <CircularProgress size={12} color="inherit" /> : <Activity size={14} />}
+          startIcon={loading ? <CircularProgress size={12} color="inherit" /> : <RefreshCw size={14} className={loading ? 'spin' : ''} />}
           sx={{
             borderRadius: '24px',
             fontSize: '0.75rem',
-            fontWeight: 700,
+            fontWeight: 800,
             textTransform: 'none',
             color: 'text.secondary',
-            borderColor: 'divider'
+            borderColor: 'divider',
+            px: 2.5
           }}
         >
-          {loading ? 'Sincronizando...' : 'Actualizar Datos'}
+          {loading ? 'Sincronizando...' : 'Actualizar'}
         </Button>
       </Box>
 
@@ -173,29 +199,30 @@ const Overview: React.FC = () => {
             onClick={() => navigate(kpi.path)}
             sx={(t) => ({
               ...googlePaper(t),
-              p: 2.5,
+              p: 3,
               cursor: 'pointer',
-              transition: 'transform 0.2s, background-color 0.2s',
+              borderLeft: `5px solid ${kpi.color}`,
+              transition: 'transform 0.15s, background-color 0.15s',
               '&:hover': {
                 transform: 'translateY(-2px)',
                 bgcolor: t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
               }
             })}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
               <Box>
-                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 10, letterSpacing: '0.08em', color: 'text.secondary', textTransform: 'uppercase', opacity: 0.6 }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, fontSize: 10, letterSpacing: '0.08em', color: 'text.secondary', textTransform: 'uppercase' }}>
                   {kpi.label}
                 </Typography>
-                <Typography variant="h5" sx={{ fontWeight: 800, fontFamily: '"Outfit", sans-serif', color: 'text.primary', mt: 0.5 }}>
+                <Typography variant="h5" sx={{ fontWeight: 900, color: kpi.color, mt: 0.5 }}>
                   {loading ? '...' : kpi.value}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', color: 'text.secondary', opacity: 0.7 }}>
+              <Box sx={{ color: 'text.secondary', opacity: 0.5 }}>
                 {kpi.icon}
               </Box>
             </Box>
-            <Typography variant="caption" sx={{ fontWeight: 600, fontSize: 11, color: 'text.secondary', opacity: 0.8 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 11, color: 'text.secondary', opacity: 0.8 }}>
               {loading ? 'Cargando...' : kpi.sub}
             </Typography>
           </Paper>
@@ -212,11 +239,11 @@ const Overview: React.FC = () => {
         <Paper sx={(t) => ({ ...googlePaper(t), p: 0, overflow: 'hidden', height: 'calc(100vh - 21.5rem)', minHeight: 450, display: 'flex', flexDirection: 'column' })}>
           <Box sx={{ px: 2.5, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
-              <Typography sx={{ fontWeight: 800, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Mapa Operativo en Tiempo Real
+              <Typography sx={{ fontWeight: 850, fontSize: 12.5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Mapa de Distribución Geográfica
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ opacity: 0.7 }}>
-                Visualización de contenedores y puntos de red IoT
+                Ubicación georreferenciada de contenedores y gateways
               </Typography>
             </Box>
             <Button
@@ -224,9 +251,9 @@ const Overview: React.FC = () => {
               variant="text"
               onClick={() => navigate('/mapa')}
               endIcon={<ArrowUpRight size={14} />}
-              sx={{ textTransform: 'none', fontWeight: 700, fontSize: 12, borderRadius: '24px' }}
+              sx={{ textTransform: 'none', fontWeight: 800, fontSize: 11.5, borderRadius: '24px' }}
             >
-              Pantalla Completa
+              Ver Mapa
             </Button>
           </Box>
           <Divider />
@@ -237,31 +264,35 @@ const Overview: React.FC = () => {
 
         {/* Right Side: Sidebar Activity Feed & Quick Actions */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          
           {/* System Status / Summary Card */}
-          <Paper sx={(t) => ({ ...googlePaper(t), p: 2.5 })}>
-            <Typography sx={{ fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>
-              Salud del Sistema
+          <Paper sx={(t) => ({ ...googlePaper(t), p: 3 })}>
+            <Typography sx={{ fontWeight: 850, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>
+              Red y Canal LoRa P2P
             </Typography>
             
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Servidor de Telemetría</Typography>
-                <Chip label="OPERATIVO" size="small" sx={{ height: 18, fontSize: 8.5, fontWeight: 900, bgcolor: 'rgba(34,197,94,0.1)', color: '#22c55e', border: 'none' }} />
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Gateways Concentradors</Typography>
+                <Chip label="OPERATIVO" size="small" sx={{ height: 18, fontSize: 8.5, fontWeight: 900, bgcolor: 'rgba(34,197,94,0.08)', color: googleColors.green, border: 'none' }} />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Simulador MQTT</Typography>
-                <Chip label="CONECTADO" size="small" sx={{ height: 18, fontSize: 8.5, fontWeight: 900, bgcolor: 'rgba(34,197,94,0.1)', color: '#22c55e', border: 'none' }} />
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Canal MQTT</Typography>
+                <Chip label="ESTABLE" size="small" sx={{ height: 18, fontSize: 8.5, fontWeight: 900, bgcolor: 'rgba(34,197,94,0.08)', color: googleColors.green, border: 'none' }} />
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Tasa de Red (RSSI)</Typography>
-                <Typography sx={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace' }}>-54 dBm (Promedio)</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Sensibilidad RSSI</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Signal size={12} color={googleColors.blue} />
+                  <Typography sx={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace' }}>{avgRssi} dBm (Prom.)</Typography>
+                </Box>
               </Box>
             </Box>
           </Paper>
 
           {/* Recent Alerts Feed */}
-          <Paper sx={(t) => ({ ...googlePaper(t), p: 2.5, minHeight: 280, display: 'flex', flexDirection: 'column' })}>
-            <Typography sx={{ fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 1.5 }}>
+          <Paper sx={(t) => ({ ...googlePaper(t), p: 3, flex: 1, minHeight: 280, display: 'flex', flexDirection: 'column' })}>
+            <Typography sx={{ fontWeight: 850, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>
               Alertas Recientes
             </Typography>
 
@@ -271,37 +302,44 @@ const Overview: React.FC = () => {
               </Box>
             ) : criticalBins.length === 0 ? (
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4, gap: 1 }}>
-                <ShieldAlert size={28} style={{ opacity: 0.3 }} />
-                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                  No se registran alertas activas en el sistema.
+                <Activity size={28} style={{ opacity: 0.2 }} />
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', fontWeight: 700 }}>
+                  Todos los niveles están estables.
                 </Typography>
               </Box>
             ) : (
-              <List dense disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <List dense disablePadding sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 {criticalBins.map((bin, i) => (
                   <ListItem 
                     key={i} 
                     disablePadding
+                    onClick={() => navigate('/alertas')}
                     sx={{
-                      p: 1.25,
-                      borderRadius: '8px',
+                      p: 1.5,
+                      borderRadius: '12px',
+                      cursor: 'pointer',
                       bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
                       borderLeft: '4px solid',
-                      borderLeftColor: bin.severity === 'error' ? 'error.main' : 'warning.main'
+                      borderLeftColor: bin.severity === 'error' ? googleColors.red : googleColors.green,
+                      transition: 'background-color 0.15s',
+                      '&:hover': {
+                        bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
+                      }
                     }}
                   >
                     <ListItemText
                       primary={
-                        <Typography sx={{ fontWeight: 800, fontSize: 11.5, color: 'text.primary', display: 'block' }}>
-                          Contenedor {bin.name}
-                        </Typography>
-                      }
-                      secondary={
-                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 0.25 }}>
-                          <Typography variant="caption" sx={{ fontSize: 10, color: 'text.secondary', fontWeight: 650, display: 'block' }}>
-                            Nivel de llenado crítico: {bin.fill}%
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                          <MapPin size={11} color="text.secondary" />
+                          <Typography sx={{ fontWeight: 800, fontSize: 12, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {bin.name}
                           </Typography>
                         </Box>
+                      }
+                      secondary={
+                        <Typography variant="caption" sx={{ fontSize: 10.5, color: 'text.secondary', fontWeight: 650, display: 'block' }}>
+                          Nivel de Llenado: <Typography component="span" sx={{ fontWeight: 900, color: bin.severity === 'error' ? googleColors.red : '#eab308' }}>{bin.fill}%</Typography>
+                        </Typography>
                       }
                     />
                   </ListItem>
