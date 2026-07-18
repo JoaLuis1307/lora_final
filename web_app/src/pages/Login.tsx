@@ -137,12 +137,16 @@ const Login: React.FC = () => {
                 right: 18,
                 zIndex: 10,
                 color: themeMode === 'dark' ? '#9aa0a6' : '#5f6368',
+                bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                 '&:hover': {
-                  bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
-                }
+                  bgcolor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: themeMode === 'dark' ? '#ffffff' : '#000000',
+                  transform: 'scale(1.08)'
+                },
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              <X size={18} />
+              <X size={20} />
             </IconButton>
 
             {/* Left Column: Branding and System Info */}
@@ -239,12 +243,13 @@ const Login: React.FC = () => {
             <Box sx={{
               width: { xs: '100%', md: '55%' },
               p: { xs: 4, sm: 5 },
+              pt: { xs: 4, sm: 5, md: 8 },
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
             }}>
               {/* Form */}
-              <Box component="form" onSubmit={handleAuth} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box component="form" onSubmit={handleAuth} sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: { xs: 2, md: 3 } }}>
                 
                 {isRegister && (
                   <TextField
