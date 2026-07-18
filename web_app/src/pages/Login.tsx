@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, Mail, Lock, User as UserIcon, ShieldAlert, Sun, Moon } from 'lucide-react';
+import { Loader2, ShieldCheck, Cpu, Eye, EyeOff, Mail, Lock, User as UserIcon, ShieldAlert, Sun, Moon, X } from 'lucide-react';
 import {
   Box, Paper, Typography, TextField, Button, IconButton, Checkbox, FormControlLabel, Divider, InputAdornment
 } from '@mui/material';
@@ -9,6 +9,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import XIcon from '@mui/icons-material/X';
 import AppleIcon from '@mui/icons-material/Apple';
+import MapPreview from '../components/dashboard/MapPreview/MapPreview';
 
 const Login: React.FC = () => {
   const [isRegister, setIsRegister] = useState(false);
@@ -25,6 +26,7 @@ const Login: React.FC = () => {
   });
   
   const navigate = useNavigate();
+  const [showForm, setShowForm] = useState(false);
 
   // Sync theme with page HTML attribute so other parts/css sync correctly
   useEffect(() => {
@@ -81,75 +83,179 @@ const Login: React.FC = () => {
 
   return (
     <Box sx={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      bgcolor: themeMode === 'dark' ? '#09090b' : '#fafafa', // Clean solid neutral background
+      width: '100vw',
+      height: '100vh',
       position: 'relative',
-      p: { xs: 2, sm: 3 },
+      overflow: 'hidden',
       fontFamily: '"Outfit", "Roboto", "Inter", sans-serif',
-      transition: 'background-color 0.3s ease'
     }}>
-      
-      {/* Theme Toggle Button (Top-Right Corner, subtle, borderless outline) */}
-      <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 100 }}>
-        <IconButton onClick={toggleTheme} sx={{
-          border: '1px solid',
-          borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-          color: themeMode === 'dark' ? '#f4f4f5' : '#18181b',
-          bgcolor: themeMode === 'dark' ? '#18181b' : '#ffffff',
-          borderRadius: '8px',
-          p: 1.2,
-          transition: 'all 0.2s ease',
-          '&:hover': {
-            bgcolor: themeMode === 'dark' ? '#27272a' : '#f4f4f5',
-          }
-        }}>
-          {themeMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </IconButton>
+      {/* 3D Map Background (Public View for Citizens) */}
+      <Box sx={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+        <MapPreview isPage={true} />
       </Box>
 
-      {/* Centered Login Card */}
-      <Paper elevation={0} sx={{
-        width: '100%',
-        maxWidth: 420,
-        borderRadius: '12px',
-        bgcolor: themeMode === 'dark' ? '#18181b' : '#ffffff',
-        border: '1px solid',
-        borderColor: themeMode === 'dark' ? '#27272a' : '#e4e4e7',
-        p: { xs: 4, sm: 5 },
-        boxShadow: themeMode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02)',
+      {/* Floating Glassmorphic Access Widget */}
+      <Box sx={{
+        position: 'absolute',
+        top: 24,
+        right: 24,
+        zIndex: 10,
+        width: showForm ? { xs: 'calc(100% - 48px)', sm: 420 } : 320,
+        maxHeight: 'calc(100vh - 48px)',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
-        zIndex: 1,
-        transition: 'all 0.3s ease'
+        transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
-        
-        {/* Brand Header */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, gap: 1.5 }}>
-          <Box sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '8px',
-            bgcolor: themeMode === 'dark' ? '#ffffff' : '#09090b',
+        {!showForm ? (
+          /* Public Widget (Compact View) */
+          <Paper elevation={0} sx={{
+            p: 3,
+            borderRadius: '16px',
+            bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.75)' : 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid',
+            borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: themeMode === 'dark' ? '#09090b' : '#ffffff'
+            flexDirection: 'column',
+            gap: 2,
+            transition: 'all 0.3s ease'
           }}>
-            <Cpu size={20} />
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: themeMode === 'dark' ? '#ffffff' : '#09090b', letterSpacing: '-0.02em' }}>
-              EcoLoRa
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '8px',
+                bgcolor: themeMode === 'dark' ? '#ffffff' : '#09090b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: themeMode === 'dark' ? '#09090b' : '#ffffff'
+              }}>
+                <Cpu size={18} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontWeight: 800, fontSize: 16, color: 'text.primary', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  EcoLoRa Arequipa
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 650, fontSize: 10, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  Mapa Público Ciudadano
+                </Typography>
+              </Box>
+            </Box>
+
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12.5, lineHeight: 1.4 }}>
+              Explora los contenedores inteligentes en tiempo real, verifica los niveles de llenado y alertas ambientales.
             </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: 13 }}>
-              {isRegister ? 'Crea una cuenta de operador' : 'Inicia sesión en tu panel de control'}
-            </Typography>
-          </Box>
-        </Box>
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => setShowForm(true)}
+                startIcon={<Lock size={14} />}
+                sx={{
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  py: 1.2,
+                  fontSize: 12.5,
+                  bgcolor: themeMode === 'dark' ? '#ffffff' : '#18181b',
+                  color: themeMode === 'dark' ? '#09090b' : '#ffffff',
+                  '&:hover': {
+                    bgcolor: themeMode === 'dark' ? '#e4e4e7' : '#27272a',
+                  }
+                }}
+              >
+                Acceso Operador
+              </Button>
+              <IconButton 
+                onClick={toggleTheme} 
+                sx={{
+                  border: '1px solid',
+                  borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                  color: 'text.primary',
+                  bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.4)' : 'rgba(255, 255, 255, 0.4)',
+                  borderRadius: '10px',
+                  p: 1.2,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                  }
+                }}
+              >
+                {themeMode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              </IconButton>
+            </Box>
+          </Paper>
+        ) : (
+          /* Full Login Card (Glassmorphic) */
+          <Paper elevation={0} sx={{
+            width: '100%',
+            borderRadius: '16px',
+            bgcolor: themeMode === 'dark' ? 'rgba(24, 24, 27, 0.85)' : 'rgba(255, 255, 255, 0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid',
+            borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+            p: { xs: 3, sm: 4 },
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            overflowY: 'auto',
+            maxHeight: 'calc(100vh - 48px)',
+            transition: 'all 0.3s ease'
+          }}>
+            {/* Header controls (Close and Theme) */}
+            <Box sx={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 1, zIndex: 100 }}>
+              <IconButton onClick={toggleTheme} size="small" sx={{
+                border: '1px solid',
+                borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                color: 'text.primary',
+                bgcolor: 'transparent',
+                borderRadius: '8px',
+                p: 0.8,
+                '&:hover': { bgcolor: themeMode === 'dark' ? '#27272a' : '#f4f4f5' }
+              }}>
+                {themeMode === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              </IconButton>
+              <IconButton onClick={() => setShowForm(false)} size="small" sx={{
+                border: '1px solid',
+                borderColor: themeMode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                color: 'text.primary',
+                bgcolor: 'transparent',
+                borderRadius: '8px',
+                p: 0.8,
+                '&:hover': { bgcolor: themeMode === 'dark' ? '#27272a' : '#f4f4f5' }
+              }}>
+                <X size={15} />
+              </IconButton>
+            </Box>
+
+            {/* Brand Header */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3, mt: 1, gap: 1.5 }}>
+              <Box sx={{
+                width: 38,
+                height: 38,
+                borderRadius: '8px',
+                bgcolor: themeMode === 'dark' ? '#ffffff' : '#09090b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: themeMode === 'dark' ? '#09090b' : '#ffffff'
+              }}>
+                <Cpu size={18} />
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.02em' }}>
+                  EcoLoRa
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: 11.5 }}>
+                  {isRegister ? 'Crea una cuenta de operador' : 'Inicia sesión en tu panel de control'}
+                </Typography>
+              </Box>
+            </Box>
+
 
         {/* Form */}
         <Box component="form" onSubmit={handleAuth} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
@@ -489,7 +595,9 @@ const Login: React.FC = () => {
           </Typography>
         </Box>
 
-      </Paper>
+          </Paper>
+        )}
+      </Box>
     </Box>
   );
 };
