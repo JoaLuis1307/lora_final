@@ -15,6 +15,15 @@ struct NodeInfo {
   int satellites;
   float battery;
   float battery_pct;
+  float batt_current_ma;
+  float batt_power_mw;
+  float batt_remaining_mah;
+  float batt_consumed_mah;
+  float batt_runtime_min;
+  float batt_energy_consumed_mwh;
+  float batt_energy_total_mwh;
+  bool  batt_low;
+  bool  batt_critical;
   int rssi;
   float snr;
   unsigned long sequence;

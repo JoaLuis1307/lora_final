@@ -68,6 +68,17 @@ export const telemetryService = {
           pkts: telemetryToSave.pkts,
           crc_ok: telemetryToSave.crc_ok ?? 1,
           crc_err: telemetryToSave.crc_err ?? 0,
+          battery: telemetryToSave.battery ?? 0,
+          battery_pct: telemetryToSave.battery_pct ?? 0,
+          batt_current_ma: telemetryToSave.batt_current_ma ?? 0,
+          batt_power_mw: telemetryToSave.batt_power_mw ?? 0,
+          batt_remaining_mah: telemetryToSave.batt_remaining_mah ?? 0,
+          batt_consumed_mah: telemetryToSave.batt_consumed_mah ?? 0,
+          batt_runtime_min: telemetryToSave.batt_runtime_min ?? 0,
+          batt_energy_consumed_mwh: telemetryToSave.batt_energy_consumed_mwh ?? 0,
+          batt_energy_total_mwh: telemetryToSave.batt_energy_total_mwh ?? 0,
+          batt_low: telemetryToSave.batt_low ?? 0,
+          batt_critical: telemetryToSave.batt_critical ?? 0,
           timestamp: telemetryToSave.timestamp ? new Date(telemetryToSave.timestamp) : new Date()
         }
       });
@@ -111,6 +122,17 @@ export const telemetryService = {
             pkts: t.pkts,
             crc_ok: t.crc_ok,
             crc_err: t.crc_err,
+            battery: Number(t.battery ?? 0),
+            battery_pct: Number(t.battery_pct ?? 0),
+            batt_current_ma: Number(t.batt_current_ma ?? 0),
+            batt_power_mw: Number(t.batt_power_mw ?? 0),
+            batt_remaining_mah: Number(t.batt_remaining_mah ?? 0),
+            batt_consumed_mah: Number(t.batt_consumed_mah ?? 0),
+            batt_runtime_min: Number(t.batt_runtime_min ?? 0),
+            batt_energy_consumed_mwh: Number(t.batt_energy_consumed_mwh ?? 0),
+            batt_energy_total_mwh: Number(t.batt_energy_total_mwh ?? 0),
+            batt_low: Number(t.batt_low ?? 0),
+            batt_critical: Number(t.batt_critical ?? 0),
             timestamp: t.timestamp.toISOString()
           };
         }
@@ -232,6 +254,17 @@ export const telemetryService = {
         pkts: Number(data.pkts ?? 1),
         crc_ok: Number(data.crc_ok ?? 1),
         crc_err: Number(data.crc_err ?? 0),
+        battery: Number(data.battery ?? 0),
+        battery_pct: Number(data.battery_pct ?? data.BATP ?? 0),
+        batt_current_ma: Number(data.batt_current_ma ?? 0),
+        batt_power_mw: Number(data.batt_power_mw ?? 0),
+        batt_remaining_mah: Number(data.batt_remaining_mah ?? 0),
+        batt_consumed_mah: Number(data.batt_consumed_mah ?? 0),
+        batt_runtime_min: Number(data.batt_runtime_min ?? 0),
+        batt_energy_consumed_mwh: Number(data.batt_energy_consumed_mwh ?? 0),
+        batt_energy_total_mwh: Number(data.batt_energy_total_mwh ?? 0),
+        batt_low: Number(data.batt_low ?? 0),
+        batt_critical: Number(data.batt_critical ?? 0),
         timestamp: new Date().toISOString()
       };
 
@@ -342,7 +375,16 @@ export const telemetryService = {
         data: {
           ...(savedTelemetry as any),
           battery: battery_level,
-          battery_level: battery_level
+          battery_level: battery_level,
+          batt_current_ma: telemetryEntry.batt_current_ma,
+          batt_power_mw: telemetryEntry.batt_power_mw,
+          batt_remaining_mah: telemetryEntry.batt_remaining_mah,
+          batt_consumed_mah: telemetryEntry.batt_consumed_mah,
+          batt_runtime_min: telemetryEntry.batt_runtime_min,
+          batt_energy_consumed_mwh: telemetryEntry.batt_energy_consumed_mwh,
+          batt_energy_total_mwh: telemetryEntry.batt_energy_total_mwh,
+          batt_low: telemetryEntry.batt_low,
+          batt_critical: telemetryEntry.batt_critical
         }
       });
       

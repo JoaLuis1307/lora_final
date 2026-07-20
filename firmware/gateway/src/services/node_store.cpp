@@ -65,6 +65,33 @@ void node_store_update(const char* node_id, const String& json, int rssi, float 
   val = parser_extract_value(json.c_str(), "battery_pct");
   if (val.length() > 0) n.battery_pct = val.toFloat();
 
+  val = parser_extract_value(json.c_str(), "batt_current_ma");
+  if (val.length() > 0) n.batt_current_ma = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_power_mw");
+  if (val.length() > 0) n.batt_power_mw = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_remaining_mah");
+  if (val.length() > 0) n.batt_remaining_mah = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_consumed_mah");
+  if (val.length() > 0) n.batt_consumed_mah = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_runtime_min");
+  if (val.length() > 0) n.batt_runtime_min = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_energy_consumed_mwh");
+  if (val.length() > 0) n.batt_energy_consumed_mwh = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_energy_total_mwh");
+  if (val.length() > 0) n.batt_energy_total_mwh = val.toFloat();
+
+  val = parser_extract_value(json.c_str(), "batt_low");
+  if (val.length() > 0) n.batt_low = val.toInt() != 0;
+
+  val = parser_extract_value(json.c_str(), "batt_critical");
+  if (val.length() > 0) n.batt_critical = val.toInt() != 0;
+
   val = parser_extract_value(json.c_str(), "sequence");
   if (val.length() > 0) n.sequence = val.toInt();
 
@@ -101,6 +128,15 @@ String node_store_get_json() {
     json += ",\"satellites\":" + String(n.satellites);
     json += ",\"battery\":" + String(n.battery, 2);
     json += ",\"battery_pct\":" + String(n.battery_pct, 1);
+    json += ",\"batt_current_ma\":" + String(n.batt_current_ma, 1);
+    json += ",\"batt_power_mw\":" + String(n.batt_power_mw, 0);
+    json += ",\"batt_remaining_mah\":" + String(n.batt_remaining_mah, 0);
+    json += ",\"batt_consumed_mah\":" + String(n.batt_consumed_mah, 1);
+    json += ",\"batt_runtime_min\":" + String(n.batt_runtime_min, 0);
+    json += ",\"batt_energy_consumed_mwh\":" + String(n.batt_energy_consumed_mwh, 1);
+    json += ",\"batt_energy_total_mwh\":" + String(n.batt_energy_total_mwh, 0);
+    json += ",\"batt_low\":" + String(n.batt_low ? "true" : "false");
+    json += ",\"batt_critical\":" + String(n.batt_critical ? "true" : "false");
     json += ",\"rssi\":" + String(n.rssi);
     json += ",\"snr\":" + String(n.snr, 1);
     json += ",\"sequence\":" + String(n.sequence);

@@ -59,7 +59,18 @@ class InfluxService {
         .intField('satellites', telemetry.satellites ?? 0)
         .intField('rssi', telemetry.rssi ?? 0)
         .floatField('snr', telemetry.snr ?? 0)
-        .intField('pkts', telemetry.pkts ?? 0);
+        .intField('pkts', telemetry.pkts ?? 0)
+        .floatField('battery', telemetry.battery ?? 0)
+        .floatField('battery_pct', telemetry.battery_pct ?? 0)
+        .floatField('batt_current_ma', telemetry.batt_current_ma ?? 0)
+        .floatField('batt_power_mw', telemetry.batt_power_mw ?? 0)
+        .floatField('batt_remaining_mah', telemetry.batt_remaining_mah ?? 0)
+        .floatField('batt_consumed_mah', telemetry.batt_consumed_mah ?? 0)
+        .floatField('batt_runtime_min', telemetry.batt_runtime_min ?? 0)
+        .floatField('batt_energy_consumed_mwh', telemetry.batt_energy_consumed_mwh ?? 0)
+        .floatField('batt_energy_total_mwh', telemetry.batt_energy_total_mwh ?? 0)
+        .intField('batt_low', telemetry.batt_low ?? 0)
+        .intField('batt_critical', telemetry.batt_critical ?? 0);
 
       this.writeApi.writePoint(point);
       
@@ -150,6 +161,17 @@ class InfluxService {
               rssi: o.rssi,
               snr: o.snr,
               pkts: o.pkts,
+              battery: o.battery ?? 0,
+              battery_pct: o.battery_pct ?? 0,
+              batt_current_ma: o.batt_current_ma ?? 0,
+              batt_power_mw: o.batt_power_mw ?? 0,
+              batt_remaining_mah: o.batt_remaining_mah ?? 0,
+              batt_consumed_mah: o.batt_consumed_mah ?? 0,
+              batt_runtime_min: o.batt_runtime_min ?? 0,
+              batt_energy_consumed_mwh: o.batt_energy_consumed_mwh ?? 0,
+              batt_energy_total_mwh: o.batt_energy_total_mwh ?? 0,
+              batt_low: o.batt_low ?? 0,
+              batt_critical: o.batt_critical ?? 0,
               timestamp: o._time
             });
           },
@@ -210,6 +232,17 @@ class InfluxService {
               rssi: o.rssi,
               snr: o.snr,
               pkts: o.pkts,
+              battery: o.battery ?? 0,
+              battery_pct: o.battery_pct ?? 0,
+              batt_current_ma: o.batt_current_ma ?? 0,
+              batt_power_mw: o.batt_power_mw ?? 0,
+              batt_remaining_mah: o.batt_remaining_mah ?? 0,
+              batt_consumed_mah: o.batt_consumed_mah ?? 0,
+              batt_runtime_min: o.batt_runtime_min ?? 0,
+              batt_energy_consumed_mwh: o.batt_energy_consumed_mwh ?? 0,
+              batt_energy_total_mwh: o.batt_energy_total_mwh ?? 0,
+              batt_low: o.batt_low ?? 0,
+              batt_critical: o.batt_critical ?? 0,
               timestamp: o._time
             });
           },
@@ -268,6 +301,17 @@ class InfluxService {
               rssi: o.rssi,
               snr: o.snr,
               pkts: o.pkts,
+              battery: o.battery ?? 0,
+              battery_pct: o.battery_pct ?? 0,
+              batt_current_ma: o.batt_current_ma ?? 0,
+              batt_power_mw: o.batt_power_mw ?? 0,
+              batt_remaining_mah: o.batt_remaining_mah ?? 0,
+              batt_consumed_mah: o.batt_consumed_mah ?? 0,
+              batt_runtime_min: o.batt_runtime_min ?? 0,
+              batt_energy_consumed_mwh: o.batt_energy_consumed_mwh ?? 0,
+              batt_energy_total_mwh: o.batt_energy_total_mwh ?? 0,
+              batt_low: o.batt_low ?? 0,
+              batt_critical: o.batt_critical ?? 0,
               timestamp: o._time
             });
           },

@@ -69,6 +69,15 @@ String parser_compact_to_json(const String& payload) {
     else if (key == "S")    json_key = "satellites";
     else if (key == "BAT")  json_key = "battery";
     else if (key == "BATP") json_key = "battery_pct";
+    else if (key == "BI")   json_key = "batt_current_ma";
+    else if (key == "BW")   json_key = "batt_power_mw";
+    else if (key == "BR")   json_key = "batt_remaining_mah";
+    else if (key == "BE")   json_key = "batt_consumed_mah";
+    else if (key == "BT")   json_key = "batt_runtime_min";
+    else if (key == "BEC")  json_key = "batt_energy_consumed_mwh";
+    else if (key == "BET")  json_key = "batt_energy_total_mwh";
+    else if (key == "BL")   json_key = "batt_low";
+    else if (key == "BK")   json_key = "batt_critical";
     else if (key == "RSSI") json_key = "rssi";
     else if (key == "SNR")  json_key = "snr";
     else if (key == "LA")   json_key = "latitude";

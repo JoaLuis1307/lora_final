@@ -49,6 +49,17 @@ CREATE TABLE IF NOT EXISTS telemetry (
     pkts INTEGER NOT NULL,
     crc_ok INTEGER DEFAULT 1 NOT NULL,
     crc_err INTEGER DEFAULT 0 NOT NULL,
+    battery NUMERIC(5,2) DEFAULT 0 NOT NULL,
+    battery_pct NUMERIC(5,1) DEFAULT 0 NOT NULL,
+    batt_current_ma NUMERIC(8,1) DEFAULT 0 NOT NULL,
+    batt_power_mw NUMERIC(8,0) DEFAULT 0 NOT NULL,
+    batt_remaining_mah NUMERIC(8,0) DEFAULT 0 NOT NULL,
+    batt_consumed_mah NUMERIC(8,1) DEFAULT 0 NOT NULL,
+    batt_runtime_min NUMERIC(8,0) DEFAULT 0 NOT NULL,
+    batt_energy_consumed_mwh NUMERIC(10,1) DEFAULT 0 NOT NULL,
+    batt_energy_total_mwh NUMERIC(10,0) DEFAULT 0 NOT NULL,
+    batt_low INTEGER DEFAULT 0 NOT NULL,
+    batt_critical INTEGER DEFAULT 0 NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

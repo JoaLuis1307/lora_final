@@ -41,6 +41,15 @@ void report_send() {
 
   payload += ",BAT" + String(d.batt_voltage, 2);
   payload += ",BATP" + String(d.batt_soc_percent, 0);
+  payload += ",BI" + String(d.batt_current_ma, 1);
+  payload += ",BW" + String(d.batt_power_mw, 0);
+  payload += ",BR" + String(d.batt_remaining_mah, 0);
+  payload += ",BE" + String(d.batt_consumed_mah, 1);
+  payload += ",BT" + String(d.batt_runtime_min, 0);
+  payload += ",BEC" + String(d.batt_energy_consumed_mwh, 1);
+  payload += ",BET" + String(d.batt_energy_total_mwh, 0);
+  payload += ",BL" + String(d.batt_low ? 1 : 0);
+  payload += ",BK" + String(d.batt_critical ? 1 : 0);
 
   String node_id = String(node_config_get_id());
   String msg = node_id + "," + payload;

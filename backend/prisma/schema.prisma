@@ -57,6 +57,17 @@ model Telemetry {
   pkts          Int
   crc_ok        Int      @default(1)
   crc_err       Int      @default(0)
+  battery               Float    @default(0)
+  battery_pct           Float    @default(0)
+  batt_current_ma       Float    @default(0)
+  batt_power_mw         Float    @default(0)
+  batt_remaining_mah    Float    @default(0)
+  batt_consumed_mah     Float    @default(0)
+  batt_runtime_min      Float    @default(0)
+  batt_energy_consumed_mwh Float @default(0)
+  batt_energy_total_mwh    Float @default(0)
+  batt_low               Int    @default(0)
+  batt_critical          Int    @default(0)
   timestamp     DateTime @default(now()) @db.Timestamptz
 
   @@index([device_id, timestamp(sort: Desc)], name: "idx_telemetry_device_timestamp")
