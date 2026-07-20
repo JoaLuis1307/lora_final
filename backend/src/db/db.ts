@@ -38,17 +38,17 @@ export interface Telemetry {
   pkts: number;
   crc_ok: number;
   crc_err: number;
-  battery: number;
-  battery_pct: number;
-  batt_current_ma: number;
-  batt_power_mw: number;
-  batt_remaining_mah: number;
-  batt_consumed_mah: number;
-  batt_runtime_min: number;
-  batt_energy_consumed_mwh: number;
-  batt_energy_total_mwh: number;
-  batt_low: number;
-  batt_critical: number;
+  battery?: number;
+  battery_pct?: number;
+  batt_current_ma?: number;
+  batt_power_mw?: number;
+  batt_remaining_mah?: number;
+  batt_consumed_mah?: number;
+  batt_runtime_min?: number;
+  batt_energy_consumed_mwh?: number;
+  batt_energy_total_mwh?: number;
+  batt_low?: number;
+  batt_critical?: number;
   timestamp: string;
 }
 

@@ -39,6 +39,17 @@ export const telemetryService = {
             pkts: latestFromInflux.pkts !== undefined && latestFromInflux.pkts !== null ? Number(latestFromInflux.pkts) : telemetry.pkts,
             crc_ok: telemetry.crc_ok ?? 1,
             crc_err: telemetry.crc_err ?? 0,
+            battery: latestFromInflux.battery !== undefined && latestFromInflux.battery !== null ? Number(latestFromInflux.battery) : telemetry.battery,
+            battery_pct: latestFromInflux.battery_pct !== undefined && latestFromInflux.battery_pct !== null ? Number(latestFromInflux.battery_pct) : telemetry.battery_pct,
+            batt_current_ma: latestFromInflux.batt_current_ma !== undefined && latestFromInflux.batt_current_ma !== null ? Number(latestFromInflux.batt_current_ma) : telemetry.batt_current_ma,
+            batt_power_mw: latestFromInflux.batt_power_mw !== undefined && latestFromInflux.batt_power_mw !== null ? Number(latestFromInflux.batt_power_mw) : telemetry.batt_power_mw,
+            batt_remaining_mah: latestFromInflux.batt_remaining_mah !== undefined && latestFromInflux.batt_remaining_mah !== null ? Number(latestFromInflux.batt_remaining_mah) : telemetry.batt_remaining_mah,
+            batt_consumed_mah: latestFromInflux.batt_consumed_mah !== undefined && latestFromInflux.batt_consumed_mah !== null ? Number(latestFromInflux.batt_consumed_mah) : telemetry.batt_consumed_mah,
+            batt_runtime_min: latestFromInflux.batt_runtime_min !== undefined && latestFromInflux.batt_runtime_min !== null ? Number(latestFromInflux.batt_runtime_min) : telemetry.batt_runtime_min,
+            batt_energy_consumed_mwh: latestFromInflux.batt_energy_consumed_mwh !== undefined && latestFromInflux.batt_energy_consumed_mwh !== null ? Number(latestFromInflux.batt_energy_consumed_mwh) : telemetry.batt_energy_consumed_mwh,
+            batt_energy_total_mwh: latestFromInflux.batt_energy_total_mwh !== undefined && latestFromInflux.batt_energy_total_mwh !== null ? Number(latestFromInflux.batt_energy_total_mwh) : telemetry.batt_energy_total_mwh,
+            batt_low: latestFromInflux.batt_low !== undefined && latestFromInflux.batt_low !== null ? Number(latestFromInflux.batt_low) : telemetry.batt_low,
+            batt_critical: latestFromInflux.batt_critical !== undefined && latestFromInflux.batt_critical !== null ? Number(latestFromInflux.batt_critical) : telemetry.batt_critical,
             timestamp: latestFromInflux.timestamp ? new Date(latestFromInflux.timestamp).toISOString() : telemetry.timestamp
           };
         } else {
