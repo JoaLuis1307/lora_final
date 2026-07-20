@@ -29,6 +29,14 @@
 #define GPS_RX          16
 #define GPS_TX          17
 
+// LEDs indicadores
+#define LED_ROJO        25  // Tanque lleno
+#define LED_VERDE       2   // Tanque disponible
+#define LED_AZUL        15  // LoRa conectado/funcionando
+
+// Umbral de tanque lleno (distancia en mm desde el sensor al nivel max)
+#define FULL_THRESHOLD_MM  100
+
 // Tiempos
 #define SEND_INTERVAL   30000
 #define MIN_SEND_INTERVAL 5000

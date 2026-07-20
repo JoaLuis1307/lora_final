@@ -1,6 +1,7 @@
 #include "node_app.h"
 #include "../../config.h"
 #include "../drivers/lora_driver.h"
+#include "../drivers/led_driver.h"
 #include "../drivers/mq135_driver.h"
 #include "../drivers/ultrasonic_driver.h"
 #include "../drivers/ir_driver.h"
@@ -234,6 +235,8 @@ void app_init() {
 
   Serial.println("--- NODE FIRMWARE ---");
 
+  node_led_init();
+
   // Cargar configuracion desde NVS
   node_config_load();
   Serial.print("Node ID: ");
@@ -244,6 +247,7 @@ void app_init() {
 
   // Inicializar LoRa y sensores SIEMPRE (necesarios en modo AP y normal)
   lora_init();
+  if (lora_ready) node_led_lora_on();
   sensor_init();
   sensor_set_mask(node_config_get_sensor_mask());
 
@@ -309,11 +313,15 @@ void app_loop() {
     sensor_update();
     command_check();
 
+    SensorData led_d = sensor_read_all();
+    node_led_update(led_d.tof_mm);
+
     // Enviar datos LoRa periodicamente incluso en modo AP
     if (now - last_send >= (unsigned long)node_config_get_interval() + send_jitter) {
       last_send = now;
       send_jitter = random(0, 3000);
       report_send();
+      node_led_lora_blink();
     }
     return;
   }
@@ -339,6 +347,9 @@ void app_loop() {
   command_check();
   handle_serial();
 
+  SensorData led_d = sensor_read_all();
+  node_led_update(led_d.tof_mm);
+
   if (menu_dirty) {
     menu_dirty = false;
     print_menu();
@@ -350,6 +361,7 @@ void app_loop() {
         last_send = now;
         send_jitter = random(0, 3000);
         report_send();
+        node_led_lora_blink();
 
         #if DEEP_SLEEP_ENABLE && SLEEP_AFTER_SEND
         Serial.println("Datos enviados, entrando en deep sleep...");

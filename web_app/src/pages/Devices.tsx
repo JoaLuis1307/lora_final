@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { containerStagger, fadeSlideUp } from '../shared/animations';
+import { calculateFillPercentage } from '../utils/fillCalculator';
 const StyledDialog = Dialog as any;
 const StyledTextField = TextField as any;
 const googlePaper = (t: any) => ({
@@ -672,7 +673,7 @@ const Devices: React.FC = () => {
                     pr: 1.5, 
                     py: 1.25, 
                     borderRight: '1px solid', 
-                    borderBottom: '1px solid',
+                    borderBottom: isGateway ? '1px solid' : 'none',
                     borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)'
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
@@ -690,7 +691,7 @@ const Devices: React.FC = () => {
                   <Box sx={{ 
                     pl: 1.5, 
                     py: 1.25,
-                    borderBottom: '1px solid',
+                    borderBottom: isGateway ? '1px solid' : 'none',
                     borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)'
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
@@ -738,40 +739,7 @@ const Devices: React.FC = () => {
                         </Typography>
                       </Box>
                     </>
-                  ) : (
-                    <>
-                      {/* Row 3, Col 1: Temp */}
-                      <Box sx={{ 
-                        pr: 1.5, 
-                        pt: 1.25, 
-                        borderRight: '1px solid', 
-                        borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)'
-                      }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                          <Thermometer size={11} style={{ opacity: 0.7, color: '#fb923c' }} />
-                          <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                            Temperatura
-                          </Typography>
-                        </Box>
-                        <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: '#fb923c', pl: 2 }}>
-                          {temp !== undefined ? `${Number(temp).toFixed(1)} °C` : '--.- °C'}
-                        </Typography>
-                      </Box>
-
-                      {/* Row 3, Col 2: Humedad */}
-                      <Box sx={{ pl: 1.5, pt: 1.25 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
-                          <Droplets size={11} style={{ opacity: 0.7, color: '#38bdf8' }} />
-                          <Typography variant="caption" sx={{ fontSize: 8.5, fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.6 }}>
-                            Humedad
-                          </Typography>
-                        </Box>
-                        <Typography sx={{ fontSize: 11.5, fontWeight: 800, fontFamily: 'monospace', color: '#38bdf8', pl: 2 }}>
-                          {hum !== undefined ? `${Number(hum).toFixed(0)} %` : '-- %'}
-                        </Typography>
-                      </Box>
-                    </>
-                  )}
+                  ) : null}
                 </Box>        </Box>
               </Box>
 
@@ -1031,8 +999,9 @@ const Devices: React.FC = () => {
                       {nodesForGw.map((device) => {
                         const deviceTelemetry = telemetry[device.device_id] || {};
                         const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
-                        const temp = deviceTelemetry.temperature ?? deviceTelemetry.temperatura ?? deviceTelemetry.temp;
-                        const hum = deviceTelemetry.humidity ?? deviceTelemetry.humedad ?? deviceTelemetry.hum;
+                        const fillDistance = deviceTelemetry.tof_cm ?? deviceTelemetry.ultrasonic_cm;
+                        const fillPct = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : undefined;
+                        const isObstructed = deviceTelemetry.obstacle === 1;
                         const aq = deviceTelemetry.air_quality ?? '--';
                         const currentRssi = deviceTelemetry.rssi !== undefined ? deviceTelemetry.rssi : device.signal_strength;
                         const currentBattery = bat !== undefined ? bat : device.battery_level;
@@ -1082,22 +1051,20 @@ const Devices: React.FC = () => {
 
                             <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'nowrap', overflow: 'hidden' }}>
-                                {temp !== undefined && (
+                                {fillDistance !== undefined && fillPct !== undefined && (
                                   <Chip 
                                     size="small"
-                                    icon={<Thermometer size={10} style={{ color: '#fb923c' }} />} 
-                                    label={`${Number(temp).toFixed(1)}°C`} 
-                                    sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: 'rgba(251,146,60,0.08)', color: '#fb923c', border: 'none', flexShrink: 0 }} 
+                                    icon={<Activity size={10} style={{ color: fillPct === -1 ? '#ea4335' : '#34a853' }} />} 
+                                    label={fillPct === -1 ? 'Fuera de Rango' : `Llenado: ${fillPct}% (${fillDistance} cm)`} 
+                                    sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: fillPct === -1 ? 'rgba(234,67,53,0.08)' : 'rgba(52,168,83,0.08)', color: fillPct === -1 ? '#ea4335' : '#34a853', border: 'none', flexShrink: 0 }} 
                                   />
                                 )}
-                                {hum !== undefined && (
-                                  <Chip 
-                                    size="small"
-                                    icon={<Droplets size={10} style={{ color: '#60a5fa' }} />} 
-                                    label={`${Number(hum).toFixed(0)}%`} 
-                                    sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: 'rgba(96,165,250,0.08)', color: '#60a5fa', border: 'none', flexShrink: 0 }} 
-                                  />
-                                )}
+                                <Chip 
+                                  size="small"
+                                  icon={<TriangleAlert size={10} style={{ color: isObstructed ? '#ea4335' : '#34a853' }} />} 
+                                  label={isObstructed ? 'Obstruido' : 'Libre'} 
+                                  sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: isObstructed ? 'rgba(234,67,53,0.08)' : 'rgba(52,168,83,0.08)', color: isObstructed ? '#ea4335' : '#34a853', border: 'none', flexShrink: 0 }} 
+                                />
                                 <Chip 
                                   size="small"
                                   icon={<Wind size={10} style={{ opacity: 0.6 }} />} 
@@ -1278,8 +1245,9 @@ const Devices: React.FC = () => {
                     {independentNodes.map((device) => {
                       const deviceTelemetry = telemetry[device.device_id] || {};
                       const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
-                      const temp = deviceTelemetry.temperature ?? deviceTelemetry.temperatura ?? deviceTelemetry.temp;
-                      const hum = deviceTelemetry.humidity ?? deviceTelemetry.humedad ?? deviceTelemetry.hum;
+                      const fillDistance = deviceTelemetry.tof_cm ?? deviceTelemetry.ultrasonic_cm;
+                      const fillPct = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : undefined;
+                      const isObstructed = deviceTelemetry.obstacle === 1;
                       const aq = deviceTelemetry.air_quality ?? '--';
                       const currentRssi = deviceTelemetry.rssi !== undefined ? deviceTelemetry.rssi : device.signal_strength;
                       const currentBattery = bat !== undefined ? bat : device.battery_level;
@@ -1326,22 +1294,20 @@ const Devices: React.FC = () => {
 
                           <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'nowrap', overflow: 'hidden' }}>
-                              {temp !== undefined && (
+                              {fillDistance !== undefined && fillPct !== undefined && (
                                 <Chip 
                                   size="small"
-                                  icon={<Thermometer size={10} style={{ color: '#fb923c' }} />} 
-                                  label={`${Number(temp).toFixed(1)}°C`} 
-                                  sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: 'rgba(251,146,60,0.08)', color: '#fb923c', border: 'none', flexShrink: 0 }} 
+                                  icon={<Activity size={10} style={{ color: fillPct === -1 ? '#ea4335' : '#34a853' }} />} 
+                                  label={fillPct === -1 ? 'Fuera de Rango' : `Llenado: ${fillPct}% (${fillDistance} cm)`} 
+                                  sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: fillPct === -1 ? 'rgba(234,67,53,0.08)' : 'rgba(52,168,83,0.08)', color: fillPct === -1 ? '#ea4335' : '#34a853', border: 'none', flexShrink: 0 }} 
                                 />
                               )}
-                              {hum !== undefined && (
-                                <Chip 
-                                  size="small"
-                                  icon={<Droplets size={10} style={{ color: '#60a5fa' }} />} 
-                                  label={`${Number(hum).toFixed(0)}%`} 
-                                  sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: 'rgba(96,165,250,0.08)', color: '#60a5fa', border: 'none', flexShrink: 0 }} 
-                                />
-                              )}
+                              <Chip 
+                                size="small"
+                                icon={<TriangleAlert size={10} style={{ color: isObstructed ? '#ea4335' : '#34a853' }} />} 
+                                label={isObstructed ? 'Obstruido' : 'Libre'} 
+                                sx={{ height: 20, fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace', bgcolor: isObstructed ? 'rgba(234,67,53,0.08)' : 'rgba(52,168,83,0.08)', color: isObstructed ? '#ea4335' : '#34a853', border: 'none', flexShrink: 0 }} 
+                              />
                               <Chip 
                                 size="small"
                                 icon={<Wind size={10} style={{ opacity: 0.6 }} />} 

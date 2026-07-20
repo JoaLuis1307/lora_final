@@ -22,6 +22,7 @@ import { calculateFillPercentage } from '../utils/fillCalculator';
 const defaultBins: any[] = [];
 
 const getFillColor = (fill: number) => {
+  if (fill < 0) return '#94a3b8'; // Grey/neutral for out of range
   if (fill >= 90) return '#ea4335'; // Softer Google Red
   if (fill >= 75) return '#f9ab00'; // Softer Google Amber
   return '#34a853'; // Google Green (safe state)
@@ -318,8 +319,9 @@ const Bins: React.FC = () => {
 
   // Compute live KPIs
   const totalBinsCount = combinedBins.length;
-  const averageFill = combinedBins.length > 0
-    ? Math.round(combinedBins.reduce((sum, b) => sum + b.fill, 0) / combinedBins.length)
+  const validBins = combinedBins.filter(b => b.fill !== -1);
+  const averageFill = validBins.length > 0
+    ? Math.round(validBins.reduce((sum, b) => sum + b.fill, 0) / validBins.length)
     : 0;
   const criticalCount = combinedBins.filter(b => b.status === 'critical' || b.status === 'high').length;
   const lowBatteryCount = combinedBins.filter(b => b.battery < 20).length;
@@ -613,9 +615,11 @@ const Bins: React.FC = () => {
                           <TableCell sx={{ color: 'text.secondary', fontSize: 12.5 }}>{bin.location}</TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                              <Typography sx={{ fontWeight: 800, fontSize: 12.5, fontFamily: 'monospace', color: getFillColor(bin.fill) }}>{bin.fill}%</Typography>
+                              <Typography sx={{ fontWeight: 800, fontSize: bin.fill === -1 ? 11 : 12.5, fontFamily: 'monospace', color: getFillColor(bin.fill) }}>
+                                {bin.fill === -1 ? 'Fuera de Rango' : `${bin.fill}%`}
+                              </Typography>
                               <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
-                                <Box sx={{ height: '100%', width: `${bin.fill}%`, bgcolor: getFillColor(bin.fill) }} />
+                                <Box sx={{ height: '100%', width: `${bin.fill === -1 ? 0 : bin.fill}%`, bgcolor: getFillColor(bin.fill) }} />
                               </Box>
                             </Box>
                           </TableCell>
@@ -759,8 +763,8 @@ const Bins: React.FC = () => {
                             {/* Gauge and Fill indicator */}
                             <Box>
                               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 0.75 }}>
-                                <Typography sx={{ fontWeight: 800, fontSize: 24, color: getFillColor(bin.fill), lineHeight: 1 }}>
-                                  {bin.fill}%
+                                <Typography sx={{ fontWeight: 800, fontSize: bin.fill === -1 ? 16 : 24, color: getFillColor(bin.fill), lineHeight: 1 }}>
+                                  {bin.fill === -1 ? 'Fuera de Rango' : `${bin.fill}%`}
                                 </Typography>
                                 <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 9.5, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.6, color: 'text.secondary' }}>
                                   Llenado
@@ -771,7 +775,7 @@ const Bins: React.FC = () => {
                                   height: '100%', 
                                   borderRadius: '4px', 
                                   background: getFillColor(bin.fill), 
-                                  width: `${bin.fill}%`, 
+                                  width: `${bin.fill === -1 ? 0 : bin.fill}%`, 
                                   transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                                 }} />
                               </Box>

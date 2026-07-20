@@ -52,12 +52,13 @@
 #define BUTTON_DOUBLE_MS    500   // Ventana para segunda pulsacion (ms)
 #define BUTTON_WAIT_MS      2000  // Max espera primera pulsacion (ms)
 
+// LEDs indicadores
+#define LED_ROJO            2   // Error de red/conectividad
+#define LED_AZUL1           3   // Estado del sistema (ON/OFF)
+#define LED_AZUL2           5   // Actividad LoRa Radio
+
 // Web Server
 #define WEB_PORT            80
-
-// Autenticacion Web (por defecto, se guardan en NVS)
-#define WEB_DEFAULT_USER    "UNSA"
-#define WEB_DEFAULT_PASS    "12345678"
 
 // Gestion de Nodos (maximo permitido en whitelist)
 #define MAX_ALLOWED_NODES   16

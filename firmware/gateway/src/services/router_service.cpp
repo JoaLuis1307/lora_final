@@ -3,6 +3,7 @@
 #include "parser_service.h"
 #include "node_store.h"
 #include "../drivers/lora_driver.h"
+#include "../drivers/led_driver.h"
 #include "display_service.h"
 
 unsigned long router_packets = 0;
@@ -72,6 +73,7 @@ void router_init() {
 void router_loop() {
   if (!lora_available()) return;
 
+  led_lora_activity();
   String raw = lora_read_string();
   router_packets++;
   Serial.print("LoRa RX: ");
@@ -87,10 +89,10 @@ void router_loop() {
       return;
     }
 
-    // Verificar whitelist - solo nodos permitidos
-    if (!node_whitelist_is_allowed(node_id.c_str())) {
-      Serial.println("  -> Nodo " + node_id + " NO permitido (fuera de whitelist)");
-      return;
+    // Almacenar SIEMPRE el nodo (auto-descubrimiento)
+    bool allowed = node_whitelist_is_allowed(node_id.c_str());
+    if (!allowed) {
+      Serial.println("  -> Nodo " + node_id + " no esta en whitelist (almacenado, sin publicar MQTT)");
     }
 
     bool crc_ok = false;
@@ -104,7 +106,7 @@ void router_loop() {
       int ack_comma = ack_data.indexOf(',');
       if (ack_comma > 0) ack_data = ack_data.substring(0, ack_comma);
       String ack_json = "{\"ack\":" + ack_data + "}";
-      router_handle_ack(node_id, ack_json);
+      if (allowed) router_handle_ack(node_id, ack_json);
       node_store_touch(node_id.c_str());
       display_update_signal(node_id.c_str(), lora_last_rssi, lora_last_snr, router_packets, router_crc_errors);
       return;
@@ -130,7 +132,9 @@ void router_loop() {
       Serial.println("  -> CRC ERROR!");
     }
 
-    router_handle_telemetry(node_id, json);
+    if (allowed) {
+      router_handle_telemetry(node_id, json);
+    }
     node_store_update(node_id.c_str(), json, lora_last_rssi, lora_last_snr);
     return;
   }
@@ -144,25 +148,25 @@ void router_loop() {
     return;
   }
 
-  // Verificar whitelist - solo nodos permitidos
-  if (!node_whitelist_is_allowed(node_id.c_str())) {
-    Serial.println("  -> Nodo " + node_id + " NO permitido (fuera de whitelist)");
-    return;
+  // Almacenar SIEMPRE el nodo (auto-descubrimiento)
+  bool allowed = node_whitelist_is_allowed(node_id.c_str());
+  if (!allowed) {
+    Serial.println("  -> Nodo " + node_id + " no esta en whitelist (almacenado, sin publicar MQTT)");
   }
 
   if (payload.length() == 0) payload = raw;
 
   if (type == "telemetry") {
-    router_handle_telemetry(node_id, payload);
+    if (allowed) router_handle_telemetry(node_id, payload);
     node_store_update(node_id.c_str(), payload, lora_last_rssi, lora_last_snr);
   } else if (type == "system") {
-    router_handle_system(node_id, payload);
+    if (allowed) router_handle_system(node_id, payload);
     node_store_touch(node_id.c_str());
   } else if (type == "event") {
-    router_handle_event(node_id, payload);
+    if (allowed) router_handle_event(node_id, payload);
     node_store_touch(node_id.c_str());
   } else if (type == "ack") {
-    router_handle_ack(node_id, payload);
+    if (allowed) router_handle_ack(node_id, payload);
     node_store_touch(node_id.c_str());
   } else {
     router_handle_telemetry(node_id, raw);
@@ -238,6 +242,7 @@ void router_handle_ack(const String& node_id, const String& payload) {
 
 void router_send_command_to_lora(const String& node_id, const String& command) {
   String msg = node_id + "|command|" + command;
+  led_lora_activity();
   lora_send((const uint8_t*)msg.c_str(), msg.length());
   Serial.print("LoRa TX command to ");
   Serial.print(node_id);

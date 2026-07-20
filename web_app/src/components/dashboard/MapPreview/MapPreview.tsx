@@ -543,10 +543,10 @@ const MapPreview: React.FC<MapPreviewProps> = ({
           <div style="display:flex;flex-direction:column;gap:6px;margin:2px 0">
             <div style="display:flex;justify-content:space-between;align-items:baseline">
               <span style="font-size:11px;font-weight:500;color:${mc}">Nivel de llenado</span>
-              <span style="font-size:22px;font-weight:700;color:${accentColor}">${fillPct}%</span>
+              <span style="font-size:${fillPct === -1 ? '13px' : '22px'};font-weight:700;color:${fillPct === -1 ? '#94a3b8' : accentColor}">${fillPct === -1 ? 'Fuera de Rango' : `${fillPct}%`}</span>
             </div>
             <div style="height:6px;background:${isDark ? '#3c4043' : '#f1f3f4'};border-radius:100px;overflow:hidden">
-              <div style="width:${fillPct}%;height:100%;background:${accentColor};border-radius:100px;transition:width 0.4s"></div>
+              <div style="width:${fillPct === -1 ? 0 : fillPct}%;height:100%;background:${fillPct === -1 ? '#94a3b8' : accentColor};border-radius:100px;transition:width 0.4s"></div>
             </div>
           </div>` : ''}
 

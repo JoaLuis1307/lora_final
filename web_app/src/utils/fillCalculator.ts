@@ -5,6 +5,11 @@
 export const calculateFillPercentage = (distance: number | undefined): number => {
   if (distance === undefined || distance === null) return 0;
 
+  // Si la distancia medida sale de rango (<= 0 o > 130 cm), retornamos -1 (fuera de rango)
+  if (distance <= 0 || distance > 130) {
+    return -1;
+  }
+
   // Retrieve user settings from localStorage (defaults: height = 100cm, fullDist = 10cm)
   const heightSetting = localStorage.getItem('container_height');
   const fullSetting = localStorage.getItem('container_full_distance');

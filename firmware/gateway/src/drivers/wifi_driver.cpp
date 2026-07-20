@@ -229,6 +229,20 @@ bool wifi_is_ap_active() {
   return ap_active;
 }
 
+int wifi_ap_client_count() {
+  if (!ap_active) return 0;
+  return WiFi.softAPgetStationNum();
+}
+
+void wifi_ap_exit() {
+  Serial.println("Saliendo de modo AP...");
+  prefs.begin("gw", false);
+  prefs.putBool("ap_request", false);
+  prefs.end();
+  delay(500);
+  ESP.restart();
+}
+
 String wifi_get_ip() {
   if (ap_active) return WiFi.softAPIP().toString();
   if (sta_connected && WiFi.status() == WL_CONNECTED) return WiFi.localIP().toString();

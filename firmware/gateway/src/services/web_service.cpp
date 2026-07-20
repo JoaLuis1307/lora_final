@@ -21,9 +21,6 @@ static char cfg_mqtt_pass[32] = "";
 static char cfg_gateway_id[32] = "gateway_01";
 static int cfg_lora_freq = 433;
 
-static char cfg_web_user[32] = WEB_DEFAULT_USER;
-static char cfg_web_pass[32] = WEB_DEFAULT_PASS;
-
 static const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8">
@@ -202,14 +199,15 @@ Herramientas</a>
 <div><div class="status-label">Nodos Activos</div><div style="font-size:18px;font-weight:700" id="ln">0</div></div>
 </div>
 </div></div>
-<div class="card"><div class="card-head">Nodos Registrados</div><div class="card-body">
+<div class="card"><div class="card-head">Nodos Descubiertos</div><div class="card-body">
+<div style="margin-bottom:12px"><input id="nodeSearch" placeholder="Buscar nodo por ID..." oninput="filterNodes()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:3px;font-size:13px;font-family:inherit"></div>
 <div id="ncl"><div class="empty">Esperando datos de nodos...</div></div>
 </div></div>
 </div>
 
 <div id="nodos" class="page">
 <div class="card"><div class="card-head"><span class="dot dot-b"></span>Gestion de Nodos (Whitelist)</div><div class="card-body">
-<p style="font-size:12px;color:var(--muted);margin-bottom:14px">Solo los nodos registrados en la whitelist pueden enviar datos al gateway. Si la lista esta vacia, se aceptan todos los nodos.</p>
+<p style="font-size:12px;color:var(--muted);margin-bottom:14px">Los nodos en la whitelist publican datos en MQTT. Los nodos fuera de whitelist se almacenan localmente pero no se publican. Si la lista esta vacia, todos publican.</p>
 <table class="tbl"><thead><tr><th>Nodo ID</th><th>Accion</th></tr></thead><tbody id="wlt"></tbody></table>
 <div id="wlempty" class="empty" style="padding:20px">Whitelist vacia - Todos los nodos son aceptados</div>
 <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
@@ -219,14 +217,6 @@ Herramientas</a>
 <button class="btn btn-primary" onclick="addNode()">Agregar</button>
 </div>
 </div>
-</div></div>
-<div class="card"><div class="card-head"><span class="dot dot-y"></span>Seguridad del Gateway</div><div class="card-body">
-<p style="font-size:12px;color:var(--muted);margin-bottom:14px">Credenciales de acceso al panel de administracion web.</p>
-<div class="row2">
-<div class="fg"><label>Usuario</label><input id="cwebu" placeholder="Usuario de acceso"></div>
-<div class="fg"><label>Clave de Acceso</label><input id="cwebp" type="password" placeholder="Dejar vacio para no cambiar"></div>
-</div>
-<div class="actions"><button class="btn btn-primary" onclick="saveWebCreds()">Actualizar Credenciales</button></div>
 </div></div>
 </div>
 
@@ -254,6 +244,7 @@ Herramientas</a>
 <div class="actions">
 <button class="btn btn-primary" onclick="doReboot()">Reiniciar Gateway</button>
 <button class="btn btn-danger" onclick="doReset()">Restablecer Valores de Fabrica</button>
+<button class="btn btn-outline" onclick="doApExit()">Salir del Modo Config</button>
 </div>
 </div></div>
 <div class="card"><div class="card-head"><span class="dot dot-b"></span>Informacion del Firmware</div><div class="card-body">
@@ -298,8 +289,9 @@ function updn(a){
 var c=$('ncl');if(!a||!a.length){c.innerHTML='<div class="empty">Esperando datos de nodos...</div>';return}
 var h='';a.forEach(function(n){
 var s=n.last_seen_sec,g=s<60;
-h+='<div class="node-card"><div class="node-header"><span class="node-id">'+n.id+'</span>';
+h+='<div class="node-card" data-id="'+n.id+'"><div class="node-header"><span class="node-id">'+n.id+'</span>';
 h+='<span class="node-badge '+(g?'on':'off')+'">'+(g?'En linea':'Sin conexion')+'</span>';
+if(n.whitelisted) h+='<span class="node-badge" style="background:#d4edda;color:#155724">Whitelist</span>';
 h+='<span class="node-time">'+(g?'hace '+s+'s':s+'s sin datos')+'</span></div>';
 h+='<div class="node-body"><div class="node-grid">';
 h+='<div class="node-cell"><span class="k">Bateria</span><span class="v">'+n.battery.toFixed(2)+'V</span></div>';
@@ -309,8 +301,18 @@ h+='<div class="node-cell"><span class="k">Ultrasonido</span><span class="v">'+n
 h+='<div class="node-cell"><span class="k">Distancia TOF</span><span class="v">'+n.tof_cm+'cm</span></div>';
 h+='<div class="node-cell"><span class="k">Infrarrojo</span><span class="v">'+(n.obstacle?'Detectado':'Libre')+'</span></div>';
 h+='</div></div>';
-h+='<div class="node-footer"><span>RSSI: '+n.rssi+'dBm</span><span>SNR: '+n.snr.toFixed(1)+'dB</span><span>Seq: #'+n.sequence+'</span></div></div>';
+h+='<div class="node-footer"><span>RSSI: '+n.rssi+'dBm</span><span>SNR: '+n.snr.toFixed(1)+'dB</span><span>Seq: #'+n.sequence+'</span>';
+h+='<span style="margin-left:auto">';
+if(n.whitelisted) h+='<button class="btn btn-danger" style="padding:2px 8px;font-size:10px" onclick="rmNode(\''+n.id+'\')">Quitar de Whitelist</button>';
+else h+='<button class="btn btn-primary" style="padding:2px 8px;font-size:10px" onclick="addNodeDirect(\''+n.id+'\')">Agregar a Whitelist</button>';
+h+='</span></div></div>';
 });c.innerHTML=h;
+}
+function filterNodes(){
+var q=$('nodeSearch').value.toLowerCase();
+document.querySelectorAll('.node-card').forEach(function(el){
+el.style.display=el.dataset.id.toLowerCase().indexOf(q)>=0?'':'none';
+});
 }
 function updw(data){
 var t=$('wlt'),e=$('wlempty');
@@ -321,18 +323,17 @@ h+='<tr><td class="mono" style="font-weight:600">'+id+'</td>';
 h+='<td><button class="btn btn-danger" style="padding:3px 10px;font-size:10px" onclick="rmNode(\''+id+'\')">Eliminar</button></td></tr>';
 });t.innerHTML=h;
 }
-function gah(){var h=sessionStorage.getItem('auth');return h?{headers:{'Authorization':'Basic '+h}}:{}}
-async function poll(){try{var r=await fetch('/api/status',gah());if(r.ok)upd(await r.json());var r2=await fetch('/api/nodes',gah());if(r2.ok)updn(await r2.json())}catch(e){}}
-async function loadCfg(){try{var r=await fetch('/api/config',gah());if(r.ok){var c=await r.json();$('cws').value=c.wifi_ssid||'';$('cms').value=c.mqtt_server||'';$('cmp').value=c.mqtt_port||1883;$('cmu').value=c.mqtt_user||'';$('cmg').value=c.gateway_id||'';$('clf').value=c.lora_freq||433}}catch(e){}}
-async function loadWL(){try{var r=await fetch('/api/whitelist',gah());if(r.ok)updw(await r.json())}catch(e){}}
-async function saveWifi(){var c={wifi_ssid:$('cws').value,wifi_pass:$('cwp').value};try{var r=await fetch('/api/config',Object.assign({method:'POST',headers:{'Content-Type':'application/json'}},gah(),{body:JSON.stringify(c)}));if(r.ok)alert('WiFi guardado. Reinicie para aplicar.');else alert('Error')}catch(e){alert('Error')}}
-async function saveMqtt(){var c={mqtt_server:$('cms').value,mqtt_port:parseInt($('cmp').value)||1883,mqtt_user:$('cmu').value,mqtt_pass:$('cmw').value,gateway_id:$('cmg').value};try{var r=await fetch('/api/config',Object.assign({method:'POST',headers:{'Content-Type':'application/json'}},gah(),{body:JSON.stringify(c)}));if(r.ok)alert('MQTT guardado. Reinicie para aplicar.');else alert('Error')}catch(e){alert('Error')}}
-async function saveLora(){var c={lora_freq:parseInt($('clf').value)||433};try{var r=await fetch('/api/config',Object.assign({method:'POST',headers:{'Content-Type':'application/json'}},gah(),{body:JSON.stringify(c)}));if(r.ok)alert('LoRa guardado. Reinicie para aplicar.');else alert('Error')}catch(e){alert('Error')}}
+async function poll(){try{var r=await fetch('/api/status');if(r.ok)upd(await r.json());var r2=await fetch('/api/nodes');if(r2.ok)updn(await r2.json())}catch(e){}}
+async function loadCfg(){try{var r=await fetch('/api/config');if(r.ok){var c=await r.json();$('cws').value=c.wifi_ssid||'';$('cms').value=c.mqtt_server||'';$('cmp').value=c.mqtt_port||1883;$('cmu').value=c.mqtt_user||'';$('cmg').value=c.gateway_id||'';$('clf').value=c.lora_freq||433}}catch(e){}}
+async function loadWL(){try{var r=await fetch('/api/whitelist');if(r.ok)updw(await r.json())}catch(e){}}
+async function saveWifi(){var c={wifi_ssid:$('cws').value,wifi_pass:$('cwp').value};try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});if(r.ok)alert('WiFi guardado. Reinicie para aplicar.');else alert('Error')}catch(e){alert('Error')}}
+async function saveMqtt(){var c={mqtt_server:$('cms').value,mqtt_port:parseInt($('cmp').value)||1883,mqtt_user:$('cmu').value,mqtt_pass:$('cmw').value,gateway_id:$('cmg').value};try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});if(r.ok)alert('MQTT guardado. Reinicie para aplicar.');else alert('Error')}catch(e){alert('Error')}}
+async function saveLora(){var c={lora_freq:parseInt($('clf').value)||433};try{var r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});if(r.ok)alert('LoRa guardado. Reinicie para aplicar.');else alert('Error')}catch(e){alert('Error')}}
 function addNode(){
 var id=$('newNid').value.trim();
 if(!id){alert('Ingrese un ID de nodo');return}
 if(id.length>15){alert('El ID no puede exceder 15 caracteres');return}
-fetch('/api/whitelist/add',Object.assign({method:'POST',headers:{'Content-Type':'application/json'}},gah(),{body:JSON.stringify({node_id:id})}))
+fetch('/api/whitelist/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({node_id:id})})
 .then(function(r){return r.json()}).then(function(d){
 if(d.ok){alert('Nodo '+id+' agregado');$('newNid').value='';loadWL()}
 else{alert(d.error||'Error al agregar nodo')}
@@ -340,24 +341,20 @@ else{alert(d.error||'Error al agregar nodo')}
 }
 function rmNode(id){
 if(!confirm('Eliminar nodo '+id+' de la whitelist?'))return;
-fetch('/api/whitelist/remove',Object.assign({method:'POST',headers:{'Content-Type':'application/json'}},gah(),{body:JSON.stringify({node_id:id})}))
+fetch('/api/whitelist/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({node_id:id})})
 .then(function(r){return r.json()}).then(function(d){
 if(d.ok){loadWL()}else{alert(d.error||'Error al eliminar nodo')}
 }).catch(function(){alert('Error de conexion')});
 }
-function saveWebCreds(){
-var u=$('cwebu').value.trim(),p=$('cwebp').value;
-if(!u){alert('Ingrese un usuario');return}
-var body={web_user:u};
-if(p)body.web_pass=p;
-fetch('/api/webcreds',Object.assign({method:'POST',headers:{'Content-Type':'application/json'}},gah(),{body:JSON.stringify(body)}))
+function addNodeDirect(id){
+fetch('/api/whitelist/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({node_id:id})})
 .then(function(r){return r.json()}).then(function(d){
-if(d.ok){alert('Credenciales actualizadas. Use las nuevas credenciales para la proxima sesion.');$('cwebp').value=''}
-else{alert(d.error||'Error')}
+if(d.ok){loadWL()}else{alert(d.error||'Error al agregar nodo')}
 }).catch(function(){alert('Error de conexion')});
 }
-function doReboot(){if(confirm('Reiniciar el gateway?'))fetch('/api/reboot',Object.assign({method:'POST'},gah())).then(()=>alert('Reiniciando...'))}
-function doReset(){if(confirm('Restablecer valores de fabrica? Todos los cambios se perderan.'))fetch('/api/reset',Object.assign({method:'POST'},gah())).then(()=>{alert('Valores restaurados. Reinicie el gateway.');loadCfg()})}
+function doReboot(){if(confirm('Reiniciar el gateway?'))fetch('/api/reboot',{method:'POST'}).then(()=>alert('Reiniciando...'))}
+function doReset(){if(confirm('Restablecer valores de fabrica? Todos los cambios se perderan.'))fetch('/api/reset',{method:'POST'}).then(()=>{alert('Valores restaurados. Reinicie el gateway.');loadCfg()})}
+function doApExit(){if(confirm('Salir del modo configuracion? El gateway se reiniciara en modo normal.'))fetch('/api/ap_exit',{method:'POST'}).then(()=>alert('Saliendo del modo AP...'))}
 poll();loadCfg();loadWL();setInterval(poll,2000);setInterval(loadWL,10000);
 </script>
 </body></html>
@@ -373,8 +370,6 @@ static void config_load() {
   strncpy(cfg_mqtt_pass, prefs.getString("m_psw", MQTT_PASS).c_str(), sizeof(cfg_mqtt_pass) - 1);
   strncpy(cfg_gateway_id, prefs.getString("g_id", MQTT_GATEWAY_ID).c_str(), sizeof(cfg_gateway_id) - 1);
   cfg_lora_freq = prefs.getInt("l_freq", (int)(LORA_FREQ / 1000000));
-  strncpy(cfg_web_user, prefs.getString("w_user", WEB_DEFAULT_USER).c_str(), sizeof(cfg_web_user) - 1);
-  strncpy(cfg_web_pass, prefs.getString("w_wpass", WEB_DEFAULT_PASS).c_str(), sizeof(cfg_web_pass) - 1);
   prefs.end();
 }
 
@@ -388,8 +383,6 @@ static void config_save() {
   prefs.putString("m_psw", cfg_mqtt_pass);
   prefs.putString("g_id", cfg_gateway_id);
   prefs.putInt("l_freq", cfg_lora_freq);
-  prefs.putString("w_user", cfg_web_user);
-  prefs.putString("w_wpass", cfg_web_pass);
   prefs.end();
 }
 
@@ -481,6 +474,12 @@ static void handle_reset() {
   server.send(200, "application/json", "{\"ok\":true,\"msg\":\"Valores por defecto restaurados.\"}");
 }
 
+static void handle_ap_exit() {
+  server.send(200, "application/json", "{\"ok\":true,\"msg\":\"Saliendo del modo AP...\"}");
+  delay(500);
+  wifi_ap_exit();
+}
+
 static void handle_whitelist_get() {
   server.send(200, "application/json", node_whitelist_get_json());
 }
@@ -515,194 +514,29 @@ static void handle_whitelist_remove() {
   }
 }
 
-static void handle_webcreds_post() {
-  String body = server.arg("plain");
-  String val;
-
-  val = parser_extract_value(body.c_str(), "web_user");
-  if (val.length() > 0) strncpy(cfg_web_user, val.c_str(), sizeof(cfg_web_user) - 1);
-
-  val = parser_extract_value(body.c_str(), "web_pass");
-  if (val.length() > 0) strncpy(cfg_web_pass, val.c_str(), sizeof(cfg_web_pass) - 1);
-
-  config_save();
-  server.send(200, "application/json", "{\"ok\":true,\"msg\":\"Credenciales web actualizadas.\"}");
-}
-
-// ===================== AUTENTICACION =====================
-
-static String base64_encode(const String& input) {
-  const char* tbl = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  String out = "";
-  int i = 0;
-  int len = input.length();
-  unsigned char c3[3];
-  unsigned char c4[4];
-  int j = 0;
-
-  while (len--) {
-    c3[j++] = input[i++];
-    if (j == 3) {
-      c4[0] = (c3[0] & 0xfc) >> 2;
-      c4[1] = ((c3[0] & 0x03) << 4) | ((c3[1] & 0xf0) >> 4);
-      c4[2] = ((c3[1] & 0x0f) << 2) | ((c3[2] & 0xc0) >> 6);
-      c4[3] = c3[2] & 0x3f;
-      for (j = 0; j < 4; j++) out += tbl[c4[j]];
-      j = 0;
-    }
-  }
-  if (j) {
-    for (int k = j; k < 3; k++) c3[k] = 0;
-    c4[0] = (c3[0] & 0xfc) >> 2;
-    c4[1] = ((c3[0] & 0x03) << 4) | ((c3[1] & 0xf0) >> 4);
-    c4[2] = ((c3[1] & 0x0f) << 2) | ((c3[2] & 0xc0) >> 6);
-    for (int k = 0; k < j + 1; k++) out += tbl[c4[k]];
-    while (j++ < 3) out += '=';
-  }
-  return out;
-}
-
-static bool check_auth() {
-  if (!server.hasHeader("Authorization")) return false;
-  String auth = server.header("Authorization");
-  if (!auth.startsWith("Basic ")) return false;
-  String decoded = auth.substring(6);
-  String expected = base64_encode(String(cfg_web_user) + ":" + String(cfg_web_pass));
-  return decoded == expected;
-}
-
-static bool auth_check() {
-  if (check_auth()) return true;
-  if (server.hasArg("__auth")) {
-    String token = server.arg("__auth");
-    String expected = base64_encode(String(cfg_web_user) + ":" + String(cfg_web_pass));
-    if (token == expected) return true;
-  }
-  return false;
-}
-
-static void handle_login_page() {
-  String html = R"rawliteral(
-<!DOCTYPE html><html lang="es"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IoT Gateway - Acceso</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef1f5;display:flex;justify-content:center;align-items:center;min-height:100vh}
-.login-box{background:#fff;border:1px solid #d4d8dd;border-radius:4px;width:360px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.login-top{background:#1b2a4a;padding:20px;text-align:center}
-.login-top svg{width:40px;height:40px;margin-bottom:8px}
-.login-top h2{color:#fff;font-size:16px;font-weight:600}
-.login-top p{color:rgba(255,255,255,.5);font-size:11px;margin-top:4px}
-.login-body{padding:24px}
-.fg{margin-bottom:16px}
-.fg label{display:block;font-size:11px;color:#6a737d;text-transform:uppercase;letter-spacing:.3px;font-weight:600;margin-bottom:4px}
-.fg input{width:100%;padding:8px 12px;border:1px solid #d4d8dd;border-radius:3px;font-size:14px;font-family:inherit}
-.fg input:focus{outline:none;border-color:#049fd9;box-shadow:0 0 0 2px rgba(4,159,217,.15)}
-.btn{width:100%;padding:9px 16px;background:#049fd9;color:#fff;border:1px solid #038ab8;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:.3px}
-.btn:hover{background:#038ab8}
-.err{color:#cb2938;font-size:12px;text-align:center;margin-top:12px;display:none}
-.login-footer{padding:12px 24px;background:#f6f8fa;border-top:1px solid #d4d8dd;text-align:center;font-size:11px;color:#6a737d}
-</style></head><body>
-<div class="login-box">
-<div class="login-top">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:#fff"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-<h2>IoT Gateway</h2>
-<p>ESP32-S3 | LoRa 433MHz | MQTT</p>
-</div>
-<div class="login-body">
-<form onsubmit="return doLogin(this)">
-<div class="fg"><label>Usuario</label><input id="lu" type="text" required autocomplete="username"></div>
-<div class="fg"><label>Clave de Acceso</label><input id="lp" type="password" required autocomplete="current-password"></div>
-<button class="btn" type="submit">Iniciar Sesion</button>
-<div class="err" id="err">Credenciales incorrectas</div>
-</form>
-</div>
-<div class="login-footer">Acceso restringido - Solo administradores</div>
-</div>
-<script>
-function doLogin(f){
-  var u=document.getElementById('lu').value;
-  var p=document.getElementById('lp').value;
-  var hash=btoa(u+':'+p);
-  fetch('/api/status?__auth='+encodeURIComponent(hash)).then(function(r){
-    if(r.ok){sessionStorage.setItem('auth',hash);window.location.href='/?__auth='+encodeURIComponent(hash)}
-    else{document.getElementById('err').style.display='block'}
-  }).catch(function(){document.getElementById('err').style.display='block'});
-  return false;
-}
-</script>
-</body></html>)rawliteral";
-  server.send(200, "text/html", html);
-}
-
-// ===================== HANDLERS CON AUTH =====================
-
-static void handle_index_auth() {
-  if (!auth_check()) { handle_login_page(); return; }
+static void handle_index() {
   server.send_P(200, "text/html", INDEX_HTML);
-}
-static void handle_status_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_status();
-}
-static void handle_nodes_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_nodes();
-}
-static void handle_config_get_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_config_get();
-}
-static void handle_config_post_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_config_post();
-}
-static void handle_reboot_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_reboot();
-}
-static void handle_reset_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_reset();
-}
-static void handle_whitelist_get_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_whitelist_get();
-}
-static void handle_whitelist_add_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_whitelist_add();
-}
-static void handle_whitelist_remove_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_whitelist_remove();
-}
-static void handle_webcreds_post_auth() {
-  if (!auth_check()) { server.send(401, "application/json", "{\"error\":\"unauthorized\"}"); return; }
-  handle_webcreds_post();
 }
 
 void web_service_init() {
   config_load();
   node_store_init();
 
-  server.on("/", HTTP_GET, handle_index_auth);
-  server.on("/api/status", HTTP_GET, handle_status_auth);
-  server.on("/api/nodes", HTTP_GET, handle_nodes_auth);
-  server.on("/api/config", HTTP_GET, handle_config_get_auth);
-  server.on("/api/config", HTTP_POST, handle_config_post_auth);
-  server.on("/api/reboot", HTTP_POST, handle_reboot_auth);
-  server.on("/api/reset", HTTP_POST, handle_reset_auth);
-  server.on("/api/whitelist", HTTP_GET, handle_whitelist_get_auth);
-  server.on("/api/whitelist/add", HTTP_POST, handle_whitelist_add_auth);
-  server.on("/api/whitelist/remove", HTTP_POST, handle_whitelist_remove_auth);
-  server.on("/api/webcreds", HTTP_POST, handle_webcreds_post_auth);
+  server.on("/", HTTP_GET, handle_index);
+  server.on("/api/status", HTTP_GET, handle_status);
+  server.on("/api/nodes", HTTP_GET, handle_nodes);
+  server.on("/api/config", HTTP_GET, handle_config_get);
+  server.on("/api/config", HTTP_POST, handle_config_post);
+  server.on("/api/reboot", HTTP_POST, handle_reboot);
+  server.on("/api/reset", HTTP_POST, handle_reset);
+  server.on("/api/whitelist", HTTP_GET, handle_whitelist_get);
+  server.on("/api/whitelist/add", HTTP_POST, handle_whitelist_add);
+  server.on("/api/whitelist/remove", HTTP_POST, handle_whitelist_remove);
+  server.on("/api/ap_exit", HTTP_POST, handle_ap_exit);
 
   server.enableCORS(true);
   server.begin();
   Serial.println("Web server iniciado en puerto " + String(WEB_PORT));
-  Serial.println("Web auth: " + String(cfg_web_user) + " / " + String(cfg_web_pass));
 }
 
 void web_service_loop() {

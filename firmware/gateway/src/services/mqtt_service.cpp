@@ -1,6 +1,7 @@
 #include "mqtt_service.h"
 #include "../../config.h"
 #include "../drivers/wifi_driver.h"
+#include "../drivers/led_driver.h"
 #include "router_service.h"
 #include "parser_service.h"
 #include "display_service.h"
@@ -50,6 +51,7 @@ static void handle_gw_command(const String& msg) {
 }
 
 static void mqtt_callback(char* topic, byte* payload, unsigned int length) {
+  led_mqtt_activity();
   String topic_str = String(topic);
   String msg;
   for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];
@@ -119,10 +121,12 @@ void mqtt_loop() { mqtt_client.loop(); }
 bool mqtt_is_connected() { return mqtt_client.connected(); }
 
 void mqtt_publish(const char* topic, const char* payload) {
+  led_mqtt_activity();
   mqtt_client.publish(topic, payload);
 }
 
 void mqtt_publish_status(bool online, const char* ip) {
+  led_mqtt_activity();
   String topic = "lora/" + String(web_service_get_gateway_id()) + "/status";
   String payload = "{\"status\":\"";
   payload += online ? "online" : "offline";
@@ -133,6 +137,7 @@ void mqtt_publish_status(bool online, const char* ip) {
 }
 
 void mqtt_publish_info() {
+  led_mqtt_activity();
   String topic = "lora/" + String(web_service_get_gateway_id()) + "/info";
   String payload = "{";
   payload += "\"uptime\":" + String(millis() / 1000);
@@ -144,6 +149,7 @@ void mqtt_publish_info() {
 }
 
 void mqtt_publish_stats(unsigned long packets, unsigned long crc_errs, int nodes) {
+  led_mqtt_activity();
   String topic = "lora/" + String(web_service_get_gateway_id()) + "/stats";
   String payload = "{";
   payload += "\"packets\":" + String(packets);

@@ -103,11 +103,23 @@ const Alerts: React.FC = () => {
           });
         }
 
-        // 3. High Fill Level (>= 75%)
+        // 3. High Fill Level (>= 75%) o fuera de rango
         const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
         if (fillDistance !== undefined) {
           const fillPct = calculateFillPercentage(fillDistance);
-          if (fillPct >= 75) {
+          if (fillPct === -1) {
+            list.push({
+              id: `INC-${dev.device_id}-RANGE`,
+              deviceId: dev.device_id,
+              sourceName: dev.name,
+              type: 'Sensor',
+              severity: 'warning',
+              condition: `Lectura fuera de rango (${fillDistance} cm) / Sensor no ubicado correctamente`,
+              timestamp: dt.timestamp || new Date().toISOString(),
+              lat: dev.latitude,
+              lng: dev.longitude
+            });
+          } else if (fillPct >= 75) {
             list.push({
               id: `INC-${dev.device_id}-FILL`,
               deviceId: dev.device_id,

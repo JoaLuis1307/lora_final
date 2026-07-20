@@ -2,6 +2,7 @@
 #include "../../config.h"
 #include "../drivers/wifi_driver.h"
 #include "../drivers/lora_driver.h"
+#include "../drivers/led_driver.h"
 #include "../services/display_service.h"
 #include "../services/mqtt_service.h"
 #include "../services/router_service.h"
@@ -22,10 +23,14 @@ void app_init() {
   Serial.begin(115200);
   delay(500);
 
+  led_init();
   display_service_init();
 
   wifi_init();
   state.wifi = wifi_is_connected();
+
+  // LED Rojo: ON si no hay WiFi (STA) o siempre en modo AP (sin internet)
+  if (!state.wifi || wifi_is_ap_active()) led_rojo_on();
 
   if (wifi_is_ap_active()) {
     display_show_ap_mode(AP_SSID, wifi_get_ip().c_str());
@@ -168,6 +173,29 @@ void app_loop() {
   handle_serial();
   web_service_loop();
   wifi_dns_loop();
+  led_blink_update();
+
+  // Modo AP: LED Rojo
+  //   Sin clientes = fijo ON (sin red/internet)
+  //   Con clientes = parpadea (configurando)
+  if (wifi_is_ap_active()) {
+    static unsigned long last_ap_blink = 0;
+    static bool ap_blink_state = false;
+    int clients = wifi_ap_client_count();
+    if (clients > 0) {
+      if (millis() - last_ap_blink > 500) {
+        last_ap_blink = millis();
+        ap_blink_state = !ap_blink_state;
+        if (ap_blink_state) led_rojo_on(); else led_rojo_off();
+      }
+    } else {
+      led_rojo_on();
+    }
+    wifi_button_check();
+    lora_check();
+    router_loop();
+    return;
+  }
 
   // Verificar boton doble pulsacion
   wifi_button_check();
@@ -196,6 +224,8 @@ void app_loop() {
       wifi_reconnect();
       state.wifi = wifi_is_connected();
     }
+    // LED Rojo: ERROR si no hay WiFi
+    if (state.wifi) led_rojo_off(); else led_rojo_on();
     display_show_status(state.wifi, state.mqtt, state.lora);
   }
 

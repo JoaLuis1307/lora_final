@@ -106,6 +106,7 @@ String node_store_get_json() {
     json += ",\"sequence\":" + String(n.sequence);
     json += ",\"last_seen_sec\":" + String(ago);
     json += ",\"active\":" + String((ago < 60) ? "true" : "false");
+    json += ",\"whitelisted\":" + String(node_whitelist_is_allowed(n.id) ? "true" : "false");
     json += "}";
   }
   json += "]";

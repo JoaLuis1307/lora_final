@@ -57,7 +57,7 @@ const getMetrics = (isDark: boolean) => [
 ];
 
 const fillColor = (v: number | null) => {
-  if (v === null) return '#94a3b8';
+  if (v === null || v < 0) return '#94a3b8';
   if (v >= 90) return '#d93025'; // Google Red
   if (v >= 75) return '#f59e0b'; // Google Orange
   if (v >= 30) return '#eab308'; // Yellow
@@ -201,7 +201,7 @@ const DeviceDetails: React.FC<DetailViewProps> = memo(({ devId, entries, isRealt
       const vals = entries.map(e => e[m.key]).filter((v: any) => v !== undefined && v !== null && !isNaN(Number(v))).map(Number);
       res[m.key] = calcStats(vals);
     }
-    const fv = entries.map(e => calcFill(e)).filter(v => v !== null) as number[];
+    const fv = entries.map(e => calcFill(e)).filter(v => v !== null && v !== -1) as number[];
     res.fill = calcStats(fv);
     return res;
   }, [entries, metrics]);
@@ -367,7 +367,7 @@ const DeviceDetails: React.FC<DetailViewProps> = memo(({ devId, entries, isRealt
                     return (
                       <TableRow key={i} hover>
                         <TableCell sx={{ fontWeight: 700 }}>{formatTime(e.timestamp)}</TableCell>
-                        <TableCell sx={{ color: fillColor(f), fontWeight: 800 }}>{f !== null ? `${f}%` : '--'}</TableCell>
+                        <TableCell sx={{ color: fillColor(f), fontWeight: 800 }}>{f !== null ? (f === -1 ? 'Fuera de Rango' : `${f}%`) : '--'}</TableCell>
                         <TableCell>{e.ultrasonic_cm?.toFixed(1) ?? '--'}</TableCell>
                         <TableCell>{e.tof_cm?.toFixed(1) ?? '--'}</TableCell>
                         <TableCell>{e.rssi ?? '--'}</TableCell>
@@ -876,9 +876,11 @@ const Stats: React.FC = () => {
                           <TableCell>
                             {dev.fill !== null ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>{dev.fill}%</Typography>
+                                <Typography sx={{ fontWeight: 800, fontSize: dev.fill === -1 ? 11 : 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>
+                                  {dev.fill === -1 ? 'Fuera de Rango' : `${dev.fill}%`}
+                                </Typography>
                                 <Box sx={{ width: 40, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
-                                  <Box sx={{ height: '100%', width: `${dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
+                                  <Box sx={{ height: '100%', width: `${dev.fill === -1 ? 0 : dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
                                 </Box>
                               </Box>
                             ) : (
@@ -977,9 +979,11 @@ const Stats: React.FC = () => {
                           <TableCell>
                             {dev.fill !== null ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Typography sx={{ fontWeight: 800, fontSize: 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>{dev.fill}%</Typography>
+                                <Typography sx={{ fontWeight: 800, fontSize: dev.fill === -1 ? 11 : 13, fontFamily: 'monospace', color: fillColor(dev.fill) }}>
+                                  {dev.fill === -1 ? 'Fuera de Rango' : `${dev.fill}%`}
+                                </Typography>
                                 <Box sx={{ width: 60, height: 5, bgcolor: 'action.hover', borderRadius: 10, overflow: 'hidden' }}>
-                                  <Box sx={{ height: '100%', width: `${dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
+                                  <Box sx={{ height: '100%', width: `${dev.fill === -1 ? 0 : dev.fill}%`, bgcolor: fillColor(dev.fill) }} />
                                 </Box>
                               </Box>
                             ) : (
