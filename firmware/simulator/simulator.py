@@ -89,7 +89,7 @@ class NodoSimulado:
         self.gps_alt = DEFAULT_ALT + random.randint(-50, 50)
         self.gps_sats = random.randint(8, 14)
         self.gps_valido = True
-        self.bateria = random.randint(70, 100)
+        self.bateria = 85.0
         self.rssi = random.randint(-85, -45)
         self.snr = round(random.uniform(5.0, 12.0), 1)
         self.manual_override = False
@@ -855,8 +855,8 @@ class SimuladorApp:
         # Satelites GPS: estables con pequena variacion
         nodo.gps_sats = random.randint(8, 14)
 
-        # Batería disminuye lentamente
-        nodo.bateria = max(0, min(100, nodo.bateria - random.uniform(0.001, 0.01)))
+        # Batería se mantiene estable en el valor configurado
+        pass
 
         # RSSI varía levemente con ruido
         nodo.rssi = max(-120, min(-30, nodo.rssi + random.randint(-1, 1)))

@@ -438,10 +438,21 @@ const Devices: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
+  // Promedio de batería de todos los nodos sensores registrados
+  const registeredNodes = devices.filter(d => d.type?.toLowerCase() !== 'gateway' && d.registered);
+  const averageBattery = registeredNodes.length > 0
+    ? Math.round(registeredNodes.reduce((sum, d) => {
+        const t = telemetry[d.device_id] || {};
+        const bat = t.battery ?? t.bateria ?? t.batt ?? t.bat;
+        const currentBattery = bat !== undefined ? bat : d.battery_level;
+        return sum + (currentBattery || 0);
+      }, 0) / registeredNodes.length)
+    : 100;
+
   const stats = [
     { label: 'Total Dispositivos', value: totalDevices, icon: <Cpu size={18} /> },
     { label: 'En Línea', value: onlineDevices, icon: <Activity size={18} /> },
-    { label: 'Fuera de Línea', value: offlineDevices, icon: <WifiOff size={18} /> },
+    { label: 'Batería Promedio', value: `${averageBattery}%`, icon: <Battery size={18} /> },
     { label: 'Alertas', value: alertDevices, icon: <TriangleAlert size={18} /> },
   ];
 
