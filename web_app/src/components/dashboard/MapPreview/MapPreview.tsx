@@ -330,13 +330,13 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Sync map style with theme
+  // Keep the base map aligned with the global theme. Satellite layers are
+  // intentionally preserved because they are independent of light/dark mode.
   useEffect(() => {
-    if (activeLayer === 'bright' || activeLayer === 'dark') {
-      const newLayer = currentTheme === 'light' ? 'bright' : 'dark';
-      if (activeLayer !== newLayer) setActiveLayer(newLayer);
-    }
-  }, [currentTheme, activeLayer]);
+    if (activeLayer === 'satellite' || activeLayer === 'hybrid') return;
+    const newLayer = currentTheme === 'light' ? 'bright' : 'dark';
+    if (activeLayer !== newLayer) setActiveLayer(newLayer);
+  }, [currentTheme]);
 
   // Geocodificación: Nominatim con respaldo en Photon (ambos públicos, sin key)
   useEffect(() => {
