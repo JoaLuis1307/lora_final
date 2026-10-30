@@ -165,6 +165,19 @@ const PointModal: React.FC<{
 // Los estilos de mapa y utilidades de ruteo/geocodificación viven en
 // services/mapStyles.ts (OpenFreeMap + Esri, sin API keys).
 
+// MapLibre lanza TypeError si se consulta un source/layer mientras el estilo
+// se está cargando (sourceCaches aún es undefined). Estos helpers lo evitan y
+// son la causa de que el mapa quedara en negro.
+const safeGetSource = (m: maplibregl.Map | null, id: string): any => {
+  if (!m) return undefined;
+  try { return m.getSource(id); } catch { return undefined; }
+};
+
+const safeGetLayer = (m: maplibregl.Map | null, id: string): any => {
+  if (!m) return undefined;
+  try { return m.getLayer(id); } catch { return undefined; }
+};
+
 const MapPreview: React.FC<MapPreviewProps> = ({ 
   isPage = false, 
   focusVehicleId = null,
@@ -178,6 +191,8 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   const map = useRef<maplibregl.Map | null>(null);
   const markersCache = useRef<Map<string, { marker: maplibregl.Marker; element: HTMLDivElement }>>(new Map());
   const hasFocusedRef = useRef<string | null>(null);
+  // Clave del estilo realmente aplicado (evita recargar el estilo al montar).
+  const appliedStyleRef = useRef<string>('');
 
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() =>
     (localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark'
@@ -352,11 +367,11 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   }, []);
 
   const add3DBuildings = useCallback(() => {
-    if (!map.current?.loaded()) return;
-    if (!map.current.getSource('openmaptiles')) return;
+    if (!map.current?.isStyleLoaded()) return;
+    if (!safeGetSource(map.current, 'openmaptiles')) return;
     const layers = map.current.getStyle().layers;
     const labelLayerId = layers?.find(l => l.type === 'symbol' && l.layout?.['text-field'])?.id;
-    if (map.current.getLayer('3d-buildings')) return;
+    if (safeGetLayer(map.current, '3d-buildings')) return;
     map.current.addLayer({
       id: '3d-buildings',
       source: 'openmaptiles',
@@ -373,13 +388,13 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   }, [currentTheme]);
 
   const addRoutes = useCallback(() => {
-    if (!map.current?.loaded()) return;
+    if (!map.current?.isStyleLoaded()) return;
     const routes = [
       { id: 'route-north', color: '#3b82f6', coords: [[-71.545, -16.390], [-71.540, -16.395], [-71.535, -16.400], [-71.530, -16.408], [-71.525, -16.415]] },
       { id: 'route-center', color: '#10b981', coords: [[-71.537, -16.410], [-71.530, -16.415], [-71.525, -16.420], [-71.520, -16.425]] }
     ];
     routes.forEach(r => {
-      if (map.current?.getSource(r.id)) return;
+      if (safeGetSource(map.current, r.id)) return;
       map.current?.addSource(r.id, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: r.coords } } as any });
       map.current?.addLayer({ id: `${r.id}-glow`, type: 'line', source: r.id, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': r.color, 'line-width': 8, 'line-opacity': 0.2, 'line-blur': 4 } });
       map.current?.addLayer({ id: r.id, type: 'line', source: r.id, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': r.color, 'line-width': 4, 'line-opacity': 0.8 } });
@@ -682,16 +697,17 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   const resetView = () => { setViewMode('3D'); map.current?.flyTo({ center, zoom: 14, pitch: 45, bearing: -17, essential: true }); };
 
   const refreshRouteLayer = useCallback(() => {
-    if (!map.current || !routeData) return;
+    if (!map.current || !routeData || !map.current.isStyleLoaded()) return;
     const geometry = routeData.geometry;
-    if (map.current.getSource('active-route')) { (map.current.getSource('active-route') as any).setData(geometry); }
+    const existing = safeGetSource(map.current, 'active-route');
+    if (existing) { existing.setData(geometry); }
     else {
       map.current.addSource('active-route', { type: 'geojson', data: geometry });
       map.current.addLayer({ id: 'route-line-bg', type: 'line', source: 'active-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#3b82f6', 'line-width': 8, 'line-opacity': 0.3 } });
       map.current.addLayer({ id: 'route-line', type: 'line', source: 'active-route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#60a5fa', 'line-width': 4, 'line-opacity': 0.8 } });
     }
-    if (map.current.getLayer('route-line-bg')) map.current.moveLayer('route-line-bg');
-    if (map.current.getLayer('route-line')) map.current.moveLayer('route-line');
+    if (safeGetLayer(map.current, 'route-line-bg')) map.current.moveLayer('route-line-bg');
+    if (safeGetLayer(map.current, 'route-line')) map.current.moveLayer('route-line');
   }, [routeData]);
 
   const calculateRoute = async (points: [number, number][]) => {
@@ -881,13 +897,18 @@ const MapPreview: React.FC<MapPreviewProps> = ({
       style: getMapStyle(activeLayer, currentTheme) as any,
       center, zoom: 14, maxZoom: 19, pitch: 45, bearing: -17, attributionControl: false,
     });
-    const onStyleLoad = () => { 
+    // Recordamos el estilo ya aplicado al crear el mapa: así el efecto de
+    // sincronización no vuelve a llamar setStyle justo después del montaje
+    // (eso recargaba el estilo y dejaba el mapa en negro).
+    appliedStyleRef.current = `${activeLayer}|${currentTheme}`;
+    const onStyleLoad = () => {
       setMapLoaded(true);
-      add3DBuildings(); 
-      addRoutes(); 
-      addMarkers(); 
-      loadDbPoints(); 
-      refreshRouteLayer(); 
+      // Cada paso aislado: si uno falla no debe impedir que se pinte el mapa.
+      try { add3DBuildings(); } catch (e) { console.warn('[Mapa] 3D buildings:', e); }
+      try { addRoutes(); } catch (e) { console.warn('[Mapa] rutas demo:', e); }
+      try { addMarkers(); } catch (e) { console.warn('[Mapa] marcadores:', e); }
+      try { loadDbPoints(); } catch (e) { console.warn('[Mapa] puntos:', e); }
+      try { refreshRouteLayer(); } catch (e) { console.warn('[Mapa] ruta activa:', e); }
     };
     map.current.on('style.load', onStyleLoad);
     const params = new URLSearchParams(window.location.search);
@@ -931,8 +952,13 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   useEffect(() => { if (mapLoaded) addMarkers(); }, [dbPoints, devices, telemetry, addMarkers, currentTheme, editMode, mapLoaded]);
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
-    const targetStyle = getMapStyle(activeLayer, currentTheme) as any;
-    map.current.setStyle(targetStyle);
+    const key = `${activeLayer}|${currentTheme}`;
+    // Solo recargamos el estilo cuando de verdad cambió la capa o el tema.
+    if (appliedStyleRef.current === key) return;
+    appliedStyleRef.current = key;
+    // Mientras el nuevo estilo carga no consultamos sources/layers.
+    setMapLoaded(false);
+    map.current.setStyle(getMapStyle(activeLayer, currentTheme) as any);
   }, [activeLayer, currentTheme, mapLoaded]);
   useEffect(() => { map.current?.flyTo({ pitch: viewMode === '2D' ? 0 : 45, bearing: viewMode === '2D' ? 0 : -17, duration: 1000 }); }, [viewMode]);
   useEffect(() => { if (showAddModal) return; loadDbPoints(); loadDevices(); loadTelemetry(); loadDiscoveredDevices(); const i = setInterval(() => { loadDbPoints(); loadDevices(); loadTelemetry(); loadDiscoveredDevices(); }, 5000); return () => clearInterval(i); }, [loadDbPoints, loadDevices, loadTelemetry, loadDiscoveredDevices, showAddModal]);
@@ -1311,7 +1337,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
           {/* Routing/Simulation Button */}
           <IconButton
-            onClick={() => { setRoutingMode(!routingMode); setRoutePoints([]); setRouteData(null); if (map.current?.getSource('active-route')) (map.current.getSource('active-route') as any).setData({ type: 'FeatureCollection', features: [] }); }}
+            onClick={() => { setRoutingMode(!routingMode); setRoutePoints([]); setRouteData(null); const s = safeGetSource(map.current, 'active-route'); if (s) s.setData({ type: 'FeatureCollection', features: [] }); }}
             sx={{ 
               width: 40,
               height: 40,
@@ -1529,7 +1555,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
               <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: '0.1em', color: 'text.secondary', opacity: 0.5 }}>Tiempo Est.</Typography>
               <Typography variant="h6" sx={{ fontWeight: 900 }}>{routeData.duration} <Typography component="span" variant="caption" sx={{ opacity: 0.5 }}>min</Typography></Typography>
             </Box>
-            <IconButton size="small" onClick={() => { setRoutePoints([]); setRouteData(null); if (map.current?.getSource('active-route')) (map.current.getSource('active-route') as any).setData({ type: 'FeatureCollection', features: [] }); }} sx={{ color: 'error.main' }}>
+            <IconButton size="small" onClick={() => { setRoutePoints([]); setRouteData(null); const s = safeGetSource(map.current, 'active-route'); if (s) s.setData({ type: 'FeatureCollection', features: [] }); }} sx={{ color: 'error.main' }}>
               <X size={18} />
             </IconButton>
           </Paper>

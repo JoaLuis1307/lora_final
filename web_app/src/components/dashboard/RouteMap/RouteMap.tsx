@@ -30,6 +30,18 @@ const center: [number, number] = [-71.537, -16.409]; // Arequipa default
 // Los estilos de mapa y utilidades de ruteo viven en services/mapStyles.ts
 // (OpenFreeMap + Esri, sin API keys).
 
+// MapLibre lanza TypeError si se consulta un source/layer mientras el estilo
+// se está cargando; estos helpers evitan romper el render del mapa.
+const safeGetSource = (m: maplibregl.Map | null, id: string): any => {
+  if (!m) return undefined;
+  try { return m.getSource(id); } catch { return undefined; }
+};
+
+const safeGetLayer = (m: maplibregl.Map | null, id: string): any => {
+  if (!m) return undefined;
+  try { return m.getLayer(id); } catch { return undefined; }
+};
+
 const RouteMap = forwardRef<any, RouteMapProps>(({ 
   onRouteCreated, 
   activeRoute, 
@@ -50,6 +62,8 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   const markersCache = useRef<Map<string, { marker: maplibregl.Marker, element: HTMLDivElement }>>(new Map());
   const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('dark');
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Clave del estilo realmente aplicado (evita recargarlo al montar).
+  const appliedStyleRef = useRef<string>('');
 
   // Initialize Map
   useEffect(() => {
@@ -68,35 +82,42 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       attributionControl: false
     });
 
+    // Estilo ya aplicado: evita un setStyle redundante tras el montaje.
+    appliedStyleRef.current = `${mapStyle}|${initialTheme}`;
+
     map.current.on('load', () => {
       setMapLoaded(true);
-      if (!map.current) return;
-      
-      // Add 3D buildings only if vector source exists
-      if (map.current.getSource('openmaptiles')) {
-        const layers = map.current.getStyle().layers;
-        const labelLayerId = layers?.find(
-          (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
-        )?.id;
-
-        map.current.addLayer({
-          'id': '3d-buildings',
-          'source': 'openmaptiles',
-          'source-layer': 'building',
-          'type': 'fill-extrusion',
-          'minzoom': 15,
-          'paint': {
-            'fill-extrusion-color': initialTheme === 'light' ? '#cbd5e1' : '#1e293b',
-            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_height']],
-            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_min_height']],
-            'fill-extrusion-opacity': initialTheme === 'light' ? 0.7 : 0.5
-          }
-        }, labelLayerId);
-      }
     });
 
     map.current.on('style.load', () => {
       setMapLoaded(true);
+      if (!map.current?.isStyleLoaded()) return;
+
+      // Edificios 3D solo si el estilo vectorial tiene la fuente.
+      try {
+        if (safeGetSource(map.current, 'openmaptiles') && !safeGetLayer(map.current, '3d-buildings')) {
+          const layers = map.current.getStyle().layers;
+          const labelLayerId = layers?.find(
+            (layer) => layer.type === 'symbol' && layer.layout && layer.layout['text-field']
+          )?.id;
+
+          map.current.addLayer({
+            'id': '3d-buildings',
+            'source': 'openmaptiles',
+            'source-layer': 'building',
+            'type': 'fill-extrusion',
+            'minzoom': 15,
+            'paint': {
+              'fill-extrusion-color': initialTheme === 'light' ? '#cbd5e1' : '#1e293b',
+              'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_height']],
+              'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 15, 0, 15.05, ['get', 'render_min_height']],
+              'fill-extrusion-opacity': initialTheme === 'light' ? 0.7 : 0.5
+            }
+          }, labelLayerId);
+        }
+      } catch (e) {
+        console.warn('[RouteMap] No se pudieron añadir los edificios 3D:', e);
+      }
     });
 
     setCurrentTheme(initialTheme);
@@ -147,9 +168,11 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
   // Sync Map Style with prop
   useEffect(() => {
     if (!map.current) return;
+    const key = `${mapStyle}|${currentTheme}`;
+    if (appliedStyleRef.current === key) return;
+    appliedStyleRef.current = key;
     setMapLoaded(false);
-    const nextStyle = getMapStyle(mapStyle, currentTheme) as any;
-    map.current.setStyle(nextStyle);
+    map.current.setStyle(getMapStyle(mapStyle, currentTheme) as any);
   }, [mapStyle, currentTheme]);
 
   // Sync Pitch with prop
@@ -456,7 +479,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
         geometry: routeData.geometry
       };
 
-      const source = map.current.getSource('route');
+      const source = safeGetSource(map.current, 'route');
       if (source) {
         (source as any).setData(geojsonFeature);
       } else {
@@ -467,7 +490,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       }
 
       // Check and add glow layer independently
-      if (!map.current.getLayer('route-glow')) {
+      if (!safeGetLayer(map.current, 'route-glow')) {
         map.current.addLayer({
           id: 'route-glow',
           type: 'line',
@@ -485,7 +508,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       }
 
       // Check and add line layer independently
-      if (!map.current.getLayer('route-line')) {
+      if (!safeGetLayer(map.current, 'route-line')) {
         map.current.addLayer({
           id: 'route-line',
           type: 'line',
@@ -501,9 +524,9 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
         map.current.setPaintProperty('route-line', 'line-color', currentColor);
       }
     } else {
-      if (map.current.getLayer('route-line')) map.current.removeLayer('route-line');
-      if (map.current.getLayer('route-glow')) map.current.removeLayer('route-glow');
-      if (map.current.getSource('route')) map.current.removeSource('route');
+      if (safeGetLayer(map.current, 'route-line')) map.current.removeLayer('route-line');
+      if (safeGetLayer(map.current, 'route-glow')) map.current.removeLayer('route-glow');
+      if (safeGetSource(map.current, 'route')) map.current.removeSource('route');
     }
   }, [points, routeData, selectedColor, activeRoute, mapLoaded, drawingMode]);
 
