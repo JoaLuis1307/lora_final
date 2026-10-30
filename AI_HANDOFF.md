@@ -87,7 +87,7 @@ graph TD
 
 ## 5. Guía de Despliegue en Servidor VPS
 
-El código corre sobre un contenedor Docker en la dirección IP VPS **`145.79.1.173`**.
+El código corre sobre un contenedor Docker en la dirección IP VPS **`179.7.180.81`**.
 
 Para compilar y desplegar cualquier cambio realizado en este repositorio:
 1. Accede mediante SSH a la terminal del VPS.

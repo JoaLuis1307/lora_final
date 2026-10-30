@@ -51,7 +51,7 @@ services:
     restart: always
     logging: *default-logging
     # Solo accesible desde el propio VPS; para la consola usa un túnel SSH:
-    #   ssh -L 8086:127.0.0.1:8086 root@179.197.88.129
+    #   ssh -L 8086:127.0.0.1:8086 root@179.7.180.81
     ports:
       - "127.0.0.1:8086:8086"
     environment:
