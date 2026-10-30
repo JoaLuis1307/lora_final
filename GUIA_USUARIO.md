@@ -18,7 +18,7 @@ El sistema está diseñado para monitorear el estado de llenado de contenedores 
 [ Gateway Concentrador (Receptor) ]
        │
        ▼ (Se conecta a Internet WiFi y traduce los datos a formato JSON)
-[ Servidor Cloud (VPS 179.7.180.81) ]
+[ Servidor Cloud (VPS 179.197.88.129) ]
   ├── Mosquitto Broker (Recibe el paquete MQTT)
   ├── Backend Fastify (Procesa la telemetría, valida el hardware y calcula llenado)
   ├── Base de Datos (Guarda configuraciones e InfluxDB registra el historial)
@@ -53,7 +53,7 @@ El despliegue está completamente automatizado a través de **Docker Compose**. 
 ### Paso 1: Conexión al Servidor VPS
 Abre una terminal de SSH en tu computadora y conéctate al servidor VPS con tus credenciales:
 ```bash
-ssh root@179.7.180.81
+ssh root@179.197.88.129
 ```
 
 ### Paso 2: Clonar o Actualizar el Código
@@ -87,7 +87,7 @@ docker compose up -d --build
 
 ## 4. Manual del Operador (Uso de la Aplicación)
 
-Cuando ingreses a la dirección IP de tu servidor (`http://179.7.180.81`) en tu navegador:
+Cuando ingreses a la dirección IP de tu servidor (`http://179.197.88.129`) en tu navegador:
 
 ### 1. Panel de Control (Consola Principal)
 * Te dará un resumen general de la operación: cantidad total de contenedores, promedio de señal de red (RSSI) de los sensores reales, y número de alertas activas.

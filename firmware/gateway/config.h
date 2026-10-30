@@ -6,7 +6,7 @@
 #define WIFI_PASSWORD   "@siul1307982026"
 
 // MQTT
-#define MQTT_SERVER        "179.7.180.81"
+#define MQTT_SERVER        "179.197.88.129"
 #define MQTT_PORT          1883
 #define MQTT_USER          "iotuser"
 #define MQTT_PASS          "130798"

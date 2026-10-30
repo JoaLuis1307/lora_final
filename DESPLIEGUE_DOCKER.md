@@ -43,7 +43,7 @@ cd /opt/ecolora
 ```
 
 > En el VPS de producción actual el proyecto vive en **`/opt/ecolora`**
-> (`root@179.7.180.81`). Para actualizarlo usa `./scripts/deploy.sh`.
+> (`root@179.197.88.129`). Para actualizarlo usa `./scripts/deploy.sh`.
 
 ### Paso 2: Configurar las Variables de Entorno (`.env`)
 > ℹ️ `docker-compose.yml` ya incluye todas las variables necesarias de forma inline,
@@ -147,7 +147,7 @@ docker compose logs -f backend
 
 Para abrir la consola de InfluxDB desde tu PC sin exponerla, usa un túnel SSH:
 ```bash
-ssh -L 8086:127.0.0.1:8086 root@179.7.180.81
+ssh -L 8086:127.0.0.1:8086 root@179.197.88.129
 # Luego abre http://localhost:8086 en el navegador
 ```
 

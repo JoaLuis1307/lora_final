@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: "postgresql://admin:admin123@179.7.180.81:5432/iot_db"
+      url: "postgresql://admin:admin123@179.197.88.129:5432/iot_db"
     }
   }
 });

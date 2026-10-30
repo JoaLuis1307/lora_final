@@ -8,7 +8,7 @@ import os
 import re
 
 # Valores por defecto en local
-MQTT_BROKER = "179.7.180.81"
+MQTT_BROKER = "179.197.88.129"
 MQTT_PORT = 1883
 MQTT_USER = None
 MQTT_PASS = None
