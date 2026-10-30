@@ -20,6 +20,7 @@ import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
 import { getWsUrl } from '../../../services/config';
 import { useAuth } from '../../../context/AuthContext';
+import { applyTheme, getStoredTheme } from '../../../utils/theme';
 import { calculateFillPercentage } from '../../../utils/fillCalculator';
 import { getMapStyle, searchPlaces, fetchOsrmRoute } from '../../../services/mapStyles';
 
@@ -194,9 +195,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
   // Clave del estilo realmente aplicado (evita recargar el estilo al montar).
   const appliedStyleRef = useRef<string>('');
 
-  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() =>
-    (localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'dark') as 'light' | 'dark'
-  );
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>(() => getStoredTheme());
   
   const [filterType, setFilterType] = useState<'all' | 'critical' | 'near' | 'recycling'>('all');
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -213,8 +212,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     } else {
       const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
       setCurrentTheme(nextTheme);
-      document.documentElement.setAttribute('data-theme', nextTheme);
-      localStorage.setItem('theme', nextTheme);
+      applyTheme(nextTheme);
     }
   };
 

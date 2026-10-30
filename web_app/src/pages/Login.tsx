@@ -8,6 +8,7 @@ import {
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
+import { applyTheme, getStoredTheme, ThemeMode } from '../utils/theme';
 
 // =========================================================================
 // CONFIGURACIÓN DE LAS IMÁGENES DEL PANEL DE INICIO DE SESIÓN
@@ -28,17 +29,14 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
-  });
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getStoredTheme());
   
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
 
   // Sync theme with page HTML attribute so other parts/css sync correctly
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', themeMode);
-    localStorage.setItem('theme', themeMode);
+    applyTheme(themeMode);
   }, [themeMode]);
 
   const toggleTheme = () => {

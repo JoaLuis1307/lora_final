@@ -22,6 +22,7 @@
   
   /* Layout */
   --sidebar-width: 240px;
+  color-scheme: dark;
 }
 
 /* Explicit selector to ensure it overrides everything */
@@ -45,5 +46,5 @@ html[data-theme="light"],
   --danger: #b3261e; 
   --warning: #b06000; 
   --border: rgba(0, 0, 0, 0.12); 
+  color-scheme: light;
 }
-

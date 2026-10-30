@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline, Box } from '@mui/material';
 import Layout from './components/layout/Layout';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { applyTheme, getStoredTheme, THEME_CHANGE_EVENT, ThemeMode } from './utils/theme';
 import './styles/global.css';
 
 const Overview = lazy(() => import('./pages/Overview'));
@@ -18,8 +19,8 @@ const StatsPage = lazy(() => import('./pages/Stats'));
 const Users = lazy(() => import('./pages/Users'));
 
 const LoadingScreen = () => (
-  <Box sx={{ minHeight: '100vh', bgcolor: '#131314', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-    <Box sx={{ width: 48, height: 48, border: '4px solid', borderColor: 'rgba(138,180,248,0.2)', borderTopColor: 'primary.main', borderRadius: '50%' }} className="spin" />
+  <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <Box sx={{ width: 48, height: 48, border: '4px solid', borderColor: 'action.hover', borderTopColor: 'primary.main', borderRadius: '50%' }} className="spin" />
   </Box>
 );
 
@@ -27,8 +28,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#131314', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Box sx={{ width: 48, height: 48, border: '4px solid', borderColor: 'rgba(138,180,248,0.2)', borderTopColor: 'primary.main', borderRadius: '50%' }} className="spin" />
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box sx={{ width: 48, height: 48, border: '4px solid', borderColor: 'action.hover', borderTopColor: 'primary.main', borderRadius: '50%' }} className="spin" />
       </Box>
     );
   }
@@ -37,17 +38,30 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function AppContent() {
-  const [mode, setMode] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('theme') as 'light' | 'dark';
-    const initial = saved || 'dark';
-    document.documentElement.setAttribute('data-theme', initial);
-    return initial;
-  });
+  const [mode, setMode] = useState<ThemeMode>(() => getStoredTheme());
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', mode);
-    localStorage.setItem('theme', mode);
+    applyTheme(mode);
   }, [mode]);
+
+  useEffect(() => {
+    const handleThemeChange = (event: Event) => {
+      const nextMode = (event as CustomEvent<ThemeMode>).detail;
+      if (nextMode === 'light' || nextMode === 'dark') setMode(nextMode);
+    };
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'theme' && (event.newValue === 'light' || event.newValue === 'dark')) {
+        setMode(event.newValue);
+      }
+    };
+
+    window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const muiTheme = useMemo(() => createTheme({
     palette: {
