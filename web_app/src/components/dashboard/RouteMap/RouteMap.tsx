@@ -5,7 +5,7 @@ import {
   Plus,
   Play
 } from 'lucide-react';
-import maplibregl from 'maplibre-gl';
+import maplibregl from '../../../services/mapLibreService';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Box } from '@mui/material';
 import { RouteData } from '../../../services/routeService';

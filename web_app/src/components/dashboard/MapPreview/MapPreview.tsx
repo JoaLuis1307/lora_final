@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import maplibregl from 'maplibre-gl';
+import maplibregl from '../../../services/mapLibreService';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   Box, Paper, Typography, IconButton, Button, TextField,
