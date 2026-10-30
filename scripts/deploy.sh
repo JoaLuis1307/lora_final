@@ -17,7 +17,7 @@ echo "==> 3/5 Levantando servicios..."
 docker compose up -d --remove-orphans
 
 echo "==> 4/5 Sincronizando esquema de base de datos (Prisma)..."
-docker compose exec -T backend npx prisma db push --skip-generate
+docker compose exec -T backend npx prisma db push --skip-generate < /dev/null
 
 echo "==> 5/5 Estado final:"
 docker compose ps
