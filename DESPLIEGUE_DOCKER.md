@@ -38,11 +38,18 @@ sudo systemctl enable --now docker
 ### Paso 1: Obtener el Código Fuente
 Clona el repositorio en tu servidor y accede al directorio del proyecto:
 ```bash
-git clone https://github.com/JoaLuis1307/lora_final.git
-cd lora_final
+git clone https://github.com/JoaLuis1307/lora_final.git /opt/ecolora
+cd /opt/ecolora
 ```
 
+> En el VPS de producción actual el proyecto vive en **`/opt/ecolora`**
+> (`root@179.197.88.129`). Para actualizarlo usa `./scripts/deploy.sh`.
+
 ### Paso 2: Configurar las Variables de Entorno (`.env`)
+> ℹ️ `docker-compose.yml` ya incluye todas las variables necesarias de forma inline,
+> por lo que **el despliegue con Docker Compose funciona sin crear archivos `.env`**.
+> Los archivos siguientes solo son necesarios si ejecutas backend/frontend fuera de Docker.
+
 El archivo principal de Docker Compose toma las credenciales y configuraciones del entorno. Asegúrate de configurar los archivos `.env` en cada sección:
 
 #### 1. Backend (`./backend/.env`)
@@ -129,27 +136,64 @@ docker compose logs -f backend
 
 ---
 
-## 🌍 Puertos Expuestos al Público
-* **Puerto `80` (HTTP)**: Acceso a la interfaz web del Frontend.
-* **Puerto `1883` (MQTT)**: Puerto donde los Gateways LoRa P2P deben reportar la telemetría mediante MQTT.
-* **Puerto `3001` (API HTTP)**: Puerto público del backend (opcional/desarrollo).
-* **Puerto `8086` (InfluxDB)**: Consola de administración de InfluxDB (opcional).
+## 🌍 Puertos Expuestos
+| Puerto | Servicio | Acceso |
+|--------|----------|--------|
+| `80`   | Frontend (Nginx) | **Público** — interfaz web y proxy `/api` + `/ws` |
+| `1883` | Mosquitto | **Público** — los Gateways LoRa reportan aquí |
+| `3001` | Backend (Fastify) | **Público** — API directa (app móvil / depuración) |
+| `5432` | PostgreSQL | Solo `127.0.0.1` (no accesible desde Internet) |
+| `8086` | InfluxDB | Solo `127.0.0.1` |
+
+Para abrir la consola de InfluxDB desde tu PC sin exponerla, usa un túnel SSH:
+```bash
+ssh -L 8086:127.0.0.1:8086 root@179.197.88.129
+# Luego abre http://localhost:8086 en el navegador
+```
+
+> El frontend consume la API mediante rutas relativas (`/api/v1` y `/ws`), por lo que
+> Nginx las redirige al contenedor `backend`. No es necesario exponer el puerto `3001`
+> para la aplicación web; solo para clientes externos (app móvil).
+
+---
+
+## 🩺 Healthchecks y Orden de Arranque
+`docker-compose.yml` define healthchecks para los 5 servicios y `depends_on` con
+`condition: service_healthy`, garantizando que el backend arranque únicamente cuando
+PostgreSQL, MQTT e InfluxDB estén listos, y el frontend cuando el backend responda.
+
+```bash
+# Ver el estado de salud de cada contenedor
+docker compose ps
+```
 
 ---
 
 ## 🔄 Actualización y Mantenimiento de Cambios
-Cuando subas nuevos cambios a la rama principal de GitHub y quieras aplicarlos en el servidor, solo debes seguir esta secuencia:
+Cuando subas nuevos cambios a la rama principal de GitHub y quieras aplicarlos en el servidor:
 
 ```bash
-# 1. Traer el último código del repositorio
-git pull origin main
-
-# 2. Re-construir y levantar los contenedores con los nuevos cambios sin detener los datos
-docker compose up -d --build
-
-# 3. (Opcional) Si hubo cambios en el esquema de la base de datos
-docker compose exec backend npx prisma db push
+cd /opt/ecolora
+./scripts/deploy.sh
 ```
+
+El script hace `git pull`, reconstruye imágenes, levanta los servicios y aplica el
+esquema de Prisma. Equivale a:
+
+```bash
+git pull origin main
+docker compose up -d --build
+docker compose exec backend npx prisma db push --skip-generate
+```
+
+---
+
+## 🔐 Notas de Seguridad del VPS
+* PostgreSQL e InfluxDB están publicados solo en `127.0.0.1` (no salen a Internet).
+* Firewall **UFW** activo: solo se permiten `22` (SSH), `80`, `443`, `1883` y `3001`.
+* **fail2ban** activo para bloquear intentos de fuerza bruta contra SSH.
+* Recomendado: usar llave SSH en lugar de contraseña y cambiar las credenciales por
+  defecto de PostgreSQL/InfluxDB antes de un entorno real.
 
 ---
 
