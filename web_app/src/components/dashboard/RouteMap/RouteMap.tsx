@@ -12,6 +12,7 @@ import { RouteData } from '../../../services/routeService';
 import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
 import { calculateFillPercentage } from '../../../utils/fillCalculator';
+import { getMapStyle, fetchOsrmRoute } from '../../../services/mapStyles';
 
 interface RouteMapProps {
   onRouteCreated: (data: any) => void;
@@ -26,96 +27,8 @@ interface RouteMapProps {
 
 const center: [number, number] = [-71.537, -16.409]; // Arequipa default
 
-const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
-  if (layer === 'satellite') {
-    return {
-      version: 8,
-      sources: {
-        'satellite-tiles': {
-          type: 'raster',
-          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-          tileSize: 256,
-          attribution: 'Esri'
-        }
-      },
-      layers: [
-        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 }
-      ]
-    };
-  }
-
-  if (layer === 'hybrid') {
-    return {
-      version: 8,
-      sources: {
-        'satellite-tiles': {
-          type: 'raster',
-          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-          tileSize: 256,
-          attribution: 'Esri'
-        },
-        'carto-labels': {
-          type: 'raster',
-          tiles: [
-            'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
-            'https://b.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
-            'https://c.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
-            'https://d.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          attribution: '© CARTO'
-        }
-      },
-      layers: [
-        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 },
-        { id: 'labels-layer', type: 'raster', source: 'carto-labels', minzoom: 0, maxzoom: 19 }
-      ]
-    };
-  }
-
-  if (layer === 'liberty') {
-    return {
-      version: 8,
-      sources: {
-        'google-terrain': {
-          type: 'raster',
-          tiles: [
-            'https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-            'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-            'https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-            'https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
-          ],
-          tileSize: 256,
-          attribution: '© Google Maps'
-        }
-      },
-      layers: [
-        { id: 'terrain-layer', type: 'raster', source: 'google-terrain', minzoom: 0, maxzoom: 19 }
-      ]
-    };
-  }
-
-  const styleName = (layer === 'bright' || (layer === 'dark' && theme === 'light')) ? 'light_all' : 'dark_all';
-  return {
-    version: 8,
-    sources: {
-      'carto-tiles': {
-        type: 'raster',
-        tiles: [
-          `https://a.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
-          `https://b.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
-          `https://c.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
-          `https://d.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`
-        ],
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors, © CARTO'
-      }
-    },
-    layers: [
-      { id: 'carto-layer', type: 'raster', source: 'carto-tiles', minzoom: 0, maxzoom: 19 }
-    ]
-  };
-};
+// Los estilos de mapa y utilidades de ruteo viven en services/mapStyles.ts
+// (OpenFreeMap + Esri, sin API keys).
 
 const RouteMap = forwardRef<any, RouteMapProps>(({ 
   onRouteCreated, 
@@ -262,34 +175,26 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
     map.current.on('click', handleMapClick);
   }, [handleMapClick]);
 
-  // Calculate OSRM Route
+  // Calculate route with public OSRM servers (with automatic fallback)
   const calculateRoute = useCallback(async (pts: [number, number][]) => {
     if (pts.length < 2) return;
-    try {
-      const coordsString = pts.map(p => `${p[0]},${p[1]}`).join(';');
-      const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`
-      );
-      const data = await response.json();
-      if (data.code === 'Ok') {
-        const route = data.routes[0];
-        setRouteData({
-          distance: (route.distance / 1000).toFixed(2),
-          duration: Math.round(route.duration / 60),
-          geometry: route.geometry
-        });
-        onRouteCreated({
-          points: pts, // Cambiado de path a points
-          distance: parseFloat((route.distance / 1000).toFixed(2)),
-          duration: Math.round(route.duration / 60)
-        });
-        return;
-      } else {
-        console.warn('OSRM returned non-Ok code:', data.code, 'falling back to straight lines');
-      }
-    } catch (error) {
-      console.warn('Error calculating OSRM route, falling back to straight lines:', error);
+
+    const route = await fetchOsrmRoute(pts);
+    if (route) {
+      setRouteData({
+        distance: (route.distance / 1000).toFixed(2),
+        duration: Math.round(route.duration / 60),
+        geometry: route.geometry
+      });
+      onRouteCreated({
+        points: pts,
+        distance: parseFloat((route.distance / 1000).toFixed(2)),
+        duration: Math.round(route.duration / 60)
+      });
+      return;
     }
+
+    console.warn('OSRM no disponible, usando línea recta como respaldo');
 
     // Straight line fallback if OSRM is offline or blocked
     const fallbackGeometry = {

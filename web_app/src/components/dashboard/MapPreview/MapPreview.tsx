@@ -21,6 +21,7 @@ import { deviceService, Device } from '../../../services/deviceService';
 import { getWsUrl } from '../../../services/config';
 import { useAuth } from '../../../context/AuthContext';
 import { calculateFillPercentage } from '../../../utils/fillCalculator';
+import { getMapStyle, searchPlaces, fetchOsrmRoute } from '../../../services/mapStyles';
 
 interface MapPreviewProps {
   isPage?: boolean;
@@ -161,96 +162,8 @@ const PointModal: React.FC<{
   </Dialog>
 );
 
-const getMapStyle = (layer: string, theme: 'light' | 'dark') => {
-  if (layer === 'satellite') {
-    return {
-      version: 8,
-      sources: {
-        'satellite-tiles': {
-          type: 'raster',
-          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-          tileSize: 256,
-          attribution: 'Esri'
-        }
-      },
-      layers: [
-        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 }
-      ]
-    };
-  }
-
-  if (layer === 'hybrid') {
-    return {
-      version: 8,
-      sources: {
-        'satellite-tiles': {
-          type: 'raster',
-          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-          tileSize: 256,
-          attribution: 'Esri'
-        },
-        'carto-labels': {
-          type: 'raster',
-          tiles: [
-            'https://a.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
-            'https://b.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
-            'https://c.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png',
-            'https://d.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          attribution: '© CARTO'
-        }
-      },
-      layers: [
-        { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 },
-        { id: 'labels-layer', type: 'raster', source: 'carto-labels', minzoom: 0, maxzoom: 19 }
-      ]
-    };
-  }
-
-  if (layer === 'liberty') {
-    return {
-      version: 8,
-      sources: {
-        'google-terrain': {
-          type: 'raster',
-          tiles: [
-            'https://mt0.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-            'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-            'https://mt2.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
-            'https://mt3.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
-          ],
-          tileSize: 256,
-          attribution: '© Google Maps'
-        }
-      },
-      layers: [
-        { id: 'terrain-layer', type: 'raster', source: 'google-terrain', minzoom: 0, maxzoom: 19 }
-      ]
-    };
-  }
-
-  const styleName = (layer === 'bright' || (layer === 'dark' && theme === 'light')) ? 'light_all' : 'dark_all';
-  return {
-    version: 8,
-    sources: {
-      'carto-tiles': {
-        type: 'raster',
-        tiles: [
-          `https://a.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
-          `https://b.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
-          `https://c.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`,
-          `https://d.basemaps.cartocdn.com/${styleName}/{z}/{x}/{y}.png`
-        ],
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors, © CARTO'
-      }
-    },
-    layers: [
-      { id: 'carto-layer', type: 'raster', source: 'carto-tiles', minzoom: 0, maxzoom: 19 }
-    ]
-  };
-};
+// Los estilos de mapa y utilidades de ruteo/geocodificación viven en
+// services/mapStyles.ts (OpenFreeMap + Esri, sin API keys).
 
 const MapPreview: React.FC<MapPreviewProps> = ({ 
   isPage = false, 
@@ -412,14 +325,11 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     }
   }, [currentTheme, activeLayer]);
 
-  // Geocoding
+  // Geocodificación: Nominatim con respaldo en Photon (ambos públicos, sin key)
   useEffect(() => {
     const fetchGeo = async () => {
       if (searchQuery.trim().length < 3) { setGeoResults([]); return; }
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`);
-        setGeoResults(await res.json());
-      } catch (e) { console.error(e); }
+      setGeoResults(await searchPlaces(searchQuery));
     };
     const t = setTimeout(fetchGeo, 400);
     return () => clearTimeout(t);
@@ -786,11 +696,14 @@ const MapPreview: React.FC<MapPreviewProps> = ({
 
   const calculateRoute = async (points: [number, number][]) => {
     if (points.length < 2) return;
-    try {
-      const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${points.map(p => `${p[0]},${p[1]}`).join(';')}?overview=full&geometries=geojson`);
-      const data = await res.json();
-      if (data.code === 'Ok') setRouteData({ distance: (data.routes[0].distance / 1000).toFixed(2), duration: Math.round(data.routes[0].duration / 60), geometry: data.routes[0].geometry });
-    } catch (e) { console.error(e); }
+    const route = await fetchOsrmRoute(points);
+    if (route) {
+      setRouteData({
+        distance: (route.distance / 1000).toFixed(2),
+        duration: Math.round(route.duration / 60),
+        geometry: route.geometry,
+      });
+    }
   };
 
   const handleOpenAddModal = (lngLat: [number, number]) => {
