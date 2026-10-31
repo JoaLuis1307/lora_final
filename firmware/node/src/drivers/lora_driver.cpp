@@ -14,6 +14,10 @@ void lora_init() {
 
   lora_ready = LoRa.begin(LORA_FREQ);
   if (lora_ready) {
+    LoRa.setSpreadingFactor(LORA_SPREADING_FACTOR);
+    LoRa.setSignalBandwidth(LORA_BANDWIDTH_HZ);
+    LoRa.setCodingRate4(LORA_CODING_RATE);
+    LoRa.setTxPower(LORA_TX_POWER_DBM);
     Serial.println("LoRa OK");
   } else {
     Serial.println("LoRa fallo");

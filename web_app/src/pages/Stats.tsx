@@ -9,6 +9,7 @@ import {
 import {
   Activity, Clock, RefreshCw, TrendingUp, TrendingDown,
   Download, ArrowLeft, Minus, ChevronDown, ChevronUp, Zap, History, Cpu, Search, MapPin, Filter
+  , Wifi, ShieldCheck, AlertTriangle, Timer
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
@@ -76,6 +77,61 @@ function calcStats(arr: number[]) {
     p95: s[Math.floor(s.length * 0.95)],
     latest: l, first: f,
     trend: Math.abs(l - f) < 0.01 ? 0 : l > f ? 1 : -1,
+  };
+}
+
+const percentage = (value: number) => `${Math.max(0, Math.min(100, value)).toFixed(1)}%`;
+
+function calculateReliability(devices: Device[], data: Record<string, any[]>) {
+  const entries = Object.values(data).flat();
+  const signalValues = entries.map(e => Number(e.rssi)).filter(v => Number.isFinite(v) && v < 0);
+  const snrValues = entries.map(e => Number(e.snr)).filter(v => Number.isFinite(v));
+  const intervals = Object.values(data).flatMap(rows => {
+    const timestamps = rows.map(e => new Date(e.timestamp).getTime()).filter(Number.isFinite).sort((a, b) => a - b);
+    return timestamps.slice(1).map((value, index) => value - timestamps[index]);
+  }).filter(interval => interval > 0);
+  const latestRadio = entries[entries.length - 1] || {};
+  const crcReceived = entries.reduce((sum, e) => sum + Math.max(0, Number(e.crc_ok) || 0), 0);
+  const crcErrors = entries.reduce((sum, e) => sum + Math.max(0, Number(e.crc_err) || 0), 0);
+  const sequences = Object.values(data).map(rows =>
+    rows.map(e => Number(e.sequence)).filter(Number.isInteger).sort((a, b) => a - b)
+  ).filter(rows => rows.length > 1);
+
+  let expected = 0;
+  let received = 0;
+  sequences.forEach(rows => {
+    const unique = Array.from(new Set(rows));
+    expected += Math.max(unique[unique.length - 1] - unique[0] + 1, unique.length);
+    received += unique.length;
+  });
+
+  const delivery = expected > 0 ? (received / expected) * 100 : null;
+  const crcRate = crcReceived + crcErrors > 0 ? (crcReceived / (crcReceived + crcErrors)) * 100 : null;
+  const availability = devices.length ? (devices.filter(d => d.status?.toLowerCase() === 'online').length / devices.length) * 100 : 0;
+  const latestTimestamp = entries.map(e => new Date(e.timestamp).getTime()).filter(Number.isFinite).sort((a, b) => b - a)[0];
+  const freshnessSeconds = latestTimestamp ? Math.max(0, (Date.now() - latestTimestamp) / 1000) : null;
+  const freshness = freshnessSeconds === null ? 0 : Math.max(0, 100 - Math.min(100, freshnessSeconds / 9));
+  const rssiScore = signalValues.length ? signalValues.reduce((sum, v) => sum + Math.max(0, Math.min(100, ((v + 110) / 50) * 100)), 0) / signalValues.length : 0;
+  const snrScore = snrValues.length ? snrValues.reduce((sum, v) => sum + Math.max(0, Math.min(100, ((v + 10) / 20) * 100)), 0) / snrValues.length : 0;
+  const radio = (rssiScore * 0.6) + (snrScore * 0.4);
+  const score = (delivery ?? 100) * 0.35 + availability * 0.25 + radio * 0.2 + (crcRate ?? 100) * 0.1 + freshness * 0.1;
+
+  return {
+    score,
+    delivery,
+    crcRate,
+    availability,
+    radio,
+    freshness,
+    freshnessSeconds,
+    samples: entries.length,
+    rssi: signalValues.length ? signalValues.reduce((a, b) => a + b, 0) / signalValues.length : null,
+    snr: snrValues.length ? snrValues.reduce((a, b) => a + b, 0) / snrValues.length : null,
+    intervalSeconds: intervals.length ? intervals.reduce((a, b) => a + b, 0) / intervals.length / 1000 : null,
+    spreadingFactor: Number(latestRadio.spreading_factor) || null,
+    bandwidthHz: Number(latestRadio.bandwidth_hz) || null,
+    codingRate: Number(latestRadio.coding_rate) || null,
+    txPowerDbm: Number(latestRadio.tx_power_dbm) || null,
   };
 }
 
@@ -513,6 +569,8 @@ const Stats: React.FC = () => {
     return { total, critical, warning, offline };
   }, [devices, data]);
 
+  const reliability = useMemo(() => calculateReliability(devices, data), [devices, data]);
+
   // Filtering & Sorting logic
   const processedDevices = useMemo(() => {
     return devices.map(dev => {
@@ -717,6 +775,51 @@ const Stats: React.FC = () => {
               </Paper>
             ))}
           </Box>
+
+          <Paper sx={{ ...glassSx, p: 2.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2, flexWrap: 'wrap', mb: 2.5 }}>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Confiabilidad de datos y red
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Calculada con las muestras del rango seleccionado · {reliability.samples} muestras
+                </Typography>
+              </Box>
+              <Chip
+                icon={<ShieldCheck size={15} />}
+                label={`Puntaje ${reliability.score.toFixed(0)}/100`}
+                color={reliability.score >= 90 ? 'success' : reliability.score >= 75 ? 'warning' : 'error'}
+                variant="outlined"
+                sx={{ fontWeight: 800 }}
+              />
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' }, gap: 1.5 }}>
+              {[
+                { label: 'Entrega estimada', value: reliability.delivery === null ? 'N/D' : percentage(reliability.delivery), icon: <Activity size={15} />, color: reliability.delivery === null || reliability.delivery >= 95 ? 'success.main' : 'warning.main' },
+                { label: 'CRC correcto', value: reliability.crcRate === null ? 'N/D' : percentage(reliability.crcRate), icon: <ShieldCheck size={15} />, color: reliability.crcRate === null || reliability.crcRate >= 98 ? 'success.main' : 'warning.main' },
+                { label: 'Disponibilidad', value: percentage(reliability.availability), icon: <Wifi size={15} />, color: reliability.availability >= 95 ? 'success.main' : 'warning.main' },
+                { label: 'RSSI promedio', value: reliability.rssi === null ? 'N/D' : `${reliability.rssi.toFixed(1)} dBm`, icon: <Wifi size={15} />, color: reliability.radio >= 75 ? 'success.main' : 'warning.main' },
+                { label: 'SNR promedio', value: reliability.snr === null ? 'N/D' : `${reliability.snr.toFixed(1)} dB`, icon: <AlertTriangle size={15} />, color: reliability.radio >= 75 ? 'success.main' : 'warning.main' },
+                { label: 'Dato más reciente', value: reliability.freshnessSeconds === null ? 'N/D' : reliability.freshnessSeconds < 60 ? `${Math.round(reliability.freshnessSeconds)} s` : `${Math.round(reliability.freshnessSeconds / 60)} min`, icon: <Timer size={15} />, color: reliability.freshness >= 75 ? 'success.main' : 'warning.main' },
+                { label: 'SF / BW / CR', value: reliability.spreadingFactor === null ? 'N/D' : `SF${reliability.spreadingFactor} / ${reliability.bandwidthHz ? `${reliability.bandwidthHz / 1000}k` : '--'} / 4/${reliability.codingRate || '--'}`, icon: <Cpu size={15} />, color: 'info.main' },
+                { label: 'Intervalo medio', value: reliability.intervalSeconds === null ? 'N/D' : `${reliability.intervalSeconds.toFixed(1)} s`, icon: <Timer size={15} />, color: reliability.intervalSeconds === null || reliability.intervalSeconds < 45 ? 'success.main' : 'warning.main' },
+                { label: 'Potencia TX', value: reliability.txPowerDbm === null ? 'N/D' : `${reliability.txPowerDbm} dBm`, icon: <Zap size={15} />, color: 'info.main' },
+              ].map(metric => (
+                <Box key={metric.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover', minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: metric.color, mb: 0.75 }}>
+                    {metric.icon}
+                    <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 800, fontSize: 9.5 }}>
+                      {metric.label}
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ fontWeight: 900, fontFamily: 'monospace', fontSize: { xs: 14, sm: 16 } }}>
+                    {metric.value}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
 
           {/* Filtering, Search and Sort Panel */}
           <Paper sx={{ ...glassSx, p: 2.5 }}>

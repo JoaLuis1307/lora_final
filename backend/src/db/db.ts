@@ -38,6 +38,11 @@ export interface Telemetry {
   pkts: number;
   crc_ok: number;
   crc_err: number;
+  source_timestamp_ms?: number;
+  spreading_factor?: number;
+  bandwidth_hz?: number;
+  coding_rate?: number;
+  tx_power_dbm?: number;
   battery?: number;
   battery_pct?: number;
   batt_current_ma?: number;

@@ -71,6 +71,11 @@ class InfluxService {
         .floatField('batt_energy_total_mwh', telemetry.batt_energy_total_mwh ?? 0)
         .intField('batt_low', telemetry.batt_low ?? 0)
         .intField('batt_critical', telemetry.batt_critical ?? 0);
+      if (telemetry.source_timestamp_ms) point.intField('source_timestamp_ms', telemetry.source_timestamp_ms);
+      if (telemetry.spreading_factor) point.intField('spreading_factor', telemetry.spreading_factor);
+      if (telemetry.bandwidth_hz) point.intField('bandwidth_hz', telemetry.bandwidth_hz);
+      if (telemetry.coding_rate) point.intField('coding_rate', telemetry.coding_rate);
+      if (telemetry.tx_power_dbm) point.intField('tx_power_dbm', telemetry.tx_power_dbm);
 
       this.writeApi.writePoint(point);
       

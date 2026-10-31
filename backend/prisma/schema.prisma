@@ -57,6 +57,11 @@ model Telemetry {
   pkts          Int
   crc_ok        Int      @default(1)
   crc_err       Int      @default(0)
+  source_timestamp_ms Int?
+  spreading_factor   Int?
+  bandwidth_hz       Int?
+  coding_rate        Int?
+  tx_power_dbm      Int?
   battery               Float    @default(0)
   battery_pct           Float    @default(0)
   batt_current_ma       Float    @default(0)

@@ -13,6 +13,10 @@
 #define LORA_MISO       19
 #define LORA_MOSI       23
 #define LORA_FREQ       433E6
+#define LORA_SPREADING_FACTOR  7
+#define LORA_BANDWIDTH_HZ      125000
+#define LORA_CODING_RATE       5
+#define LORA_TX_POWER_DBM      17
 
 // I2C (VL53L0X + INA219)
 #define I2C_SDA         21

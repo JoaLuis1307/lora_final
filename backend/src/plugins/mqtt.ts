@@ -83,6 +83,11 @@ const mqttPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
       LA:   'latitude',
       LO:   'longitude',
       CRC:  'crc',
+      TS:  'source_timestamp_ms',
+      SF:  'spreading_factor',
+      BD:  'bandwidth_hz',
+      CR:  'coding_rate',
+      TXP: 'tx_power_dbm',
       N:    '_node_id'      // node-id prefix field, kept for reference but not stored
     };
 

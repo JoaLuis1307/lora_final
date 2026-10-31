@@ -25,6 +25,11 @@ void report_send() {
   seq++;
 
   String payload = "P" + String(seq);
+  payload += ",TS" + String(millis());
+  payload += ",SF" + String(LORA_SPREADING_FACTOR);
+  payload += ",BD" + String(LORA_BANDWIDTH_HZ);
+  payload += ",CR" + String(LORA_CODING_RATE);
+  payload += ",TXP" + String(LORA_TX_POWER_DBM);
   payload += ",AQ" + String(d.air_quality_raw);
   payload += ",U" + String((int)d.distance_cm);
   payload += ",TOF" + String(d.tof_mm / 10);
