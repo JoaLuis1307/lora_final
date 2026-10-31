@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { containerStagger, fadeSlideUp } from '../shared/animations';
-import { calculateFillPercentage } from '../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
 const StyledDialog = Dialog as any;
 const StyledTextField = TextField as any;
 const googlePaper = (t: any) => ({
@@ -1028,7 +1028,7 @@ const Devices: React.FC = () => {
                       {nodesForGw.map((device) => {
                         const deviceTelemetry = telemetry[device.device_id] || {};
                         const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
-                        const fillDistance = deviceTelemetry.tof_cm ?? deviceTelemetry.ultrasonic_cm;
+                        const fillDistance = getValidFillDistance(deviceTelemetry);
                         const fillPct = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : undefined;
                         const isObstructed = deviceTelemetry.obstacle === 1;
                         const aq = deviceTelemetry.air_quality ?? '--';
@@ -1274,7 +1274,7 @@ const Devices: React.FC = () => {
                     {independentNodes.map((device) => {
                       const deviceTelemetry = telemetry[device.device_id] || {};
                       const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
-                      const fillDistance = deviceTelemetry.tof_cm ?? deviceTelemetry.ultrasonic_cm;
+                      const fillDistance = getValidFillDistance(deviceTelemetry);
                       const fillPct = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : undefined;
                       const isObstructed = deviceTelemetry.obstacle === 1;
                       const aq = deviceTelemetry.air_quality ?? '--';

@@ -11,7 +11,7 @@ import { Box } from '@mui/material';
 import { RouteData } from '../../../services/routeService';
 import { mapService, MapPoint } from '../../../services/mapService';
 import { deviceService, Device } from '../../../services/deviceService';
-import { calculateFillPercentage } from '../../../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../../../utils/fillCalculator';
 import { getMapStyle, fetchOsrmRoute } from '../../../services/mapStyles';
 
 interface RouteMapProps {
@@ -293,7 +293,7 @@ const RouteMap = forwardRef<any, RouteMapProps>(({
       const isOnline = linkedDevice?.status?.toLowerCase() === 'online';
       
       // Calculate fill level using dynamic utility
-      const dist = deviceTelemetry ? (deviceTelemetry.tof_cm ?? deviceTelemetry.ultrasonic_cm) : undefined;
+      const dist = getValidFillDistance(deviceTelemetry);
       const level = isOnline && dist !== undefined ? calculateFillPercentage(dist) : 0;
       
       // Match Google Colors for consistency with main MapPreview

@@ -4,7 +4,7 @@ import {
   AlertTriangle, ShieldAlert, CheckCircle, Search, RefreshCcw, ExternalLink, Map, Check
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
-import { calculateFillPercentage } from '../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
 import {
   Box, Paper, Typography, IconButton, InputAdornment, TextField, Chip, Button, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, MenuItem, Select, FormControl, InputLabel
@@ -104,7 +104,7 @@ const Alerts: React.FC = () => {
         }
 
         // 3. High Fill Level (>= 75%) o fuera de rango
-        const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+        const fillDistance = getValidFillDistance(dt);
         if (fillDistance !== undefined) {
           const fillPct = calculateFillPercentage(fillDistance);
           if (fillPct === -1) {

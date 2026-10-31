@@ -32,7 +32,7 @@ void report_send() {
   payload += ",TXP" + String(LORA_TX_POWER_DBM);
   payload += ",AQ" + String(d.air_quality_raw);
   payload += ",U" + String((int)d.distance_cm);
-  payload += ",TOF" + String(d.tof_mm / 10);
+  payload += ",TOF" + String(d.tof_mm > 0 ? d.tof_mm / 10 : -1);
   payload += ",IR" + String(d.obstacle ? 1 : 0);
 
   if (d.gps_valid) {

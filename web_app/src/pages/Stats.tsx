@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
-import { calculateFillPercentage } from '../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, Legend, ReferenceLine
@@ -32,7 +32,7 @@ const formatFull = (ts: string) => {
 };
 
 const calcFill = (e: any) => {
-  const d = e.tof_cm ?? e.ultrasonic_cm;
+  const d = getValidFillDistance(e);
   if (d === undefined || d === null) return null;
   return calculateFillPercentage(d);
 };

@@ -32,3 +32,16 @@ export const calculateFillPercentage = (distance: number | undefined): number =>
   const fill = Math.round(((height - distance) / (height - fullDist)) * 100);
   return Math.max(0, Math.min(100, fill));
 };
+
+export const getValidFillDistance = (telemetry: {
+  tof_cm?: number | null;
+  ultrasonic_cm?: number | null;
+  fill?: number | null;
+} | undefined): number | undefined => {
+  if (!telemetry) return undefined;
+  const tof = Number(telemetry.tof_cm);
+  if (Number.isFinite(tof) && tof > 0) return tof;
+  const ultrasonic = Number(telemetry.ultrasonic_cm);
+  if (Number.isFinite(ultrasonic) && ultrasonic > 0) return ultrasonic;
+  return undefined;
+};

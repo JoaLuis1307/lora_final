@@ -14,7 +14,7 @@ import RouteMap from '../components/dashboard/RouteMap/RouteMap';
 import { routeService, RouteData } from '../services/routeService';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
-import { calculateFillPercentage } from '../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
 
 const DEPOT: [number, number] = [-71.5375, -16.4090]; // Yanahuara municipal depot center
 
@@ -184,7 +184,7 @@ const RoutesPage: React.FC = () => {
       let fill = 50; // fallback
       if (associated) {
         const dt = telemetry[associated.device_id] || {};
-        const dist = dt.tof_cm ?? dt.ultrasonic_cm;
+        const dist = getValidFillDistance(dt);
         if (dist !== undefined) fill = calculateFillPercentage(dist);
       }
       return {
@@ -202,7 +202,7 @@ const RoutesPage: React.FC = () => {
         let fill = 45;
         if (associated) {
           const dt = telemetry[associated.device_id] || {};
-          const dist = dt.tof_cm ?? dt.ultrasonic_cm;
+          const dist = getValidFillDistance(dt);
           if (dist !== undefined) fill = calculateFillPercentage(dist);
         }
         return {

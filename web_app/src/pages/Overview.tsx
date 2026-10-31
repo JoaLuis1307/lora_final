@@ -10,7 +10,7 @@ import {
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
 import MapPreview from '../components/dashboard/MapPreview/MapPreview';
-import { calculateFillPercentage } from '../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
 
 const googlePaper = (t: any) => ({
   bgcolor: t.palette.mode === 'dark' ? 'rgba(30, 31, 32, 0.55)' : '#ffffff',
@@ -67,7 +67,7 @@ const Overview: React.FC = () => {
       const associatedDevice = devices.find(d => d.map_point_id === bin.id && d.registered);
       if (associatedDevice) {
         const dt = telemetry[associatedDevice.device_id] || {};
-        const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+        const fillDistance = getValidFillDistance(dt);
         if (fillDistance !== undefined) {
           const fill = calculateFillPercentage(fillDistance);
           totalFill += fill;
@@ -103,7 +103,7 @@ const Overview: React.FC = () => {
       let fill = 0;
       if (associatedDevice) {
         const dt = telemetry[associatedDevice.device_id] || {};
-        const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+        const fillDistance = getValidFillDistance(dt);
         if (fillDistance !== undefined) {
           fill = calculateFillPercentage(fillDistance);
         }

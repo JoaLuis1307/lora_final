@@ -21,7 +21,7 @@ import { deviceService, Device } from '../../../services/deviceService';
 import { getWsUrl } from '../../../services/config';
 import { useAuth } from '../../../context/AuthContext';
 import { applyTheme, getStoredTheme } from '../../../utils/theme';
-import { calculateFillPercentage } from '../../../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../../../utils/fillCalculator';
 import { getMapStyle, searchPlaces, fetchOsrmRoute } from '../../../services/mapStyles';
 
 interface MapPreviewProps {
@@ -282,7 +282,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
             }));
             setDevices(prev => prev.map(d => {
               if (d.device_id === parsed.device_id) {
-                const fillDistance = parsed.data.tof_cm ?? parsed.data.ultrasonic_cm ?? 80;
+                const fillDistance = getValidFillDistance(parsed.data);
                 const fillPct = calculateFillPercentage(fillDistance);
                 const status = fillPct >= 90 ? 'Warning' : 'Online';
                 return { ...d, status, last_seen: new Date().toISOString() };
@@ -417,7 +417,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
       `;
     }
 
-    const fillDistance = deviceTelemetry?.tof_cm ?? deviceTelemetry?.ultrasonic_cm ?? deviceTelemetry?.fill;
+    const fillDistance = getValidFillDistance(deviceTelemetry);
     let fillPct = 24;
     if (fillDistance !== undefined) {
       fillPct = calculateFillPercentage(fillDistance);
@@ -587,7 +587,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
       filteredPoints = dbPoints.filter(point => {
         const linkedDevice = devices.find(d => d.map_point_id === point.id);
         const dt = linkedDevice ? telemetry[linkedDevice.device_id] : null;
-        const fillDistance = dt?.tof_cm ?? dt?.ultrasonic_cm ?? dt?.fill;
+        const fillDistance = getValidFillDistance(dt);
         let fillPct = 24;
         if (fillDistance !== undefined) {
           fillPct = calculateFillPercentage(fillDistance);
@@ -614,7 +614,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
       const isOnline = linkedDevice?.status?.toLowerCase() === 'online';
       const dt = linkedDevice ? telemetry[linkedDevice.device_id] : null;
 
-      const fillDistance = dt?.tof_cm ?? dt?.ultrasonic_cm ?? dt?.fill;
+      const fillDistance = getValidFillDistance(dt);
       let fillPct = 24;
       if (fillDistance !== undefined) {
         fillPct = calculateFillPercentage(fillDistance);
@@ -1081,7 +1081,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
               const isOnline = linkedDevice?.status?.toLowerCase() === 'online';
               const dt = linkedDevice ? telemetry[linkedDevice.device_id] : null;
               const battery = dt?.battery ?? linkedDevice?.battery_level ?? 85;
-              const fillDistance = dt?.tof_cm ?? dt?.ultrasonic_cm;
+              const fillDistance = getValidFillDistance(dt);
               const fillLevel = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : (dt?.fill_level ?? 0);
               const isFull = fillLevel >= 90 || dt?.is_full === 1;
               const rssi = dt?.rssi ?? dt?.signal_strength ?? -85;

@@ -17,7 +17,7 @@ import {
 import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
 import { getWsUrl } from '../services/config';
-import { calculateFillPercentage } from '../utils/fillCalculator';
+import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
 
 const defaultBins: any[] = [];
 
@@ -240,7 +240,7 @@ const Bins: React.FC = () => {
     }
     
     if (dt) {
-      const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+      const fillDistance = getValidFillDistance(dt);
       if (fillDistance !== undefined) {
         fill = calculateFillPercentage(fillDistance);
       }
@@ -283,7 +283,7 @@ const Bins: React.FC = () => {
       let battery = d.battery_level ?? 80;
       
       if (dt) {
-        const fillDistance = dt.tof_cm ?? dt.ultrasonic_cm;
+        const fillDistance = getValidFillDistance(dt);
         if (fillDistance !== undefined) {
           fill = calculateFillPercentage(fillDistance);
         }
