@@ -291,7 +291,11 @@ export const telemetryService = {
       const savedTelemetry = await this.saveTelemetry(fastify, telemetryEntry);
       
       // 3. Estimate Status and Battery based on container fill level, signal strength (RSSI), battery, and noise (SNR)
-      const fillDistance = telemetryEntry.tof_cm || telemetryEntry.ultrasonic_cm;
+      const fillDistance = telemetryEntry.tof_cm > 0
+        ? telemetryEntry.tof_cm
+        : telemetryEntry.ultrasonic_cm > 0
+          ? telemetryEntry.ultrasonic_cm
+          : undefined;
       
       // Extraer nivel de batería (porcentaje 0-100) de forma robusta
       let battery_level = 100;
@@ -315,9 +319,12 @@ export const telemetryService = {
       }
       
       let status: 'Online' | 'Warning' | 'Offline' = 'Online';
-      if (telemetryEntry.rssi <= -105 || telemetryEntry.snr <= -5.0) {
-        status = 'Offline'; // Total loss of connection due to low signal or excessive noise
-      } else if (fillDistance <= 15 || battery_level <= 15 || telemetryEntry.rssi <= -95 || telemetryEntry.snr <= 1.0) {
+      if (
+        (fillDistance !== undefined && fillDistance <= 15) ||
+        battery_level <= 15 ||
+        telemetryEntry.rssi <= -95 ||
+        telemetryEntry.snr <= 1.0
+      ) {
         status = 'Warning'; // Warning due to low battery, weak signal, high noise, or full container
       }
 
