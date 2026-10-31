@@ -4,13 +4,23 @@ import * as path from 'path';
 // Load .env file
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
+const parsePort = (value: string | undefined, fallback: number): number => {
+  const parsed = Number(value ?? fallback);
+  return Number.isInteger(parsed) && parsed > 0 && parsed <= 65535 ? parsed : fallback;
+};
+
+const jwtSecret = process.env.JWT_SECRET?.trim();
+if (!jwtSecret) {
+  console.warn('[CONFIG] JWT_SECRET no está configurado; use un secreto propio antes de producción.');
+}
+
 export const config = {
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parsePort(process.env.PORT, 3001),
   host: process.env.HOST || '0.0.0.0',
-  jwtSecret: process.env.JWT_SECRET || 'supersecret_jwt_key_smart_containers_2026',
+  jwtSecret: jwtSecret || 'development-only-change-me',
   mqtt: {
     broker: process.env.MQTT_BROKER || 'mqtt://localhost',
-    port: parseInt(process.env.MQTT_PORT || '1883', 10),
+    port: parsePort(process.env.MQTT_PORT, 1883),
     username: process.env.MQTT_USER || undefined,
     password: process.env.MQTT_PASS || undefined,
   },

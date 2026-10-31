@@ -7,6 +7,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     mqtt: {
       client: mqtt.MqttClient | null;
+      isConnected: () => boolean;
       publishCommand: (gatewayId: string, nodeId: string | null, commandObj: Record<string, any>) => boolean;
     };
   }
@@ -20,6 +21,8 @@ const mqttPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
   const options: mqtt.IClientOptions = {
     port: config.mqtt.port,
     reconnectPeriod: 5000,
+    connectTimeout: 10000,
+    keepalive: 30,
   };
 
   if (config.mqtt.username) options.username = config.mqtt.username;
@@ -186,6 +189,9 @@ const mqttPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
     client.on('error', (err) => {
       fastify.log.error(`[MQTT] Error en el cliente MQTT: ${err}`);
     });
+    client.on('offline', () => fastify.log.warn('[MQTT] Cliente offline; esperando reconexión automática.'));
+    client.on('reconnect', () => fastify.log.info('[MQTT] Intentando reconectar al broker...'));
+    client.on('close', () => fastify.log.warn('[MQTT] Conexión cerrada.'));
 
   } catch (err) {
     fastify.log.error(`[MQTT] Error inicializando cliente MQTT: ${err}`);
@@ -211,6 +217,7 @@ const mqttPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
 
   fastify.decorate('mqtt', {
     client,
+    isConnected: () => Boolean(client?.connected),
     publishCommand,
   });
 

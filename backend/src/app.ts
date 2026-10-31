@@ -59,6 +59,17 @@ export async function buildApp(): Promise<FastifyInstance> {
     return { status: 'healthy', uptime: process.uptime() };
   });
 
+  app.get('/ready', async (_request, reply) => {
+    const mqttConnected = app.mqtt.isConnected();
+    const status = mqttConnected ? 'ready' : 'degraded';
+    if (!mqttConnected) reply.code(503);
+    return {
+      status,
+      uptime: process.uptime(),
+      dependencies: { mqtt: mqttConnected },
+    };
+  });
+
   // 5. Register Domain Routes with Versioning Prefix
   await app.register(async (api) => {
     await api.register(authRoutes);
