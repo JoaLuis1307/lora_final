@@ -12,6 +12,7 @@ export const createDeviceSchema = {
       battery_level: { type: 'integer', minimum: 0, maximum: 100 },
       signal_strength: { type: 'integer' },
       mac_address: { type: 'string' },
+      gateway_id: { type: ['string', 'null'] },
       registered: { type: 'boolean' },
       map_point_id: { type: ['integer', 'null'] }
     }
@@ -37,6 +38,7 @@ export const updateDeviceSchema = {
       battery_level: { type: 'integer', minimum: 0, maximum: 100 },
       signal_strength: { type: 'integer' },
       mac_address: { type: 'string' },
+      gateway_id: { type: ['string', 'null'] },
       registered: { type: 'boolean' },
       map_point_id: { type: ['integer', 'null'] }
     }

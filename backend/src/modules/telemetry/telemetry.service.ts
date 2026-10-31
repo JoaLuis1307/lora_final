@@ -247,13 +247,14 @@ export const telemetryService = {
    */
   async processNodeTelemetry(fastify: FastifyInstance, nodeId: string, data: any, gatewayId?: string) {
     try {
+      const normalizedGatewayId = gatewayId?.trim() || undefined;
       // PRIORIDAD AL HARDWARE REAL:
       // Si el dispositivo ya está registrado y enlazado al gateway real ('gateway_01'), 
       // e intentamos procesar una trama proveniente del simulador ('gateway_02'), abortamos de inmediato.
       const devices = await devicesService.getDevices(fastify);
       const device = devices.find(d => d.device_id === nodeId);
       
-      if (device && device.gateway_id?.toLowerCase() === 'gateway_01' && gatewayId?.toLowerCase() === 'gateway_02') {
+      if (device && device.gateway_id?.toLowerCase() === 'gateway_01' && normalizedGatewayId?.toLowerCase() === 'gateway_02') {
         fastify.log.warn(`[MQTT] [PRIORIDAD REAL] Ignorando telemetría simulada de gateway_02 para el nodo de hardware real: ${nodeId}`);
         return;
       }
@@ -352,7 +353,7 @@ export const telemetryService = {
           signal_strength: telemetryEntry.rssi,
           battery_level,
           last_seen: new Date().toISOString(),
-          gateway_id: gatewayId || device.gateway_id
+          gateway_id: normalizedGatewayId || device.gateway_id || null
         };
 
         // Si el broker envió coordenadas GPS dinámicas en la trama (no cero), las usamos.
@@ -389,7 +390,7 @@ export const telemetryService = {
           type: 'Nodo Sensor',
           battery_level,
           signal_strength: telemetryEntry.rssi,
-          gateway_id: gatewayId || null
+          gateway_id: normalizedGatewayId || null
         });
         fastify.log.info(`[MQTT] Nuevo dispositivo [${nodeId}] detectado pero NO registrado. Guardado en la cola de descubrimiento.`);
       }

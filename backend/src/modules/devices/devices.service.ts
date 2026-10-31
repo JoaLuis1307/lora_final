@@ -35,8 +35,10 @@ export const devicesService = {
       return; // Already registered
     }
 
+    const gatewayId = dev.gateway_id?.trim() || null;
     this.discoveredDevices.set(dev.device_id.toLowerCase(), {
       ...dev,
+      gateway_id: gatewayId,
       last_seen: new Date().toISOString()
     });
 
@@ -176,7 +178,8 @@ export const devicesService = {
   async updateGatewayStatus(fastify: FastifyInstance, gatewayId: string, statusPayload: string) {
     try {
       const devices = await this.getDevices(fastify);
-      const gateway = devices.find(d => d.device_id === gatewayId);
+      const normalizedGatewayId = gatewayId.trim();
+      const gateway = devices.find(d => d.device_id.toLowerCase() === normalizedGatewayId.toLowerCase());
       
       let isOnline = false;
       const cleanPayload = statusPayload.trim();
@@ -195,15 +198,15 @@ export const devicesService = {
       const statusStr = isOnline ? 'Online' : 'Offline';
 
       if (gateway) {
-        await this.updateDevice(fastify, gatewayId, {
+        await this.updateDevice(fastify, gateway.device_id, {
           status: statusStr,
           last_seen: new Date().toISOString()
         });
-        fastify.log.info(`[MQTT] Gateway [${gatewayId}] actualizado a: ${statusStr}`);
+        fastify.log.info(`[MQTT] Gateway [${gateway.device_id}] actualizado a: ${statusStr}`);
       } else {
         // DO NOT Auto-register in DB! Instead, put in memory discovery queue!
         await this.addDiscoveredDevice(fastify, {
-          device_id: gatewayId,
+          device_id: normalizedGatewayId,
           type: 'Gateway',
           battery_level: 100,
           signal_strength: -50,
