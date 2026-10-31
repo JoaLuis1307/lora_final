@@ -15,6 +15,11 @@ void lora_init() {
     return;
   }
   lora_alive = true;
+  LoRa.setSpreadingFactor(LORA_SPREADING_FACTOR);
+  LoRa.setSignalBandwidth(LORA_BANDWIDTH_HZ);
+  LoRa.setCodingRate4(LORA_CODING_RATE);
+  LoRa.setTxPower(LORA_TX_POWER_DBM);
+  LoRa.receive();
   Serial.println("LoRa OK");
 }
 
@@ -37,7 +42,14 @@ void lora_check() {
     }
     LoRa.end();
     lora_alive = LoRa.begin(LORA_FREQ);
-    if (lora_alive) Serial.println("LoRa recuperado");
+    if (lora_alive) {
+      LoRa.setSpreadingFactor(LORA_SPREADING_FACTOR);
+      LoRa.setSignalBandwidth(LORA_BANDWIDTH_HZ);
+      LoRa.setCodingRate4(LORA_CODING_RATE);
+      LoRa.setTxPower(LORA_TX_POWER_DBM);
+      LoRa.receive();
+      Serial.println("LoRa recuperado");
+    }
     else Serial.println("LoRa sigue fallando");
   } else {
     lora_alive = true;

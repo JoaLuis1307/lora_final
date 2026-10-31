@@ -90,7 +90,8 @@ void router_loop() {
     }
 
     // Almacenar SIEMPRE el nodo (auto-descubrimiento)
-    bool allowed = node_whitelist_is_allowed(node_id.c_str());
+    bool allowed = LORA_REQUIRE_WHITELIST == 0 ||
+      node_whitelist_is_allowed(node_id.c_str());
     if (!allowed) {
       Serial.println("  -> Nodo " + node_id + " no esta en whitelist (almacenado, sin publicar MQTT)");
     }
@@ -149,7 +150,8 @@ void router_loop() {
   }
 
   // Almacenar SIEMPRE el nodo (auto-descubrimiento)
-  bool allowed = node_whitelist_is_allowed(node_id.c_str());
+  bool allowed = LORA_REQUIRE_WHITELIST == 0 ||
+    node_whitelist_is_allowed(node_id.c_str());
   if (!allowed) {
     Serial.println("  -> Nodo " + node_id + " no esta en whitelist (almacenado, sin publicar MQTT)");
   }

@@ -34,6 +34,14 @@
 #define LORA_SPI_MISO   13
 #define LORA_SPI_SCK    12
 #define LORA_FREQ       433E6
+#define LORA_SPREADING_FACTOR  7
+#define LORA_BANDWIDTH_HZ      125000
+#define LORA_CODING_RATE       5
+#define LORA_TX_POWER_DBM      17
+
+// 0: publica nodos validos para permitir descubrimiento automatico.
+// 1: solo publica nodos registrados en la whitelist.
+#define LORA_REQUIRE_WHITELIST 0
 
 // Tiempos
 #define RECONNECT_INTERVAL    5000
