@@ -9,7 +9,10 @@ static int find_key(const char* json, const char* key) {
 
 bool parser_is_json(const char* raw) {
   if (!raw || strlen(raw) < 2) return false;
-  return raw[0] == '{' && raw[strlen(raw) - 1] == '}';
+  while (*raw && isSpace(*raw)) raw++;
+  size_t len = strlen(raw);
+  while (len > 0 && isSpace(raw[len - 1])) len--;
+  return len >= 2 && raw[0] == '{' && raw[len - 1] == '}';
 }
 
 String parser_extract_value(const char* json, const char* key) {

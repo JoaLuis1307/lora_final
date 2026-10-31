@@ -111,9 +111,14 @@ const mqttPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
       // 1. Try pure JSON first
       if (trimmed.startsWith('{')) {
         const parsed = JSON.parse(trimmed); // may throw — caller catches
-        // Handle gateway-wrapped: {"value":"N7,P364,T14,..."}
-        if (typeof parsed.value === 'string' && !parsed.value.startsWith('{')) {
-          return parseCompactCSV(parsed.value);
+        // Handle gateway-wrapped payloads, including {"value":"{\"sequence\":1,...}"}.
+        if (typeof parsed.value === 'string') {
+          const value = parsed.value.trim();
+          if (value.startsWith('{')) {
+            const nested = JSON.parse(value);
+            return typeof nested === 'object' && nested !== null ? nested : {};
+          }
+          return parseCompactCSV(value);
         }
         return parsed;
       }
