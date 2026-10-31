@@ -45,7 +45,7 @@ export async function devicesRoutes(fastify: FastifyInstance, options: FastifyPl
       
       // If registering a node, attempt to send a ping command through MQTT
       if (newDevice.type === 'Nodo Sensor') {
-        const gatewayId = 'gateway_02'; // Default gateway for virtual/simulator
+        const gatewayId = newDevice.gateway_id || 'gateway_01';
         fastify.mqtt.publishCommand(gatewayId, newDevice.device_id, { cmd: 'ping' });
       }
 
@@ -64,9 +64,12 @@ export async function devicesRoutes(fastify: FastifyInstance, options: FastifyPl
 
       const updatedDevice = await devicesService.updateDevice(fastify, deviceId, updates);
       
-      // If updating interval via frontend, transmit to physical/simulated hardware via MQTT command
+      // If updating interval via frontend, transmit through the node's gateway.
       if (updates.status === 'Configuring') {
-        fastify.mqtt.publishCommand('gateway_02', deviceId, { cmd: 'request' });
+        const devices = await devicesService.getDevices(fastify);
+        const device = devices.find(d => d.device_id.toLowerCase() === deviceId.toLowerCase());
+        const gatewayId = updates.gateway_id || device?.gateway_id || 'gateway_01';
+        fastify.mqtt.publishCommand(gatewayId, deviceId, { cmd: 'request' });
       }
 
       return updatedDevice;
@@ -98,7 +101,9 @@ export async function devicesRoutes(fastify: FastifyInstance, options: FastifyPl
         return reply.status(400).send({ error: 'Bad Request', message: 'cmd is required in body' });
       }
 
-      const gatewayId = body.gateway_id || 'gateway_02'; // Default simulator gateway
+      const devices = await devicesService.getDevices(fastify);
+      const device = devices.find(d => d.device_id.toLowerCase() === deviceId.toLowerCase());
+      const gatewayId = body.gateway_id || device?.gateway_id || 'gateway_01';
       const success = fastify.mqtt.publishCommand(gatewayId, deviceId, { cmd: body.cmd, value: body.value });
 
       if (success) {

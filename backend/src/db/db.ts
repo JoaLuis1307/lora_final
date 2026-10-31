@@ -95,18 +95,15 @@ const defaultMapPoints: MapPoint[] = [
   { id: 1, name: 'Punto Limpio Plaza Yanahuara', latitude: -16.3888, longitude: -71.5415, type: 'Reciclaje', description: 'Contenedor inteligente de vidrio y plástico', created_at: new Date().toISOString() },
   { id: 2, name: 'Contenedor Av. Ejército C-4', latitude: -16.3920, longitude: -71.5460, type: 'General', description: 'Contenedor de residuos generales de alta capacidad', created_at: new Date().toISOString() },
   { id: 3, name: 'Punto Ecológico Mall Plaza', latitude: -16.3980, longitude: -71.5520, type: 'Papel/Cartón', description: 'Contenedor inteligente para papel y cartón', created_at: new Date().toISOString() },
-  { id: 4, name: 'Contenedor Calle Mercaderes', latitude: -16.3988, longitude: -71.5368, type: 'General', description: 'Ubicación central del simulador', created_at: new Date().toISOString() }
 ];
 
 const defaultDevices: Device[] = [
   { id: 1, device_id: 'gateway_01', name: 'Gateway Principal LoRa', type: 'Gateway', status: 'Online', latitude: -16.3950, longitude: -71.5400, battery_level: 100, signal_strength: -40, last_seen: new Date().toISOString(), mac_address: 'AA:BB:CC:DD:EE:01', registered: true, map_point_id: null, gateway_id: null },
-  { id: 2, device_id: 'gateway_02', name: 'Simulador Virtual Python', type: 'Gateway', status: 'Online', latitude: -16.3988, longitude: -71.5368, battery_level: 100, signal_strength: -30, last_seen: new Date().toISOString(), mac_address: '00:11:22:33:44:55', registered: true, map_point_id: null, gateway_id: null },
   { id: 3, device_id: 'N1', name: 'Contenedor Plaza Yanahuara', type: 'Nodo Sensor', status: 'Online', latitude: -16.3888, longitude: -71.5415, battery_level: 84, signal_strength: -75, last_seen: new Date().toISOString(), mac_address: '24:0A:C4:8B:58:AA', registered: true, map_point_id: 1, gateway_id: 'gateway_01' },
-  { id: 4, device_id: 'N2', name: 'Contenedor Av. Ejército C-4', type: 'Nodo Sensor', status: 'Warning', latitude: -16.3920, longitude: -71.5460, battery_level: 42, signal_strength: -88, last_seen: new Date().toISOString(), mac_address: '24:0A:C4:8B:58:BB', registered: true, map_point_id: 2, gateway_id: 'gateway_02' }
 ];
 
 const defaultTelemetry: Telemetry[] = [];
-// Populate some historical telemetry for Yanahuara (N1) and Av Ejercito (N2)
+// Populate historical telemetry for the physical deployment sample.
 for (let i = 24; i >= 0; i--) {
   const timestamp = new Date(Date.now() - i * 60 * 60 * 1000).toISOString();
   defaultTelemetry.push({
@@ -123,24 +120,6 @@ for (let i = 24; i >= 0; i--) {
     rssi: -70 - Math.floor(Math.random() * 8),
     snr: 8.5 + Math.random(),
     pkts: 150 - i,
-    crc_ok: 1,
-    crc_err: 0,
-    timestamp
-  });
-  defaultTelemetry.push({
-    device_id: 'N2',
-    sequence: 200 - i,
-    temperature: 22 + Math.sin(i / 2) * 5,
-    humidity: 45 + Math.cos(i / 2) * 8,
-    air_quality: 150 + Math.floor(Math.random() * 30),
-    ultrasonic_cm: Math.max(8, 30 - (24 - i) * 0.8), // almost full!
-    tof_cm: Math.max(8, 30 - (24 - i) * 0.8),
-    obstacle: 1,
-    altitude: 2340,
-    satellites: 10,
-    rssi: -85 - Math.floor(Math.random() * 5),
-    snr: 5.2 + Math.random(),
-    pkts: 180 - i,
     crc_ok: 1,
     crc_err: 0,
     timestamp

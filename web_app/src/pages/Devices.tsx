@@ -487,7 +487,6 @@ const Devices: React.FC = () => {
     .filter(d => d.type?.toLowerCase() === 'gateway' && d.registered)
     .map((gw, idx) => {
       const isG1 = gw.device_id.toLowerCase() === 'gateway_01';
-      const isG2 = gw.device_id.toLowerCase() === 'gateway_02';
       const count = devices.filter(d => d.type?.toLowerCase() !== 'gateway' && d.gateway_id?.toLowerCase() === gw.device_id.toLowerCase()).length;
       
       let color = 'primary.main';
@@ -499,17 +498,13 @@ const Devices: React.FC = () => {
         color = 'primary.main';
         icon = <Cpu size={18} />;
         desc = 'Hardware real - Yanahuara';
-      } else if (isG2) {
-        color = 'primary.main';
-        icon = <Activity size={18} />;
-        desc = 'Red Virtual (Python)';
       } else {
         color = 'primary.main';
       }
       
       return {
         value: gw.device_id,
-        label: isG1 ? 'Nodos G1 (Físicos)' : isG2 ? 'Nodos G2 (Virtuales)' : `Nodos ${gw.device_id.toUpperCase()}`,
+        label: isG1 ? 'Nodos físicos' : `Nodos ${gw.device_id.toUpperCase()}`,
         count,
         color,
         icon,

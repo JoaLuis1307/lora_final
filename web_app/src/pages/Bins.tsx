@@ -60,7 +60,7 @@ const Bins: React.FC = () => {
   const [editBinModalOpen, setEditBinModalOpen] = useState(false);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [editBinData, setEditBinData] = useState<{ id: string; name: string; location: string; lat?: number; lng?: number } | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'real' | 'simulated' | 'independent'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'real' | 'independent'>('all');
   const [showSidebar, setShowSidebar] = useState(true);
   const [discoveredIds, setDiscoveredIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid'); // Default back to original grid view
@@ -229,7 +229,7 @@ const Bins: React.FC = () => {
     let name = mockBin.name;
     let lat = mockBin.lat;
     let lng = mockBin.lng;
-    let gateway_id = liveDevice?.gateway_id || 'gateway_02';
+    let gateway_id = liveDevice?.gateway_id;
     
     if (liveDevice) {
       name = liveDevice.name || name;
@@ -359,14 +359,12 @@ const Bins: React.FC = () => {
 
   const alertsToDisplay = liveAlerts.length > 0 ? liveAlerts.slice(0, 5) : [
     { id: 'N1', msg: 'Carga crítica — 94% ocupado', time: 'Hace 5 min', severity: 'error' as const },
-    { id: 'N2', msg: 'Batería baja — 12% restante', time: 'Hace 1 hora', severity: 'warning' as const },
   ];
 
   const filteredBins = useMemo(() => {
     return combinedBins.filter(b => {
       if (filterType === 'real') return b.gateway_id?.toLowerCase() === 'gateway_01';
-      if (filterType === 'simulated') return b.gateway_id?.toLowerCase() === 'gateway_02';
-      if (filterType === 'independent') return !b.gateway_id || (b.gateway_id.toLowerCase() !== 'gateway_01' && b.gateway_id.toLowerCase() !== 'gateway_02');
+      if (filterType === 'independent') return !b.gateway_id;
       return true;
     }).sort((a, b) => b.fill - a.fill); // Sort by fill capacity descending (Google Console efficiency)
   }, [combinedBins, filterType]);
@@ -564,7 +562,6 @@ const Bins: React.FC = () => {
                   >
                     <MenuItem value="all" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Todos los Nodos</MenuItem>
                     <MenuItem value="real" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Hardware Real</MenuItem>
-                    <MenuItem value="simulated" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Simulados</MenuItem>
                     <MenuItem value="independent" sx={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase' }}>Independientes</MenuItem>
                   </Select>
                 </FormControl>
@@ -607,7 +604,7 @@ const Bins: React.FC = () => {
                   <TableBody>
                     {filteredBins.map(bin => {
                       const gw = devices.find(d => d.device_id.toLowerCase() === bin.gateway_id?.toLowerCase() && d.type?.toLowerCase() === 'gateway');
-                      const gwName = gw ? gw.name : (bin.gateway_id === 'gateway_01' ? 'Gateway Real' : (bin.gateway_id === 'gateway_02' ? 'Gateway Virtual' : 'Sin Gateway'));
+                      const gwName = gw ? gw.name : (bin.gateway_id === 'gateway_01' ? 'Gateway Principal LoRa' : 'Sin Gateway');
                       return (
                         <TableRow key={bin.id} hover>
                           <TableCell sx={{ fontWeight: 800 }}>{bin.name}</TableCell>
@@ -684,7 +681,7 @@ const Bins: React.FC = () => {
                 {filteredBins.map(bin => {
                   const isSync = devices.some(d => d.device_id.toLowerCase() === bin.id.toLowerCase() && d.registered !== false);
                   const gw = devices.find(d => d.device_id.toLowerCase() === bin.gateway_id?.toLowerCase() && d.type?.toLowerCase() === 'gateway');
-                  const gwName = gw ? gw.name : (bin.gateway_id === 'gateway_01' ? 'Gateway Real' : (bin.gateway_id === 'gateway_02' ? 'Gateway Virtual' : 'Sin Gateway'));
+                  const gwName = gw ? gw.name : (bin.gateway_id === 'gateway_01' ? 'Gateway Principal LoRa' : 'Sin Gateway');
 
                   return (
                     <motion.div key={bin.id} variants={fadeSlideUp} style={{ display: 'flex' }}>

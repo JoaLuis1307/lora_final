@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 async function main() {
   const prisma = new PrismaClient();
   try {
-    console.log('[SEED] Asegurando que los gateways principales existan en la base de datos...');
+    console.log('[SEED] Asegurando que el gateway físico exista en la base de datos...');
     
     // Upsert Gateway 01
     await prisma.device.upsert({
@@ -25,25 +25,9 @@ async function main() {
     });
     console.log('[SEED] Gateway 01 verificado/creado.');
 
-    // Upsert Gateway 02
-    await prisma.device.upsert({
-      where: { device_id: 'gateway_02' },
-      update: { name: 'Gateway Virtual' },
-      create: {
-        device_id: 'gateway_02',
-        name: 'Gateway Virtual',
-        type: 'Gateway',
-        status: 'Online',
-        latitude: -16.3988,
-        longitude: -71.5368,
-        battery_level: 100,
-        signal_strength: -30,
-        last_seen: new Date(),
-        mac_address: '00:11:22:33:44:55',
-        registered: true
-      }
+    await prisma.device.deleteMany({
+      where: { device_id: 'gateway_02' }
     });
-    console.log('[SEED] Gateway 02 verificado/creado.');
 
     const devices = await prisma.device.findMany({
       orderBy: { id: 'asc' }
@@ -58,4 +42,3 @@ async function main() {
 }
 
 main();
-

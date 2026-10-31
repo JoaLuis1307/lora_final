@@ -8,7 +8,7 @@ const watchdogPlugin: FastifyPluginAsync = fp(async (fastify) => {
   
   // Timeout thresholds
   const NODE_TIMEOUT_MS = 30000; // 30 seconds
-  const GATEWAY_TIMEOUT_MS = 60000; // 60 seconds (since simulated gateway transmits every 30s)
+  const GATEWAY_TIMEOUT_MS = 60000;
 
   const checkInactivity = async () => {
     try {

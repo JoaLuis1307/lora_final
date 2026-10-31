@@ -248,16 +248,8 @@ export const telemetryService = {
   async processNodeTelemetry(fastify: FastifyInstance, nodeId: string, data: any, gatewayId?: string) {
     try {
       const normalizedGatewayId = gatewayId?.trim() || undefined;
-      // PRIORIDAD AL HARDWARE REAL:
-      // Si el dispositivo ya está registrado y enlazado al gateway real ('gateway_01'), 
-      // e intentamos procesar una trama proveniente del simulador ('gateway_02'), abortamos de inmediato.
       const devices = await devicesService.getDevices(fastify);
       const device = devices.find(d => d.device_id === nodeId);
-      
-      if (device && device.gateway_id?.toLowerCase() === 'gateway_01' && normalizedGatewayId?.toLowerCase() === 'gateway_02') {
-        fastify.log.warn(`[MQTT] [PRIORIDAD REAL] Ignorando telemetría simulada de gateway_02 para el nodo de hardware real: ${nodeId}`);
-        return;
-      }
 
       // 1. Format telemetry entry
       const telemetryEntry = {

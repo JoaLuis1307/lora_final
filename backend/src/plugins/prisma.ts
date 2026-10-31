@@ -40,25 +40,14 @@ async function seedDefaultData(prisma: PrismaClient) {
     });
     console.log('[DATABASE] Seaseed/Verify gateway_01 en base de datos.');
 
-    // 3. Upsert Gateway 02
-    await prisma.device.upsert({
-      where: { device_id: 'gateway_02' },
-      update: { name: 'Gateway Virtual' },
-      create: {
-        device_id: 'gateway_02',
-        name: 'Gateway Virtual',
-        type: 'Gateway',
-        status: 'Online',
-        latitude: -16.3988,
-        longitude: -71.5368,
-        battery_level: 100,
-        signal_strength: -30,
-        last_seen: new Date(),
-        mac_address: '00:11:22:33:44:55',
-        registered: true
-      }
+    // Remove legacy simulator records from production.
+    await prisma.device.deleteMany({
+      where: { device_id: { in: ['gateway_02', 'n2'] } }
     });
-    console.log('[DATABASE] Seaseed/Verify gateway_02 en base de datos.');
+    await prisma.mapPoint.deleteMany({
+      where: { name: { in: ['Contenedor Av. Ejército C-4', 'Contenedor Calle Mercaderes'] } }
+    });
+    console.log('[DATABASE] Registros virtuales heredados eliminados.');
 
     // 4. Find or create default MapPoints to link sensor nodes
     let p1 = await prisma.mapPoint.findFirst({
@@ -76,22 +65,7 @@ async function seedDefaultData(prisma: PrismaClient) {
       });
     }
 
-    let p2 = await prisma.mapPoint.findFirst({
-      where: { name: 'Contenedor Av. Ejército C-4' }
-    });
-    if (!p2) {
-      p2 = await prisma.mapPoint.create({
-        data: {
-          name: 'Contenedor Av. Ejército C-4',
-          latitude: -16.3920,
-          longitude: -71.5460,
-          type: 'General',
-          description: 'Contenedor de residuos generales de alta capacidad'
-        }
-      });
-    }
-
-    // 5. Seed sensor nodes N1 and N2 linked to points
+    // 4. Seed the legacy N1 point only when it is already part of the deployment.
     await prisma.device.upsert({
       where: { device_id: 'n1' },
       update: {},
@@ -112,26 +86,7 @@ async function seedDefaultData(prisma: PrismaClient) {
       }
     });
 
-    await prisma.device.upsert({
-      where: { device_id: 'n2' },
-      update: {},
-      create: {
-        device_id: 'n2',
-        name: 'Contenedor Av. Ejército C-4',
-        type: 'Nodo Sensor',
-        status: 'Warning',
-        latitude: -16.3920,
-        longitude: -71.5460,
-        battery_level: 42,
-        signal_strength: -88,
-        last_seen: new Date(),
-        mac_address: '24:0A:C4:8B:58:BB',
-        registered: true,
-        map_point_id: p2.id,
-        gateway_id: 'gateway_02'
-      }
-    });
-    console.log('[DATABASE] Seeding de puntos de mapa y nodos de sensores completado.');
+    console.log('[DATABASE] Seeding del gateway físico completado.');
   } catch (err) {
     console.error('[DATABASE] Error seeding default data:', err);
   }
@@ -144,7 +99,7 @@ const prismaPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
 
   await prisma.$connect();
 
-  // Run seeding to ensure gateway_01 and gateway_02 exist
+  // Run seeding for the physical gateway only
   await seedDefaultData(prisma);
 
   fastify.decorate('prisma', prisma);
@@ -156,4 +111,3 @@ const prismaPlugin: FastifyPluginAsync = fp(async (fastify, opts) => {
 
 export default prismaPlugin;
 export { prismaPlugin };
-
