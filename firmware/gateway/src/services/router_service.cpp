@@ -5,6 +5,7 @@
 #include "../drivers/lora_driver.h"
 #include "../drivers/led_driver.h"
 #include "display_service.h"
+#include "../../config.h"
 
 unsigned long router_packets = 0;
 unsigned long router_crc_errors = 0;
