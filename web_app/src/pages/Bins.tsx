@@ -18,6 +18,7 @@ import { deviceService, Device } from '../services/deviceService';
 import { mapService } from '../services/mapService';
 import { getWsUrl } from '../services/config';
 import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
+import { resolveBatteryPercent } from '../utils/battery';
 
 const defaultBins: any[] = [];
 
@@ -246,7 +247,7 @@ const Bins: React.FC = () => {
       }
       aq = dt.air_quality ?? aq;
       ir = dt.obstacle === 1;
-      battery = dt.battery ?? battery;
+      battery = resolveBatteryPercent(dt, battery);
       if (dt.timestamp) {
         lastUpdate = formatLastSeen(dt.timestamp);
       }
@@ -274,7 +275,7 @@ const Bins: React.FC = () => {
   });
 
   const extraBins = devices
-    .filter(d => (d.type === 'Nodo Sensor' || d.device_id.startsWith('N')) && !defaultBins.some(mb => mb.id === d.device_id))
+    .filter(d => (d.type?.toLowerCase() === 'nodo sensor' || d.device_id.startsWith('N')) && !defaultBins.some(mb => mb.id === d.device_id))
     .map(d => {
       const dt = telemetry[d.device_id];
       let fill = 0;
@@ -289,7 +290,7 @@ const Bins: React.FC = () => {
         }
         aq = dt.air_quality ?? aq;
         ir = dt.obstacle === 1;
-        battery = dt.battery ?? battery;
+        battery = resolveBatteryPercent(dt, battery);
       }
       
       let status = 'optimal';

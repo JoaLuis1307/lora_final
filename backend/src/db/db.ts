@@ -287,12 +287,17 @@ export const db = {
   },
 
   async getTelemetryHistory(deviceId: string, range: string = '24h'): Promise<Telemetry[]> {
-    let cutoff = new Date();
-    if (range === '1h') cutoff.setHours(cutoff.getHours() - 1);
-    else if (range === '6h') cutoff.setHours(cutoff.getHours() - 6);
-    else if (range === '24h') cutoff.setDate(cutoff.getDate() - 1);
-    else if (range === '7d') cutoff.setDate(cutoff.getDate() - 7);
-    else cutoff.setDate(cutoff.getDate() - 1); // Default to 24h
+    const RANGE_MINUTES: Record<string, number> = {
+      '5m': 5,
+      '15m': 15,
+      '1h': 60,
+      '5h': 300,
+      '6h': 360,
+      '24h': 1440,
+      '7d': 10080,
+    };
+    const minutes = RANGE_MINUTES[range] ?? (parseInt(range, 10) || 1440);
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
 
     if (supabase) {
       const { data, error } = await supabase

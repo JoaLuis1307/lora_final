@@ -9,7 +9,7 @@ class BinModel {
   
   // Custom fields calculated from latest telemetry if bound to a device
   double fillLevel; // Percentage 0-100
-  double temperature;
+  double? airQuality; // Air quality in ppm (null when unknown)
   String status; // 'green', 'orange', 'red', 'gray' (offline)
 
   BinModel({
@@ -21,7 +21,7 @@ class BinModel {
     this.description,
     this.createdAt,
     this.fillLevel = 0.0,
-    this.temperature = 20.0,
+    this.airQuality,
     this.status = 'green',
   });
 
@@ -35,7 +35,7 @@ class BinModel {
       description: json['description'] as String?,
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
       fillLevel: (json['fillLevel'] as num?)?.toDouble() ?? 0.0,
-      temperature: (json['temperature'] as num?)?.toDouble() ?? 20.0,
+      airQuality: (json['air_quality'] as num?)?.toDouble(),
       status: json['status'] as String? ?? 'green',
     );
   }

@@ -70,6 +70,7 @@ const Overview: React.FC = () => {
         const fillDistance = getValidFillDistance(dt);
         if (fillDistance !== undefined) {
           const fill = calculateFillPercentage(fillDistance);
+          if (fill < 0) return; // reading out of range: exclude from the average
           totalFill += fill;
           filledCount++;
           if (fill >= 90) {

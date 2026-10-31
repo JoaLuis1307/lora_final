@@ -119,22 +119,27 @@ export const fleetService = {
    * Used by the MQTT handler so simulator data always lands in the DB.
    */
   async upsertVehicle(fastify: FastifyInstance, vehicleId: string, updates: Partial<VehicleData>): Promise<VehicleData> {
+    // Drop undefined fields so a partial MQTT payload never overwrites stored values.
+    const cleanUpdates: Partial<VehicleData> = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined)
+    ) as Partial<VehicleData>;
+
     const defaults: VehicleData = {
       id: vehicleId,
       plate: `SIM-${vehicleId}`,
-      driver: updates.driver ?? 'Simulador',
-      status: (updates.status as VehicleData['status']) ?? 'Available',
-      fuel: updates.fuel ?? 100,
-      capacity: updates.capacity ?? 0,
-      location: updates.location ?? `Base Central (-16.409000, -71.537000)`,
+      driver: cleanUpdates.driver ?? 'Simulador',
+      status: (cleanUpdates.status as VehicleData['status']) ?? 'Available',
+      fuel: cleanUpdates.fuel ?? 100,
+      capacity: cleanUpdates.capacity ?? 0,
+      location: cleanUpdates.location ?? `Base Central (-16.409000, -71.537000)`,
       last_update: 'Justo ahora',
-      speed: updates.speed ?? 0
+      speed: cleanUpdates.speed ?? 0
     };
 
     if (config.db.mode === 'prisma') {
       const upserted = await fastify.prisma.vehicle.upsert({
         where: { id: vehicleId },
-        update: { ...updates, last_update: 'Justo ahora' } as any,
+        update: { ...cleanUpdates, last_update: 'Justo ahora' } as any,
         create: defaults as any
       });
       return upserted as unknown as VehicleData;
@@ -142,12 +147,12 @@ export const fleetService = {
       const list = this.readJSON(VEHICLES_FILE, defaultVehicles);
       const index = list.findIndex((v: VehicleData) => v.id === vehicleId);
       if (index === -1) {
-        const newVehicle = { ...defaults, ...updates };
+        const newVehicle = { ...defaults, ...cleanUpdates };
         list.push(newVehicle);
         this.writeJSON(VEHICLES_FILE, list);
         return newVehicle;
       } else {
-        list[index] = { ...list[index], ...updates, last_update: 'Justo ahora' };
+        list[index] = { ...list[index], ...cleanUpdates, last_update: 'Justo ahora' };
         this.writeJSON(VEHICLES_FILE, list);
         return list[index];
       }

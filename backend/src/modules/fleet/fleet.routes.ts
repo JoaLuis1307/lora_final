@@ -21,7 +21,7 @@ export async function fleetRoutes(fastify: FastifyInstance, options: FastifyPlug
       
       const realTimeFleet = list.map(vehicle => {
         // Robust regex to extract latitude and longitude from location string
-        const match = vehicle.location.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+        const match = String(vehicle.location ?? '').match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
         let lat: number | null = null;
         let lng: number | null = null;
         

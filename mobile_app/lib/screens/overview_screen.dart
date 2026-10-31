@@ -241,7 +241,7 @@ class OverviewScreen extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Temp: ${bin.temperature.toStringAsFixed(1)}°C | ${bin.description ?? "Sin descripción"}',
+                                        '${bin.airQuality != null ? "AQ: ${bin.airQuality!.toStringAsFixed(0)} ppm | " : ""}${bin.description ?? "Sin descripción"}',
                                         style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,

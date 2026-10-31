@@ -5,6 +5,7 @@ import { containerStagger, fadeSlideUp } from '../shared/animations';
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
 import { getWsUrl } from '../services/config';
+import { resolveBatteryPercent } from '../utils/battery';
 import {
   Box, Paper, Typography, Button, IconButton,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -149,12 +150,11 @@ const Gateways: React.FC = () => {
             
             setDevices(prev => prev.map(d => {
               if (d.device_id === parsed.device_id) {
-                const bat = parsed.data.battery ?? parsed.data.bateria ?? parsed.data.batt ?? parsed.data.bat;
                 const rssi = parsed.data.rssi;
                 return { 
                   ...d, 
                   status: 'online',
-                  battery_level: bat !== undefined ? bat : d.battery_level,
+                  battery_level: resolveBatteryPercent(parsed.data, d.battery_level ?? 100),
                   signal_strength: rssi !== undefined ? rssi : d.signal_strength,
                   last_seen: new Date().toISOString()
                 };
@@ -377,7 +377,7 @@ const Gateways: React.FC = () => {
                         onClick={() => {
                           setFormData({
                             device_id: device.device_id,
-                            name: device.type === 'gateway' ? 'Gateway Alpha' : `Node ${device.device_id.slice(-2)}`,
+                            name: device.type?.toLowerCase() === 'gateway' ? 'Gateway Alpha' : `Node ${device.device_id.slice(-2)}`,
                             type: device.type,
                             map_point_id: ''
                           });

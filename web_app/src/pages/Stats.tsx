@@ -14,6 +14,7 @@ import {
 import { deviceService, Device } from '../services/deviceService';
 import { mapService, MapPoint } from '../services/mapService';
 import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
+import { resolveBatteryPercent } from '../utils/battery';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, Legend, ReferenceLine
@@ -97,8 +98,16 @@ function calculateReliability(devices: Device[], data: Record<string, any[]>) {
     return timestamps.slice(1).map((value, index) => value - timestamps[index]);
   }).filter(interval => interval > 0);
   const latestRadio = entries[entries.length - 1] || {};
-  const crcReceived = entries.reduce((sum, e) => sum + Math.max(0, Number(e.crc_ok) || 0), 0);
-  const crcErrors = entries.reduce((sum, e) => sum + Math.max(0, Number(e.crc_err) || 0), 0);
+  // crc_err is a cumulative gateway counter: aggregate the in-window delta,
+  // never the sum of every row, otherwise the error rate grows unbounded.
+  const crcReceived = entries.reduce((sum, e) => sum + (Number(e.crc_ok) === 1 ? 1 : 0), 0);
+  const crcErrors = Object.values(data).reduce((sum, rows) => {
+    const values = rows
+      .map(e => Number(e.crc_err))
+      .filter(v => Number.isFinite(v) && v >= 0);
+    if (values.length < 2) return sum;
+    return sum + Math.max(0, Math.max(...values) - Math.min(...values));
+  }, 0);
   const sequences = Object.values(data).map(rows =>
     rows.map(e => Number(e.sequence)).filter(Number.isInteger).sort((a, b) => a - b)
   ).filter(rows => rows.length > 1);
@@ -523,9 +532,9 @@ const Stats: React.FC = () => {
           ...e,
           rssi: e.rssi ?? e.signal_strength ?? -75,
           snr: e.snr ?? 8.0,
-          battery: e.battery ?? e.battery_level ?? e.bateria ?? 100,
-          ultrasonic_cm: e.ultrasonic_cm ?? 80,
-          tof_cm: e.tof_cm ?? 80
+          battery: resolveBatteryPercent(e, 100),
+          ultrasonic_cm: e.ultrasonic_cm,
+          tof_cm: e.tof_cm
         }));
       });
       setData(processed);
@@ -585,7 +594,7 @@ const Stats: React.FC = () => {
       const fillVal = calcFill(latestEntry);
       const rssiVal = latestEntry.rssi ?? -85;
       const snrVal = latestEntry.snr ?? 8.5;
-      const battVal = dev.battery_level ?? latestEntry.battery ?? 100;
+      const battVal = resolveBatteryPercent(latestEntry, dev.battery_level ?? 100);
       
       const point = dev.map_point_id ? pointMap.get(dev.map_point_id) : null;
       const locationLabel = point ? point.name : 'Ubicación sin asignar';

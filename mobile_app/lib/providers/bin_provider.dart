@@ -65,11 +65,12 @@ class BinProvider with ChangeNotifier {
 
   Future<String> _getWsUrl() async {
     final baseUrl = await StorageService.getApiBaseUrl();
+    final secure = baseUrl.startsWith('https://');
     final host = baseUrl
-        .replaceFirst('http://', '')
-        .replaceFirst('https://', '')
-        .replaceFirst('/api/v1', '');
-    return 'ws://$host/ws';
+        .replaceFirst(RegExp(r'^https?://'), '')
+        .replaceFirst(RegExp(r'/api/v1/?$'), '')
+        .replaceFirst(RegExp(r'/$'), '');
+    return '${secure ? 'wss' : 'ws'}://$host/ws';
   }
 
   void _connectWebSocket() async {
@@ -100,21 +101,60 @@ class BinProvider with ChangeNotifier {
     }
   }
 
+  static double? _validDistance(dynamic tel) {
+    final tof = (tel['tof_cm'] as num?)?.toDouble();
+    if (tof != null && tof > 0) return tof;
+    final ultrasonic = (tel['ultrasonic_cm'] as num?)?.toDouble();
+    if (ultrasonic != null && ultrasonic > 0) return ultrasonic;
+    return null;
+  }
+
+  static double _fillFromDistance(double? distance) {
+    if (distance == null) return 0.0;
+    final pct = ((120.0 - distance) / 110.0) * 100.0;
+    return pct.clamp(0.0, 100.0);
+  }
+
+  /// Accepts `battery_pct`/`BATP` (percentage), `battery_level` (percentage)
+  /// or `battery` (percentage when > 5, otherwise Li-ion voltage).
+  static int? _resolveBatteryPct(dynamic data) {
+    final pct = (data['battery_pct'] as num?)?.toDouble() ??
+        (data['BATP'] as num?)?.toDouble();
+    if (pct != null) {
+      final battery = (data['battery'] as num?)?.toDouble();
+      // Legacy rows persisted 0 even when only voltage was known.
+      if (pct == 0 && battery != null && battery > 0 && battery <= 5) {
+        return (((battery - 3.0) / (4.2 - 3.0)) * 100.0).clamp(0.0, 100.0).round();
+      }
+      return pct.clamp(0.0, 100.0).round();
+    }
+
+    final level = (data['battery_level'] as num?)?.toDouble();
+    if (level != null) return level.clamp(0.0, 100.0).round();
+
+    final battery = (data['battery'] as num?)?.toDouble();
+    if (battery == null) return null;
+    if (battery > 5.0) return battery.clamp(0.0, 100.0).round();
+    if (battery <= 0.0) return null;
+    final voltagePct = ((battery - 3.0) / (4.2 - 3.0)) * 100.0;
+    return voltagePct.clamp(0.0, 100.0).round();
+  }
+
   void _applyTelemetry(String deviceId, dynamic data) {
     bool changed = false;
     for (var bin in _bins) {
       final bound = _devices.where((d) => d.mapPointId == bin.id).firstOrNull;
       if (bound != null && bound.deviceId == deviceId) {
-        final distance = (data['ultrasonic_cm'] as num?)?.toDouble() ?? (data['tof_cm'] as num?)?.toDouble();
-        if (distance != null && distance < 120) {
-          final fill = ((120.0 - distance) / 110.0 * 100).clamp(0.0, 100.0);
-          bin.fillLevel = fill;
+        final distance = _validDistance(data);
+        if (distance != null) {
+          bin.fillLevel = _fillFromDistance(distance);
         }
-        if (data['temperature'] != null) {
-          bin.temperature = (data['temperature'] as num).toDouble();
+        if (data['air_quality'] != null) {
+          bin.airQuality = (data['air_quality'] as num).toDouble();
         }
-        if (data['battery'] != null) {
-          _devices[_devices.indexOf(bound)] = bound.copyWith(batteryLevel: (data['battery'] as num).toInt());
+        final batteryPct = _resolveBatteryPct(data);
+        if (batteryPct != null) {
+          _devices[_devices.indexOf(bound)] = bound.copyWith(batteryLevel: batteryPct);
         }
         bin.status = _computeStatus(bound.status, bin.fillLevel);
         changed = true;
@@ -223,16 +263,18 @@ class BinProvider with ChangeNotifier {
 
         if (boundDevice.id != -1 && latestTelemetry.containsKey(boundDevice.deviceId)) {
           final tel = latestTelemetry[boundDevice.deviceId];
-          final double distance = (tel['ultrasonic_cm'] as num?)?.toDouble() ?? 120.0;
-          double fillPct = 0.0;
-          if (distance < 120.0) {
-            fillPct = ((120.0 - distance) / 110.0) * 100.0;
-            if (fillPct < 0) fillPct = 0.0;
-            if (fillPct > 100) fillPct = 100.0;
-          }
+          final fillPct = _fillFromDistance(_validDistance(tel));
 
           bin.fillLevel = fillPct;
-          bin.temperature = (tel['temperature'] as num?)?.toDouble() ?? 20.0;
+          bin.airQuality = (tel['air_quality'] as num?)?.toDouble();
+
+          final batteryPct = _resolveBatteryPct(tel);
+          if (batteryPct != null) {
+            final deviceIndex = _devices.indexOf(boundDevice);
+            if (deviceIndex >= 0) {
+              _devices[deviceIndex] = boundDevice.copyWith(batteryLevel: batteryPct);
+            }
+          }
 
           bin.status = _computeStatus(boundDevice.status, fillPct);
         } else {
@@ -258,10 +300,10 @@ class BinProvider with ChangeNotifier {
 
   void _loadMockData() {
     _bins = [
-      BinModel(id: 1, name: 'Contenedor Av. Ejército 402', latitude: -16.403, longitude: -71.536, type: 'bin', description: 'Papel y Cartón', fillLevel: 45.0, status: 'green', temperature: 22.5),
-      BinModel(id: 2, name: 'Contenedor Plaza de Armas', latitude: -16.398, longitude: -71.536, type: 'bin', description: 'Plásticos y Latas', fillLevel: 82.0, status: 'red', temperature: 24.1),
-      BinModel(id: 3, name: 'Contenedor Calle Mercaderes 115', latitude: -16.399, longitude: -71.535, type: 'bin', description: 'Residuos Orgánicos', fillLevel: 61.0, status: 'orange', temperature: 21.8),
-      BinModel(id: 4, name: 'Contenedor C.C. Real Plaza', latitude: -16.407, longitude: -71.527, type: 'bin', description: 'Vidrio', fillLevel: 12.0, status: 'green', temperature: 19.5),
+      BinModel(id: 1, name: 'Contenedor Av. Ejército 402', latitude: -16.403, longitude: -71.536, type: 'bin', description: 'Papel y Cartón', fillLevel: 45.0, status: 'green', airQuality: 320.0),
+      BinModel(id: 2, name: 'Contenedor Plaza de Armas', latitude: -16.398, longitude: -71.536, type: 'bin', description: 'Plásticos y Latas', fillLevel: 82.0, status: 'red', airQuality: 780.0),
+      BinModel(id: 3, name: 'Contenedor Calle Mercaderes 115', latitude: -16.399, longitude: -71.535, type: 'bin', description: 'Residuos Orgánicos', fillLevel: 61.0, status: 'orange', airQuality: 540.0),
+      BinModel(id: 4, name: 'Contenedor C.C. Real Plaza', latitude: -16.407, longitude: -71.527, type: 'bin', description: 'Vidrio', fillLevel: 12.0, status: 'green', airQuality: 210.0),
     ];
     _devices = [
       DeviceModel(id: 1, deviceId: 'N1', name: 'Nodo Sensor 01', type: 'Nodo Sensor', status: 'Online', latitude: -16.403, longitude: -71.536, batteryLevel: 94, signalStrength: -68, mapPointId: 1),

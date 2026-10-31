@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion';
 import { containerStagger, fadeSlideUp } from '../shared/animations';
 import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
+import { resolveBatteryPercent } from '../utils/battery';
 const StyledDialog = Dialog as any;
 const StyledTextField = TextField as any;
 const googlePaper = (t: any) => ({
@@ -241,8 +242,8 @@ const Devices: React.FC = () => {
           latitude: Number(selectedDeviceData.latitude),
           longitude: Number(selectedDeviceData.longitude),
           mac_address: selectedDeviceData.mac_address,
-          gateway_id: selectedDeviceData.type === 'Gateway' ? null : selectedDeviceData.gateway_id,
-          map_point_id: selectedDeviceData.type === 'Gateway' ? undefined : selectedDeviceData.map_point_id,
+          gateway_id: selectedDeviceData.type?.toLowerCase() === 'gateway' ? null : selectedDeviceData.gateway_id,
+          map_point_id: selectedDeviceData.type?.toLowerCase() === 'gateway' ? undefined : selectedDeviceData.map_point_id,
           registered: true
         });
 
@@ -257,8 +258,8 @@ const Devices: React.FC = () => {
           latitude: Number(selectedDeviceData.latitude),
           longitude: Number(selectedDeviceData.longitude),
           mac_address: selectedDeviceData.mac_address,
-          gateway_id: selectedDeviceData.type === 'Gateway' ? null : selectedDeviceData.gateway_id,
-          map_point_id: selectedDeviceData.type === 'Gateway' ? undefined : selectedDeviceData.map_point_id,
+          gateway_id: selectedDeviceData.type?.toLowerCase() === 'gateway' ? null : selectedDeviceData.gateway_id,
+          map_point_id: selectedDeviceData.type?.toLowerCase() === 'gateway' ? undefined : selectedDeviceData.map_point_id,
           registered: true,
           status: 'Online',
           battery_level: 100,
@@ -340,12 +341,11 @@ const Devices: React.FC = () => {
             
             setDevices(prev => prev.map(d => {
               if (d.device_id === parsed.device_id) {
-                const bat = parsed.data.battery ?? parsed.data.bateria ?? parsed.data.batt ?? parsed.data.bat;
                 const rssi = parsed.data.rssi;
                 return { 
                   ...d, 
                   status: 'online', // Telemetry arrival signifies active/online state
-                  battery_level: bat !== undefined ? bat : d.battery_level,
+                  battery_level: resolveBatteryPercent(parsed.data, d.battery_level ?? 100),
                   signal_strength: rssi !== undefined ? rssi : d.signal_strength,
                   last_seen: new Date().toISOString()
                 };
@@ -470,9 +470,7 @@ const Devices: React.FC = () => {
   const averageBattery = registeredNodes.length > 0
     ? Math.round(registeredNodes.reduce((sum, d) => {
         const t = telemetry[d.device_id] || {};
-        const bat = t.battery ?? t.bateria ?? t.batt ?? t.bat;
-        const currentBattery = bat !== undefined ? bat : d.battery_level;
-        return sum + (currentBattery || 0);
+        return sum + resolveBatteryPercent(t, d.battery_level ?? 100);
       }, 0) / registeredNodes.length)
     : 100;
 
@@ -549,11 +547,8 @@ const Devices: React.FC = () => {
 
   const renderDeviceCard = (device: Device) => {
     const deviceTelemetry = telemetry[device.device_id] || {};
-    const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
-    const temp = deviceTelemetry.temperature ?? deviceTelemetry.temperatura ?? deviceTelemetry.temp;
-    const hum = deviceTelemetry.humidity ?? deviceTelemetry.humedad ?? deviceTelemetry.hum;
     const currentRssi = deviceTelemetry.rssi !== undefined ? deviceTelemetry.rssi : device.signal_strength;
-    const currentBattery = bat !== undefined ? bat : device.battery_level;
+    const currentBattery = resolveBatteryPercent(deviceTelemetry, device.battery_level ?? 100);
     const signalColor = !currentRssi || currentRssi === 0 ? 'rgba(255,255,255,0.1)' : currentRssi > -60 ? '#22c55e' : currentRssi > -80 ? '#f59e0b' : '#ef4444';
     const deviceTypeLabel = device.type?.toLowerCase() === 'gateway' ? 'Gateway' : 'Sensor Node';
     const linkedPoint = mapPoints.find(p => p.id === device.map_point_id);
@@ -1031,13 +1026,12 @@ const Devices: React.FC = () => {
                     <TableBody>
                       {nodesForGw.map((device) => {
                         const deviceTelemetry = telemetry[device.device_id] || {};
-                        const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
                         const fillDistance = getValidFillDistance(deviceTelemetry);
                         const fillPct = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : undefined;
                         const isObstructed = deviceTelemetry.obstacle === 1;
                         const aq = deviceTelemetry.air_quality ?? '--';
                         const currentRssi = deviceTelemetry.rssi !== undefined ? deviceTelemetry.rssi : device.signal_strength;
-                        const currentBattery = bat !== undefined ? bat : device.battery_level;
+                        const currentBattery = resolveBatteryPercent(deviceTelemetry, device.battery_level ?? 100);
                         const currentSnr = deviceTelemetry.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5';
                         const linkedPoint = mapPoints.find(p => p.id === device.map_point_id);
                         const locationName = linkedPoint ? linkedPoint.name : 'Sin Ubicación';
@@ -1277,13 +1271,12 @@ const Devices: React.FC = () => {
                   <TableBody>
                     {independentNodes.map((device) => {
                       const deviceTelemetry = telemetry[device.device_id] || {};
-                      const bat = deviceTelemetry.battery ?? deviceTelemetry.bateria ?? deviceTelemetry.batt ?? deviceTelemetry.bat;
                       const fillDistance = getValidFillDistance(deviceTelemetry);
                       const fillPct = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : undefined;
                       const isObstructed = deviceTelemetry.obstacle === 1;
                       const aq = deviceTelemetry.air_quality ?? '--';
                       const currentRssi = deviceTelemetry.rssi !== undefined ? deviceTelemetry.rssi : device.signal_strength;
-                      const currentBattery = bat !== undefined ? bat : device.battery_level;
+                      const currentBattery = resolveBatteryPercent(deviceTelemetry, device.battery_level ?? 100);
                       const currentSnr = deviceTelemetry.snr !== undefined ? Number(deviceTelemetry.snr).toFixed(1) : '8.5';
                       const linkedPoint = mapPoints.find(p => p.id === device.map_point_id);
                       const locationName = linkedPoint ? linkedPoint.name : 'Sin Ubicación';
@@ -2169,17 +2162,17 @@ const Devices: React.FC = () => {
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                       <Box sx={{
-                        color: dev.type === 'Gateway' ? 'primary.main' : 'text.secondary',
+                        color: dev.type?.toLowerCase() === 'gateway' ? 'primary.main' : 'text.secondary',
                         display: 'flex'
                       }}>
-                        {dev.type === 'Gateway' ? <Router size={20} /> : <Cpu size={20} />}
+                        {dev.type?.toLowerCase() === 'gateway' ? <Router size={20} /> : <Cpu size={20} />}
                       </Box>
                       <Box>
                         <Typography sx={{ fontWeight: 850, fontSize: 13, color: 'text.primary', fontFamily: 'monospace', textTransform: 'uppercase' }}>
                           {dev.device_id}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 650, mt: 0.1 }}>
-                          {dev.type === 'Gateway' ? 'Gateway Concentrador' : 'Nodo Sensor (Buzón)'} • Señal: {dev.signal_strength || '-50'} dBm
+                          {dev.type?.toLowerCase() === 'gateway' ? 'Gateway Concentrador' : 'Nodo Sensor (Buzón)'} • Señal: {dev.signal_strength || '-50'} dBm
                         </Typography>
                       </Box>
                     </Box>

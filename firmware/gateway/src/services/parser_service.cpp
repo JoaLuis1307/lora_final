@@ -62,6 +62,11 @@ String parser_compact_to_json(const String& payload) {
 
     String json_key;
     if (key == "P")         json_key = "sequence";
+    else if (key == "TS")   json_key = "source_timestamp_ms";
+    else if (key == "SF")   json_key = "spreading_factor";
+    else if (key == "BD")   json_key = "bandwidth_hz";
+    else if (key == "CR")   json_key = "coding_rate";
+    else if (key == "TXP")  json_key = "tx_power_dbm";
     else if (key == "T")    json_key = "temperature";
     else if (key == "H")    json_key = "humidity";
     else if (key == "AQ")   json_key = "air_quality";

@@ -7,6 +7,7 @@ import {
   Battery, RefreshCcw, ArrowLeft, Signal, Info, Cpu
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
+import { resolveBatteryPercent } from '../utils/battery';
 import {
   Box, Paper, Typography, IconButton, ToggleButton, ToggleButtonGroup, Chip, Button, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
@@ -104,7 +105,7 @@ const Analysis: React.FC = () => {
           ...d,
           rssi: d.rssi ?? d.signal_strength ?? -75,
           snr: d.snr ?? 8.0,
-          battery: d.battery ?? d.battery_level ?? d.bateria ?? (95 - Math.min(15, Math.floor((d.sequence || 0) / 100)))
+          battery: resolveBatteryPercent(d as any, 95 - Math.min(15, Math.floor((d.sequence || 0) / 100)))
         }));
         setData(processed);
       } else {
@@ -146,10 +147,14 @@ const Analysis: React.FC = () => {
     const batts = data.map(d => d.battery).filter(v => v != null);
     const sigs = data.map(d => d.rssi).filter(v => v != null);
     const rssiSD = calculateSD(sigs);
+    const RANGE_MINUTES: Record<string, number> = {
+      '5m': 5, '15m': 15, '1h': 60, '5h': 300, '6h': 360, '24h': 1440, '7d': 10080
+    };
+    const rangeMinutes = RANGE_MINUTES[range] ?? 5;
     
     return {
       stability: Math.max(0, 100 - (rssiSD * 8)).toFixed(1),
-      transmissionRate: (data.length / (range === '5m' ? 5 : (range === '1h' ? 60 : 300))).toFixed(1),
+      transmissionRate: (data.length / rangeMinutes).toFixed(1),
       healthScore: Math.min(100, (batts[batts.length - 1] * 0.6 + (120 + sigs[sigs.length - 1]) * 0.4)).toFixed(0),
       uptime: '99.98%',
       anomalies: sigs.filter(s => Math.abs(s - (sigs.reduce((a, b) => a + b, 0) / sigs.length)) > rssiSD * 2).length

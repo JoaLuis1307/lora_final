@@ -44,7 +44,7 @@ export async function devicesRoutes(fastify: FastifyInstance, options: FastifyPl
       const newDevice = await devicesService.saveDevice(fastify, deviceData);
       
       // If registering a node, attempt to send a ping command through MQTT
-      if (newDevice.type === 'Nodo Sensor') {
+      if (newDevice.type?.toLowerCase() === 'nodo sensor') {
         const gatewayId = newDevice.gateway_id || 'gateway_01';
         fastify.mqtt.publishCommand(gatewayId, newDevice.device_id, { cmd: 'ping' });
       }

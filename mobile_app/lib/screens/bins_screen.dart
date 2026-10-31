@@ -306,7 +306,7 @@ class _BinsScreenState extends State<BinsScreen> {
                                             ),
                                             child: Row(
                                               children: [
-                                                _paramColumn('Temperatura', '${bin.temperature.toStringAsFixed(1)}°C', Icons.thermostat_outlined, const Color(0xFFFB923C), cs, rs),
+                                                _paramColumn('Calidad Aire', bin.airQuality != null ? '${bin.airQuality!.toStringAsFixed(0)} ppm' : '--', Icons.air, const Color(0xFF34A853), cs, rs),
                                                 SizedBox(width: rs(14)),
                                                 _paramColumn('Batería', boundDevice.id != -1 ? '${boundDevice.batteryLevel}%' : '--', Icons.battery_charging_full,
                                                     boundDevice.id != -1 && boundDevice.batteryLevel < 20 ? const Color(0xFFEF4444) : const Color(0xFF10B981), cs, rs),

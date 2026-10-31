@@ -27,7 +27,7 @@ const watchdogPlugin: FastifyPluginAsync = fp(async (fastify) => {
 
         const lastSeenDate = new Date(device.last_seen);
         const elapsed = now.getTime() - lastSeenDate.getTime();
-        const threshold = device.type === 'Gateway' ? GATEWAY_TIMEOUT_MS : NODE_TIMEOUT_MS;
+        const threshold = device.type?.toLowerCase() === 'gateway' ? GATEWAY_TIMEOUT_MS : NODE_TIMEOUT_MS;
 
         if (elapsed > threshold) {
           fastify.log.warn(`[WATCHDOG] Dispositivo [${device.device_id}] (${device.type}) inactivo por ${Math.round(elapsed / 1000)}s (umbral: ${threshold / 1000}s). Marcando como Offline.`);

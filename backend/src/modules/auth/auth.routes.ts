@@ -41,7 +41,7 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
       try {
         await request.jwtVerify();
       } catch (err) {
-        reply.send(err);
+        return reply.send(err);
       }
     }]
   }, async (request, reply) => {
@@ -54,7 +54,7 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
       try {
         await request.jwtVerify();
       } catch (err) {
-        reply.send(err);
+        return reply.send(err);
       }
     }]
   }, async (request, reply) => {
@@ -68,7 +68,7 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
       try {
         await request.jwtVerify();
       } catch (err) {
-        reply.send(err);
+        return reply.send(err);
       }
     }]
   }, async (request, reply) => {
@@ -90,7 +90,7 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
       try {
         await request.jwtVerify();
       } catch (err) {
-        reply.send(err);
+        return reply.send(err);
       }
     }]
   }, async (request, reply) => {

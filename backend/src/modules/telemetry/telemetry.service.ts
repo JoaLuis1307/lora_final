@@ -39,13 +39,21 @@ export const telemetryService = {
             pkts: latestFromInflux.pkts !== undefined && latestFromInflux.pkts !== null ? Number(latestFromInflux.pkts) : telemetry.pkts,
             crc_ok: telemetry.crc_ok ?? 1,
             crc_err: telemetry.crc_err ?? 0,
-            source_timestamp_ms: latestFromInflux.source_timestamp_ms !== undefined ? Number(latestFromInflux.source_timestamp_ms) : telemetry.source_timestamp_ms,
-            spreading_factor: latestFromInflux.spreading_factor !== undefined ? Number(latestFromInflux.spreading_factor) : telemetry.spreading_factor,
-            bandwidth_hz: latestFromInflux.bandwidth_hz !== undefined ? Number(latestFromInflux.bandwidth_hz) : telemetry.bandwidth_hz,
-            coding_rate: latestFromInflux.coding_rate !== undefined ? Number(latestFromInflux.coding_rate) : telemetry.coding_rate,
-            tx_power_dbm: latestFromInflux.tx_power_dbm !== undefined ? Number(latestFromInflux.tx_power_dbm) : telemetry.tx_power_dbm,
+            source_timestamp_ms: latestFromInflux.source_timestamp_ms !== undefined && latestFromInflux.source_timestamp_ms !== null ? Number(latestFromInflux.source_timestamp_ms) : telemetry.source_timestamp_ms,
+            spreading_factor: latestFromInflux.spreading_factor !== undefined && latestFromInflux.spreading_factor !== null ? Number(latestFromInflux.spreading_factor) : telemetry.spreading_factor,
+            bandwidth_hz: latestFromInflux.bandwidth_hz !== undefined && latestFromInflux.bandwidth_hz !== null ? Number(latestFromInflux.bandwidth_hz) : telemetry.bandwidth_hz,
+            coding_rate: latestFromInflux.coding_rate !== undefined && latestFromInflux.coding_rate !== null ? Number(latestFromInflux.coding_rate) : telemetry.coding_rate,
+            tx_power_dbm: latestFromInflux.tx_power_dbm !== undefined && latestFromInflux.tx_power_dbm !== null ? Number(latestFromInflux.tx_power_dbm) : telemetry.tx_power_dbm,
             battery: latestFromInflux.battery !== undefined && latestFromInflux.battery !== null ? Number(latestFromInflux.battery) : telemetry.battery,
-            battery_pct: latestFromInflux.battery_pct !== undefined && latestFromInflux.battery_pct !== null ? Number(latestFromInflux.battery_pct) : telemetry.battery_pct,
+            battery_pct: (() => {
+              const fromInflux = latestFromInflux.battery_pct;
+              if (fromInflux !== undefined && fromInflux !== null) {
+                const pct = Number(fromInflux);
+                // Older points stored 0 when only voltage was known: keep the computed SoC.
+                if (Number.isFinite(pct) && (pct > 0 || !telemetry.battery_pct)) return pct;
+              }
+              return telemetry.battery_pct;
+            })(),
             batt_current_ma: latestFromInflux.batt_current_ma !== undefined && latestFromInflux.batt_current_ma !== null ? Number(latestFromInflux.batt_current_ma) : telemetry.batt_current_ma,
             batt_power_mw: latestFromInflux.batt_power_mw !== undefined && latestFromInflux.batt_power_mw !== null ? Number(latestFromInflux.batt_power_mw) : telemetry.batt_power_mw,
             batt_remaining_mah: latestFromInflux.batt_remaining_mah !== undefined && latestFromInflux.batt_remaining_mah !== null ? Number(latestFromInflux.batt_remaining_mah) : telemetry.batt_remaining_mah,
@@ -143,6 +151,11 @@ export const telemetryService = {
             pkts: t.pkts,
             crc_ok: t.crc_ok,
             crc_err: t.crc_err,
+            source_timestamp_ms: Number(t.source_timestamp_ms ?? 0),
+            spreading_factor: Number(t.spreading_factor ?? 0),
+            bandwidth_hz: Number(t.bandwidth_hz ?? 0),
+            coding_rate: Number(t.coding_rate ?? 0),
+            tx_power_dbm: Number(t.tx_power_dbm ?? 0),
             battery: Number(t.battery ?? 0),
             battery_pct: Number(t.battery_pct ?? 0),
             batt_current_ma: Number(t.batt_current_ma ?? 0),
@@ -182,11 +195,16 @@ export const telemetryService = {
    */
   async getTelemetryHistory(fastify: FastifyInstance, deviceId: string, range: string = '24h'): Promise<Telemetry[]> {
     // Determine range minutes
-    let minutes = 1440; // 24h default
-    if (range === '1h') minutes = 60;
-    else if (range === '6h') minutes = 360;
-    else if (range === '24h') minutes = 1440;
-    else if (range === '7d') minutes = 10080;
+    const RANGE_MINUTES: Record<string, number> = {
+      '5m': 5,
+      '15m': 15,
+      '1h': 60,
+      '5h': 300,
+      '6h': 360,
+      '24h': 1440,
+      '7d': 10080,
+    };
+    const minutes = RANGE_MINUTES[range] ?? (parseInt(range, 10) || 1440);
 
     // 1. Try to read from InfluxDB if active
     if (influxService.isActive()) {
@@ -216,7 +234,16 @@ export const telemetryService = {
    * Fetch all telemetry stats for a given range, organized by device
    */
   async getAllStats(fastify: FastifyInstance, range: string = '5m'): Promise<Record<string, any[]>> {
-    const minutes = range === '1h' ? 60 : range === '6h' ? 360 : range === '24h' ? 1440 : range === '7d' ? 10080 : parseInt(range, 10) || 5;
+    const RANGE_MINUTES: Record<string, number> = {
+      '5m': 5,
+      '15m': 15,
+      '1h': 60,
+      '5h': 300,
+      '6h': 360,
+      '24h': 1440,
+      '7d': 10080,
+    };
+    const minutes = RANGE_MINUTES[range] ?? (parseInt(range, 10) || 5);
     const stats: Record<string, any[]> = {};
 
     // 1. Try InfluxDB first
@@ -233,7 +260,7 @@ export const telemetryService = {
     // 2. Fallback to SQL / JSON DB
     const devices = await devicesService.getDevices(fastify);
     for (const device of devices) {
-      const history = await this.getTelemetryHistory(fastify, device.device_id, '1h');
+      const history = await this.getTelemetryHistory(fastify, device.device_id, range);
       if (history.length > 0) {
         stats[device.device_id] = history;
       }
@@ -251,15 +278,46 @@ export const telemetryService = {
       const devices = await devicesService.getDevices(fastify);
       const device = devices.find(d => d.device_id === nodeId);
 
+      // 0. Resolve battery state-of-charge (0-100) BEFORE building the entry so
+      // `battery_pct` is never persisted as 0 when only voltage was reported.
+      // Priority: explicit percentage (battery_pct/BATP) > battery_level > percentage > voltage.
+      const toNumber = (value: unknown): number | undefined => {
+        const n = typeof value === 'string' ? Number(value) : value;
+        return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
+      };
+      const explicitPct = toNumber(data.battery_pct ?? data.BATP ?? data.batp ?? data.batteryPercent);
+      const explicitLevel = toNumber(data.battery_level);
+      const rawBattery = toNumber(data.battery);
+      const sequenceValue = toNumber(data.sequence) ?? 0;
+
+      let battery_level = 100;
+      if (explicitPct !== undefined) {
+        battery_level = Math.round(Math.max(0, Math.min(100, explicitPct)));
+      } else if (explicitLevel !== undefined) {
+        battery_level = Math.round(Math.max(0, Math.min(100, explicitLevel)));
+      } else if (rawBattery !== undefined) {
+        if (rawBattery > 5.0) {
+          // Viene directamente en porcentaje (ej. 85%)
+          battery_level = Math.round(Math.max(0, Math.min(100, rawBattery)));
+        } else if (rawBattery > 0) {
+          // Viene en formato voltaje (ej. 3.63V). Mapeamos de 3.0V (0%) a 4.2V (100%)
+          const percentage = ((rawBattery - 3.0) / (4.2 - 3.0)) * 100;
+          battery_level = Math.round(Math.max(0, Math.min(100, percentage)));
+        }
+      } else {
+        // Fallback estimado basado en secuencia
+        battery_level = 95 - Math.min(15, Math.floor(sequenceValue / 100));
+      }
+
       // 1. Format telemetry entry
       const telemetryEntry = {
         device_id: nodeId,
-        sequence: Number(data.sequence || 0),
+        sequence: sequenceValue,
         temperature: Number(data.temperature ?? 24),
         humidity: Number(data.humidity ?? 50),
         air_quality: Number(data.air_quality ?? 100),
-        ultrasonic_cm: Number(data.ultrasonic_cm ?? data.tof_cm ?? 80),
-        tof_cm: Number(data.tof_cm ?? data.ultrasonic_cm ?? 80),
+        ultrasonic_cm: Number(data.ultrasonic_cm ?? data.tof_cm ?? 0),
+        tof_cm: Number(data.tof_cm ?? data.ultrasonic_cm ?? 0),
         obstacle: Number(data.obstacle || 0),
         altitude: Number(data.altitude ?? 2335),
         satellites: Number(data.satellites ?? 10),
@@ -274,7 +332,7 @@ export const telemetryService = {
         coding_rate: Number(data.coding_rate ?? 0),
         tx_power_dbm: Number(data.tx_power_dbm ?? 0),
         battery: Number(data.battery ?? 0),
-        battery_pct: Number(data.battery_pct ?? data.BATP ?? 0),
+        battery_pct: battery_level,
         batt_current_ma: Number(data.batt_current_ma ?? 0),
         batt_power_mw: Number(data.batt_power_mw ?? 0),
         batt_remaining_mah: Number(data.batt_remaining_mah ?? 0),
@@ -296,27 +354,6 @@ export const telemetryService = {
         : telemetryEntry.ultrasonic_cm > 0
           ? telemetryEntry.ultrasonic_cm
           : undefined;
-      
-      // Extraer nivel de batería (porcentaje 0-100) de forma robusta
-      let battery_level = 100;
-      if (typeof data.BATP === 'number') {
-        battery_level = Math.round(data.BATP);
-      } else if (typeof data.batp === 'number') {
-        battery_level = Math.round(data.batp);
-      } else if (typeof data.battery === 'number') {
-        if (data.battery > 5.0) {
-          // Viene directamente en porcentaje (ej. 85%)
-          battery_level = Math.round(data.battery);
-        } else {
-          // Viene en formato voltaje (ej. 3.63V). Mapeamos de 3.0V (0%) a 4.2V (100%)
-          const voltage = data.battery;
-          const percentage = ((voltage - 3.0) / (4.2 - 3.0)) * 100;
-          battery_level = Math.round(Math.max(0, Math.min(100, percentage)));
-        }
-      } else {
-        // Fallback estimado basado en secuencia
-        battery_level = 95 - Math.min(15, Math.floor(telemetryEntry.sequence / 100));
-      }
       
       let status: 'Online' | 'Warning' | 'Offline' = 'Online';
       if (

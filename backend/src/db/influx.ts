@@ -60,6 +60,8 @@ class InfluxService {
         .intField('rssi', telemetry.rssi ?? 0)
         .floatField('snr', telemetry.snr ?? 0)
         .intField('pkts', telemetry.pkts ?? 0)
+        .intField('crc_ok', telemetry.crc_ok ?? 0)
+        .intField('crc_err', telemetry.crc_err ?? 0)
         .floatField('battery', telemetry.battery ?? 0)
         .floatField('battery_pct', telemetry.battery_pct ?? 0)
         .floatField('batt_current_ma', telemetry.batt_current_ma ?? 0)
@@ -141,8 +143,9 @@ class InfluxService {
         |> range(start: -7d)
         |> filter(fn: (r) => r["_measurement"] == "telemetry")
         |> filter(fn: (r) => r["device_id"] == "${deviceId}")
-        |> last()
         |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+        |> sort(columns: ["_time"], desc: true)
+        |> limit(n: 1)
     `;
 
     try {
@@ -166,6 +169,13 @@ class InfluxService {
               rssi: o.rssi,
               snr: o.snr,
               pkts: o.pkts,
+              crc_ok: o.crc_ok ?? 0,
+              crc_err: o.crc_err ?? 0,
+              source_timestamp_ms: o.source_timestamp_ms,
+              spreading_factor: o.spreading_factor,
+              bandwidth_hz: o.bandwidth_hz,
+              coding_rate: o.coding_rate,
+              tx_power_dbm: o.tx_power_dbm,
               battery: o.battery ?? 0,
               battery_pct: o.battery_pct ?? 0,
               batt_current_ma: o.batt_current_ma ?? 0,
@@ -237,6 +247,13 @@ class InfluxService {
               rssi: o.rssi,
               snr: o.snr,
               pkts: o.pkts,
+              crc_ok: o.crc_ok ?? 0,
+              crc_err: o.crc_err ?? 0,
+              source_timestamp_ms: o.source_timestamp_ms,
+              spreading_factor: o.spreading_factor,
+              bandwidth_hz: o.bandwidth_hz,
+              coding_rate: o.coding_rate,
+              tx_power_dbm: o.tx_power_dbm,
               battery: o.battery ?? 0,
               battery_pct: o.battery_pct ?? 0,
               batt_current_ma: o.batt_current_ma ?? 0,
@@ -306,6 +323,13 @@ class InfluxService {
               rssi: o.rssi,
               snr: o.snr,
               pkts: o.pkts,
+              crc_ok: o.crc_ok ?? 0,
+              crc_err: o.crc_err ?? 0,
+              source_timestamp_ms: o.source_timestamp_ms,
+              spreading_factor: o.spreading_factor,
+              bandwidth_hz: o.bandwidth_hz,
+              coding_rate: o.coding_rate,
+              tx_power_dbm: o.tx_power_dbm,
               battery: o.battery ?? 0,
               battery_pct: o.battery_pct ?? 0,
               batt_current_ma: o.batt_current_ma ?? 0,

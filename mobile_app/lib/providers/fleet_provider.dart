@@ -46,11 +46,12 @@ class FleetProvider with ChangeNotifier {
 
   Future<String> _getWsUrl() async {
     final baseUrl = await StorageService.getApiBaseUrl();
+    final secure = baseUrl.startsWith('https://');
     final host = baseUrl
-        .replaceFirst('http://', '')
-        .replaceFirst('https://', '')
-        .replaceFirst('/api/v1', '');
-    return 'ws://$host/ws';
+        .replaceFirst(RegExp(r'^https?://'), '')
+        .replaceFirst(RegExp(r'/api/v1/?$'), '')
+        .replaceFirst(RegExp(r'/$'), '');
+    return '${secure ? 'wss' : 'ws'}://$host/ws';
   }
 
   void _connectWebSocket() async {

@@ -145,12 +145,12 @@ export const devicesService = {
 
     // Cascading offline state: If this device is a Gateway and its status is being updated to Offline,
     // all connected sensor nodes must also be marked as Offline in the DB and broadcasted.
-    if (dev.type === 'Gateway' && dev.status?.toLowerCase() === 'offline') {
+    if (dev.type?.toLowerCase() === 'gateway' && dev.status?.toLowerCase() === 'offline') {
       try {
         const allDevices = await this.getDevices(fastify);
         const children = allDevices.filter(d => 
           d.gateway_id?.toLowerCase() === deviceId.toLowerCase() && 
-          d.type === 'Nodo Sensor' && 
+          d.type?.toLowerCase() !== 'gateway' &&
           d.status?.toLowerCase() !== 'offline'
         );
 

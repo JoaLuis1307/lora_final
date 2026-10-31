@@ -140,9 +140,9 @@ class _FleetScreenState extends State<FleetScreen> {
                           color: statusColor,
                         ),
                         _buildBottomSheetStat(
-                          icon: Icons.thermostat_outlined,
-                          label: 'Temp.',
-                          value: '${bin.temperature.toStringAsFixed(1)}°C',
+                          icon: Icons.air,
+                          label: 'Calidad Aire',
+                          value: bin.airQuality != null ? '${bin.airQuality!.toStringAsFixed(0)} ppm' : '--',
                           color: cs.secondary,
                         ),
                         _buildBottomSheetStat(

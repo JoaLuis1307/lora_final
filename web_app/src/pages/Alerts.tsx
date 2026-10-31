@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { deviceService, Device } from '../services/deviceService';
 import { calculateFillPercentage, getValidFillDistance } from '../utils/fillCalculator';
+import { resolveBatteryPercent } from '../utils/battery';
 import {
   Box, Paper, Typography, IconButton, InputAdornment, TextField, Chip, Button, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, MenuItem, Select, FormControl, InputLabel
@@ -88,7 +89,7 @@ const Alerts: React.FC = () => {
 
       if (dt) {
         // 2. Battery Alert (< 20%)
-        const batt = dt.battery ?? dt.battery_level ?? dt.bateria ?? 100;
+        const batt = resolveBatteryPercent(dt, 100);
         if (batt < 20) {
           list.push({
             id: `INC-${dev.device_id}-BATTERY`,
@@ -96,7 +97,7 @@ const Alerts: React.FC = () => {
             sourceName: dev.name,
             type: 'Energía',
             severity: batt < 10 ? 'critical' : 'warning',
-            condition: `Voltaje de batería crítico (${batt}%)`,
+            condition: `Batería baja (${batt}%)`,
             timestamp: dt.timestamp || new Date().toISOString(),
             lat: dev.latitude,
             lng: dev.longitude

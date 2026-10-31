@@ -22,6 +22,7 @@ import { getWsUrl } from '../../../services/config';
 import { useAuth } from '../../../context/AuthContext';
 import { applyTheme, getStoredTheme } from '../../../utils/theme';
 import { calculateFillPercentage, getValidFillDistance } from '../../../utils/fillCalculator';
+import { resolveBatteryPercent } from '../../../utils/battery';
 import { getMapStyle, searchPlaces, fetchOsrmRoute } from '../../../services/mapStyles';
 
 interface MapPreviewProps {
@@ -422,14 +423,14 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     if (fillDistance !== undefined) {
       fillPct = calculateFillPercentage(fillDistance);
     }
-    const showBinIndicator = point.type === 'bin' || point.type === 'Reciclaje' || linkedDevice?.type === 'Nodo Sensor';
+    const showBinIndicator = point.type === 'bin' || point.type === 'Reciclaje' || linkedDevice?.type?.toLowerCase() === 'nodo sensor';
 
     // Status Badges
     const statusDotColor = isOnline ? '#34a853' : '#5f6368';
     const statusBgColor = isOnline ? (isDark ? 'rgba(196,252,209,0.08)' : 'rgba(24,128,56,0.08)') : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
     const statusTextColor = isOnline ? (isDark ? '#34a853' : '#137333') : (isDark ? '#c4c7c5' : '#5f6368');
 
-    const typeLabel = linkedDevice?.type === 'gateway' ? 'Gateway Concentrador' : 'Nodo Sensor LoRa P2P';
+    const typeLabel = linkedDevice?.type?.toLowerCase() === 'gateway' ? 'Gateway Concentrador' : 'Nodo Sensor LoRa P2P';
 
     // Coordinates display formatting
     const latStr = point.latitude.toFixed(5);
@@ -620,7 +621,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
         fillPct = calculateFillPercentage(fillDistance);
       }
       const isFull = fillPct >= 90 || dt?.is_full === 1;
-      const batt = dt?.battery ?? dt?.battery_level ?? linkedDevice?.battery_level ?? 0;
+      const batt = dt ? resolveBatteryPercent(dt, linkedDevice?.battery_level ?? 0) : (linkedDevice?.battery_level ?? 0);
       const cached = markersCache.current.get(id);
       const el = cached?.element || document.createElement('div');
       if (!cached) el.className = 'db-marker';
@@ -1080,7 +1081,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({
               const linkedDevice = devices.find(d => d.map_point_id === point.id);
               const isOnline = linkedDevice?.status?.toLowerCase() === 'online';
               const dt = linkedDevice ? telemetry[linkedDevice.device_id] : null;
-              const battery = dt?.battery ?? linkedDevice?.battery_level ?? 85;
+              const battery = dt ? resolveBatteryPercent(dt, linkedDevice?.battery_level ?? 85) : (linkedDevice?.battery_level ?? 85);
               const fillDistance = getValidFillDistance(dt);
               const fillLevel = fillDistance !== undefined ? calculateFillPercentage(fillDistance) : (dt?.fill_level ?? 0);
               const isFull = fillLevel >= 90 || dt?.is_full === 1;
