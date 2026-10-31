@@ -30,16 +30,18 @@ export const devicesService = {
     signal_strength?: number;
     gateway_id?: string | null;
   }) {
+    const normalizedDeviceId = dev.device_id.trim();
     const registered = await this.getDevices(fastify);
-    if (registered.some(d => d.device_id.toLowerCase() === dev.device_id.toLowerCase())) {
+    if (registered.some(d => d.device_id.trim().toLowerCase() === normalizedDeviceId.toLowerCase())) {
       return; // Already registered
     }
 
     const gatewayId = dev.gateway_id?.trim() || null;
-    const discoveryKey = dev.device_id.toLowerCase();
+    const discoveryKey = normalizedDeviceId.toLowerCase();
     const isNewDiscovery = !this.discoveredDevices.has(discoveryKey);
-    this.discoveredDevices.set(dev.device_id.toLowerCase(), {
+    this.discoveredDevices.set(discoveryKey, {
       ...dev,
+      device_id: normalizedDeviceId,
       gateway_id: gatewayId,
       last_seen: new Date().toISOString()
     });
@@ -48,7 +50,7 @@ export const devicesService = {
     if (isNewDiscovery) {
       fastify.broadcast({
         event: 'device_discovered',
-        device_id: dev.device_id,
+        device_id: normalizedDeviceId,
         data: {
           device_id: dev.device_id,
           type: dev.type,

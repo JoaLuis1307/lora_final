@@ -148,16 +148,20 @@ const Devices: React.FC = () => {
       const merged = [...prev];
       incoming.forEach(device => {
         if (!device.device_id) return;
+        const normalizedId = device.device_id.trim();
         const index = merged.findIndex(
-          existing => existing.device_id?.toLowerCase() === device.device_id?.toLowerCase()
+          existing => existing.device_id?.trim().toLowerCase() === normalizedId.toLowerCase()
         );
         if (index >= 0) {
-          merged[index] = { ...merged[index], ...device };
+          merged[index] = { ...merged[index], ...device, device_id: normalizedId };
         } else {
-          merged.push(device);
+          merged.push({ ...device, device_id: normalizedId });
         }
       });
-      return merged;
+      return merged.filter((device, index, list) => {
+        const id = device.device_id?.trim().toLowerCase();
+        return id && list.findIndex(item => item.device_id?.trim().toLowerCase() === id) === index;
+      });
     });
 
     if (openDialog) {
