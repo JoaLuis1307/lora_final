@@ -233,10 +233,10 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     return t === 'light' ? 'bright' : 'dark';
   });
   const [layerAnchor, setLayerAnchor] = useState<HTMLElement | null>(null);
-  const [viewMode, setViewMode] = useState<'2D' | '3D'>('3D');
+  const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; lngLat: [number, number] } | null>(null);
-  const [bearing, setBearing] = useState(-17);
-  const [pitch, setPitch] = useState(45);
+  const [bearing, setBearing] = useState(0);
+  const [pitch, setPitch] = useState(0);
   const [coords, setCoords] = useState({ lat: -16.409, lng: -71.537 });
   const [dbPoints, setDbPoints] = useState<MapPoint[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -893,7 +893,14 @@ const MapPreview: React.FC<MapPreviewProps> = ({
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: getMapStyle(activeLayer, currentTheme) as any,
-      center, zoom: 14, maxZoom: 19, pitch: 45, bearing: -17, attributionControl: false,
+      center,
+      zoom: 13,
+      maxZoom: 19,
+      pitch: 0,
+      bearing: 0,
+      attributionControl: false,
+      fadeDuration: 0,
+      renderWorldCopies: false,
     });
     // Recordamos el estilo ya aplicado al crear el mapa: así el efecto de
     // sincronización no vuelve a llamar setStyle justo después del montaje
@@ -993,7 +1000,22 @@ const MapPreview: React.FC<MapPreviewProps> = ({
         `}</style>
 
         {/* Map Container */}
-        <Box ref={mapContainer} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+        <Box
+          ref={mapContainer}
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            '& .maplibregl-map, & .maplibregl-canvas-container, & .maplibregl-canvas': {
+              width: '100%',
+              height: '100%',
+            },
+            '& .maplibregl-canvas': {
+              display: 'block',
+            },
+          }}
+        />
 
         {/* Context Menu */}
         <Menu

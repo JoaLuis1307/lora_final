@@ -32,12 +32,23 @@ export const getMapStyle = (layer: string, theme: 'light' | 'dark'): any => {
         type: 'raster',
         tiles: [ESRI_SATELLITE],
         tileSize: 256,
+        maxzoom: 19,
         attribution: 'Imágenes © Esri, Maxar, Earthstar Geographics',
       },
     };
 
     const layers: any[] = [
-      { id: 'satellite-layer', type: 'raster', source: 'satellite-tiles', minzoom: 0, maxzoom: 19 },
+      {
+        id: 'satellite-layer',
+        type: 'raster',
+        source: 'satellite-tiles',
+        minzoom: 0,
+        paint: {
+          // Keep the previous tile visible while a zoomed tile is loading.
+          'raster-fade-duration': 0,
+          'raster-resampling': 'linear',
+        },
+      },
     ];
 
     if (layer === 'hybrid') {
@@ -45,9 +56,19 @@ export const getMapStyle = (layer: string, theme: 'light' | 'dark'): any => {
         type: 'raster',
         tiles: [ESRI_LABELS],
         tileSize: 256,
+        maxzoom: 19,
         attribution: 'Etiquetas © Esri',
       };
-      layers.push({ id: 'labels-layer', type: 'raster', source: 'esri-labels', minzoom: 0, maxzoom: 19 });
+      layers.push({
+        id: 'labels-layer',
+        type: 'raster',
+        source: 'esri-labels',
+        minzoom: 0,
+        paint: {
+          'raster-fade-duration': 0,
+          'raster-resampling': 'linear',
+        },
+      });
     }
 
     return { version: 8, sources, layers };
