@@ -82,6 +82,12 @@ function calcStats(arr: number[]) {
 
 const percentage = (value: number) => `${Math.max(0, Math.min(100, value)).toFixed(1)}%`;
 
+const reliabilityStatus = (score: number) => {
+  if (score >= 90) return { label: 'Excelente', color: 'success' as const, tone: '#34a853' };
+  if (score >= 75) return { label: 'Estable', color: 'warning' as const, tone: '#f9ab00' };
+  return { label: 'Requiere atención', color: 'error' as const, tone: '#ea4335' };
+};
+
 function calculateReliability(devices: Device[], data: Record<string, any[]>) {
   const entries = Object.values(data).flat();
   const signalValues = entries.map(e => Number(e.rssi)).filter(v => Number.isFinite(v) && v < 0);
@@ -777,48 +783,85 @@ const Stats: React.FC = () => {
           </Box>
 
           <Paper sx={{ ...glassSx, p: 2.5 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2, flexWrap: 'wrap', mb: 2.5 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2, flexWrap: 'wrap', mb: 2 }}>
               <Box>
-                <Typography variant="body2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Confiabilidad de datos y red
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Calculada con las muestras del rango seleccionado · {reliability.samples} muestras
-                </Typography>
-              </Box>
-              <Chip
-                icon={<ShieldCheck size={15} />}
-                label={`Puntaje ${reliability.score.toFixed(0)}/100`}
-                color={reliability.score >= 90 ? 'success' : reliability.score >= 75 ? 'warning' : 'error'}
-                variant="outlined"
-                sx={{ fontWeight: 800 }}
-              />
-            </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)', lg: 'repeat(6, 1fr)' }, gap: 1.5 }}>
-              {[
-                { label: 'Entrega estimada', value: reliability.delivery === null ? 'N/D' : percentage(reliability.delivery), icon: <Activity size={15} />, color: reliability.delivery === null || reliability.delivery >= 95 ? 'success.main' : 'warning.main' },
-                { label: 'CRC correcto', value: reliability.crcRate === null ? 'N/D' : percentage(reliability.crcRate), icon: <ShieldCheck size={15} />, color: reliability.crcRate === null || reliability.crcRate >= 98 ? 'success.main' : 'warning.main' },
-                { label: 'Disponibilidad', value: percentage(reliability.availability), icon: <Wifi size={15} />, color: reliability.availability >= 95 ? 'success.main' : 'warning.main' },
-                { label: 'RSSI promedio', value: reliability.rssi === null ? 'N/D' : `${reliability.rssi.toFixed(1)} dBm`, icon: <Wifi size={15} />, color: reliability.radio >= 75 ? 'success.main' : 'warning.main' },
-                { label: 'SNR promedio', value: reliability.snr === null ? 'N/D' : `${reliability.snr.toFixed(1)} dB`, icon: <AlertTriangle size={15} />, color: reliability.radio >= 75 ? 'success.main' : 'warning.main' },
-                { label: 'Dato más reciente', value: reliability.freshnessSeconds === null ? 'N/D' : reliability.freshnessSeconds < 60 ? `${Math.round(reliability.freshnessSeconds)} s` : `${Math.round(reliability.freshnessSeconds / 60)} min`, icon: <Timer size={15} />, color: reliability.freshness >= 75 ? 'success.main' : 'warning.main' },
-                { label: 'SF / BW / CR', value: reliability.spreadingFactor === null ? 'N/D' : `SF${reliability.spreadingFactor} / ${reliability.bandwidthHz ? `${reliability.bandwidthHz / 1000}k` : '--'} / 4/${reliability.codingRate || '--'}`, icon: <Cpu size={15} />, color: 'info.main' },
-                { label: 'Intervalo medio', value: reliability.intervalSeconds === null ? 'N/D' : `${reliability.intervalSeconds.toFixed(1)} s`, icon: <Timer size={15} />, color: reliability.intervalSeconds === null || reliability.intervalSeconds < 45 ? 'success.main' : 'warning.main' },
-                { label: 'Potencia TX', value: reliability.txPowerDbm === null ? 'N/D' : `${reliability.txPowerDbm} dBm`, icon: <Zap size={15} />, color: 'info.main' },
-              ].map(metric => (
-                <Box key={metric.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover', minWidth: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: metric.color, mb: 0.75 }}>
-                    {metric.icon}
-                    <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 800, fontSize: 9.5 }}>
-                      {metric.label}
-                    </Typography>
-                  </Box>
-                  <Typography sx={{ fontWeight: 900, fontFamily: 'monospace', fontSize: { xs: 14, sm: 16 } }}>
-                    {metric.value}
+                  <Typography variant="body2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Activity size={17} />
+                    Salud de la red LoRa
                   </Typography>
-                </Box>
-              ))}
+                  <Typography variant="caption" color="text.secondary">
+                    Indicadores de entrega, radio y disponibilidad · {reliability.samples} muestras analizadas
+                  </Typography>
+              </Box>
+              {(() => {
+                  const status = reliabilityStatus(reliability.score);
+                  return (
+                    <Chip
+                      icon={<ShieldCheck size={15} />}
+                      label={`${status.label} · ${reliability.score.toFixed(0)}/100`}
+                      color={status.color}
+                      variant="outlined"
+                      sx={{ fontWeight: 800 }}
+                    />
+                  );
+              })()}
             </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+              <Box sx={{ flex: 1, height: 7, borderRadius: 10, bgcolor: 'action.hover', overflow: 'hidden' }}>
+                  <Box sx={{ width: `${Math.min(100, Math.max(0, reliability.score))}%`, height: '100%', bgcolor: reliabilityStatus(reliability.score).tone, borderRadius: 10, transition: 'width 0.4s ease' }} />
+              </Box>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', minWidth: 42, textAlign: 'right' }}>
+                  {reliability.score.toFixed(0)}%
+              </Typography>
+            </Box>
+            {[
+              {
+                  title: 'Entrega e integridad',
+                  icon: <ShieldCheck size={14} />,
+                  metrics: [
+                    { label: 'Entrega estimada', value: reliability.delivery === null ? 'N/D' : percentage(reliability.delivery), color: reliability.delivery === null || reliability.delivery >= 95 ? '#34a853' : '#f9ab00' },
+                    { label: 'CRC correcto', value: reliability.crcRate === null ? 'N/D' : percentage(reliability.crcRate), color: reliability.crcRate === null || reliability.crcRate >= 98 ? '#34a853' : '#f9ab00' },
+                    { label: 'Muestras', value: reliability.samples.toLocaleString('es-PE'), color: '#1a73e8' },
+                  ],
+              },
+              {
+                  title: 'Calidad de radio',
+                  icon: <Wifi size={14} />,
+                  metrics: [
+                    { label: 'RSSI medio', value: reliability.rssi === null ? 'N/D' : `${reliability.rssi.toFixed(1)} dBm`, color: reliability.radio >= 75 ? '#34a853' : '#f9ab00' },
+                    { label: 'SNR medio', value: reliability.snr === null ? 'N/D' : `${reliability.snr.toFixed(1)} dB`, color: reliability.radio >= 75 ? '#34a853' : '#f9ab00' },
+                    { label: 'Parámetros', value: reliability.spreadingFactor === null ? 'N/D' : `SF${reliability.spreadingFactor} · ${reliability.bandwidthHz ? `${reliability.bandwidthHz / 1000} kHz` : '--'} · 4/${reliability.codingRate || '--'}`, color: '#1a73e8' },
+                  ],
+              },
+              {
+                  title: 'Operación y tiempo',
+                  icon: <Timer size={14} />,
+                  metrics: [
+                    { label: 'Disponibilidad', value: percentage(reliability.availability), color: reliability.availability >= 95 ? '#34a853' : '#f9ab00' },
+                    { label: 'Dato más reciente', value: reliability.freshnessSeconds === null ? 'N/D' : reliability.freshnessSeconds < 60 ? `${Math.round(reliability.freshnessSeconds)} s` : `${Math.round(reliability.freshnessSeconds / 60)} min`, color: reliability.freshness >= 75 ? '#34a853' : '#f9ab00' },
+                    { label: 'Intervalo / TX', value: reliability.intervalSeconds === null ? 'N/D' : `${reliability.intervalSeconds.toFixed(1)} s · ${reliability.txPowerDbm ?? '--'} dBm`, color: '#1a73e8' },
+                  ],
+              },
+            ].map(group => (
+              <Box key={group.title} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
+                  <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.secondary', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', mb: 1 }}>
+                    {group.icon}
+                    {group.title}
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.25 }}>
+                    {group.metrics.map(metric => (
+                      <Box key={metric.label} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider', minWidth: 0 }}>
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', fontWeight: 800, fontSize: 9.5, mb: 0.6 }}>
+                          {metric.label}
+                        </Typography>
+                        <Typography sx={{ fontWeight: 900, fontFamily: 'monospace', fontSize: { xs: 14, sm: 16 }, color: metric.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {metric.value}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+              </Box>
+            ))}
           </Paper>
 
           {/* Filtering, Search and Sort Panel */}
