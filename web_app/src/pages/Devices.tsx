@@ -141,6 +141,31 @@ const Devices: React.FC = () => {
     }
   };
 
+  const updateDiscoveredDevices = (incoming: Partial<Device>[], openDialog = false) => {
+    if (incoming.length === 0) return;
+
+    setDiscoveredDevices(prev => {
+      const merged = [...prev];
+      incoming.forEach(device => {
+        if (!device.device_id) return;
+        const index = merged.findIndex(
+          existing => existing.device_id?.toLowerCase() === device.device_id?.toLowerCase()
+        );
+        if (index >= 0) {
+          merged[index] = { ...merged[index], ...device };
+        } else {
+          merged.push(device);
+        }
+      });
+      return merged;
+    });
+
+    if (openDialog) {
+      setScanning(false);
+      setDiscoverDialogOpen(true);
+    }
+  };
+
   const handleOpenAddDialog = () => {
     setIsDiscoveryRegistration(false);
     setIsEditMode(false);
@@ -264,14 +289,16 @@ const Devices: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [devicesData, telemetryData, pointsData] = await Promise.all([
+        const [devicesData, telemetryData, pointsData, discoveredData] = await Promise.all([
           deviceService.getDevices(),
           deviceService.getLatestTelemetry(),
-          mapService.getPoints().catch(() => [])
+          mapService.getPoints().catch(() => []),
+          deviceService.getDiscoveredDevices()
         ]);
         setDevices(devicesData);
         setTelemetry(telemetryData);
         setMapPoints(pointsData);
+        updateDiscoveredDevices(discoveredData);
       } catch (err) {
         console.error('Error fetching devices:', err);
       } finally {
@@ -352,11 +379,7 @@ const Devices: React.FC = () => {
           // 4. Real-Time API Device Discovery Event
           else if (parsed.event === 'device_discovered' && parsed.device_id && parsed.data) {
             console.log('[DEVICES WEBSOCKET] Nuevo dispositivo descubierto en tiempo real:', parsed.device_id, parsed.data);
-            
-            setDiscoveredDevices(prev => {
-              if (prev.some(d => d.device_id?.toLowerCase() === parsed.device_id.toLowerCase())) return prev;
-              return [...prev, parsed.data];
-            });
+            updateDiscoveredDevices([parsed.data], true);
           }
         } catch (err) {
           console.error('[DEVICES WEBSOCKET] Error procesando mensaje de red en tiempo real:', err);

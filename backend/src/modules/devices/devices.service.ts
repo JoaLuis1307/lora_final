@@ -36,6 +36,8 @@ export const devicesService = {
     }
 
     const gatewayId = dev.gateway_id?.trim() || null;
+    const discoveryKey = dev.device_id.toLowerCase();
+    const isNewDiscovery = !this.discoveredDevices.has(discoveryKey);
     this.discoveredDevices.set(dev.device_id.toLowerCase(), {
       ...dev,
       gateway_id: gatewayId,
@@ -43,18 +45,20 @@ export const devicesService = {
     });
 
     // Broadcast discovery notification over WS in real time
-    fastify.broadcast({
-      event: 'device_discovered',
-      device_id: dev.device_id,
-      data: {
+    if (isNewDiscovery) {
+      fastify.broadcast({
+        event: 'device_discovered',
         device_id: dev.device_id,
-        type: dev.type,
-        last_seen: new Date().toISOString(),
-        battery_level: dev.battery_level,
-        signal_strength: dev.signal_strength,
-        gateway_id: dev.gateway_id
-      }
-    });
+        data: {
+          device_id: dev.device_id,
+          type: dev.type,
+          last_seen: new Date().toISOString(),
+          battery_level: dev.battery_level,
+          signal_strength: dev.signal_strength,
+          gateway_id: gatewayId
+        }
+      });
+    }
   },
 
   // === Devices DB Operations ===
