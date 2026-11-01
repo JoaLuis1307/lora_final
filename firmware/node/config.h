@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // Identificacion del nodo
-#define NODE_ID         "N1"
+#define NODE_ID         "N3"
 #define NODE_NUM        1
 #define NODE_ID_MAX_LEN 15   // Debe coincidir con la validacion del gateway
 
