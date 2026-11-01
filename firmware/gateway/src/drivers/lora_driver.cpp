@@ -52,6 +52,33 @@ void lora_init(float freq_hz) {
   Serial.println("dBm");
 }
 
+// La libreria LoRa no expone getSpreadingFactor()/readRegister() como publicos
+// en todas sus versiones. Para el chequeo de salud se leen los registros del
+// SX1278 directamente por SPI, con los mismos pines del gateway.
+static uint8_t lora_read_register(uint8_t address) {
+  SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(LORA_CS, LOW);
+  SPI.transfer(address & 0x7F);          // bit 7 = 0 -> lectura
+  uint8_t value = SPI.transfer(0x00);
+  digitalWrite(LORA_CS, HIGH);
+  SPI.endTransaction();
+  return value;
+}
+
+// RegVersion (0x42) devuelve 0x12 en el SX1276/77/78/79: confirma que el chip
+// responde por SPI. Ademas se comprueba que ModemConfig2 (0x20) conserve el SF
+// y el CRC de radio: si el modulo se reinicia por una caida de alimentacion,
+// RegVersion sigue valiendo 0x12 pero la configuracion vuelve a los valores por
+// defecto.
+static bool lora_is_healthy() {
+  if (lora_read_register(0x42) != 0x12) return false;
+
+  uint8_t modem_config2 = lora_read_register(0x20);
+  if (((modem_config2 >> 4) & 0x0F) != LORA_SPREADING_FACTOR) return false;
+  if ((modem_config2 & 0x04) == 0) return false; // CRC de radio apagado
+  return true;
+}
+
 void lora_check() {
   static unsigned long last = 0;
   unsigned long now = millis();
@@ -60,9 +87,8 @@ void lora_check() {
 
   // LoRa.random() lee el registro 0x2C (RSSI wideband), que solo es valido en
   // modo FSK: en modo LoRa puede devolver 0 y provocar reinicios falsos cada
-  // 3 segundos. Es mejor comprobar un registro LoRa real: si el SPI responde,
-  // ModemConfig2 devuelve el SF configurado.
-  bool dead = (LoRa.getSpreadingFactor() != LORA_SPREADING_FACTOR);
+  // 3 segundos. Se comprueban directamente registros LoRa reales.
+  bool dead = !lora_is_healthy();
   if (dead) {
     if (lora_alive) {
       Serial.println("LoRa no responde, reintentando...");
