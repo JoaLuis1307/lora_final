@@ -21,6 +21,19 @@ static char cfg_mqtt_pass[32] = "";
 static char cfg_gateway_id[32] = "gateway_01";
 static int cfg_lora_freq = 433;
 
+// El gateway_id forma parte del topic MQTT: no puede contener separadores de
+// nivel ni comodines, y debe caber en el buffer de 32 bytes.
+static bool gateway_id_is_valid(const char* id) {
+  if (id == nullptr) return false;
+  size_t len = strlen(id);
+  if (len == 0 || len > 30) return false;
+  for (size_t i = 0; i < len; i++) {
+    char c = id[i];
+    if (c == '/' || c == '+' || c == '#' || c == ' ' || c == '|' || c == ',') return false;
+  }
+  return true;
+}
+
 static const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8">
@@ -234,7 +247,7 @@ Herramientas</a>
 <div class="actions"><button class="btn btn-primary" onclick="saveMqtt()">Aplicar Cambios</button></div>
 </div></div>
 <div class="card"><div class="card-head">Configuracion LoRa</div><div class="card-body">
-<div class="fg"><label>Frecuencia de Operacion (MHz)</label><input id="clf" type="number" placeholder="433"><div class="help">Debe coincidir con la frecuencia de los nodos remotos</div></div>
+<div class="fg"><label>Frecuencia de Operacion (MHz)</label><input id="clf" type="number" min="410" max="525" placeholder="433"><div class="help">Debe coincidir con los nodos. Rango del SX1278: 410-525 MHz</div></div>
 <div class="actions"><button class="btn btn-primary" onclick="saveLora()">Aplicar Cambios</button></div>
 </div></div>
 </div>
@@ -369,7 +382,13 @@ static void config_load() {
   strncpy(cfg_mqtt_user, prefs.getString("m_usr", MQTT_USER).c_str(), sizeof(cfg_mqtt_user) - 1);
   strncpy(cfg_mqtt_pass, prefs.getString("m_psw", MQTT_PASS).c_str(), sizeof(cfg_mqtt_pass) - 1);
   strncpy(cfg_gateway_id, prefs.getString("g_id", MQTT_GATEWAY_ID).c_str(), sizeof(cfg_gateway_id) - 1);
+  if (!gateway_id_is_valid(cfg_gateway_id)) {
+    strncpy(cfg_gateway_id, MQTT_GATEWAY_ID, sizeof(cfg_gateway_id) - 1);
+  }
   cfg_lora_freq = prefs.getInt("l_freq", (int)(LORA_FREQ / 1000000));
+  if (cfg_lora_freq < LORA_FREQ_MIN_MHZ || cfg_lora_freq > LORA_FREQ_MAX_MHZ) {
+    cfg_lora_freq = (int)(LORA_FREQ / 1000000);
+  }
   prefs.end();
 }
 
@@ -434,6 +453,25 @@ static void handle_config_post() {
   String body = server.arg("plain");
   String val;
 
+  // Validar primero los campos que forman parte de la radio o de los topics
+  // MQTT, para no guardar una configuracion que rompa el enlace LoRa.
+  String new_gw_id = parser_extract_value(body.c_str(), "gateway_id");
+  if (new_gw_id.length() > 0 && !gateway_id_is_valid(new_gw_id.c_str())) {
+    server.send(400, "application/json",
+      "{\"ok\":false,\"error\":\"gateway_id invalido: use hasta 30 caracteres sin / + # espacios | ,\"}");
+    return;
+  }
+
+  String new_freq = parser_extract_value(body.c_str(), "lora_freq");
+  if (new_freq.length() > 0) {
+    int f = new_freq.toInt();
+    if (f < LORA_FREQ_MIN_MHZ || f > LORA_FREQ_MAX_MHZ) {
+      server.send(400, "application/json",
+        "{\"ok\":false,\"error\":\"Frecuencia fuera de rango para el SX1278 (410-525 MHz)\"}");
+      return;
+    }
+  }
+
   val = parser_extract_value(body.c_str(), "wifi_ssid");
   if (val.length() > 0) strncpy(cfg_wifi_ssid, val.c_str(), sizeof(cfg_wifi_ssid) - 1);
 
@@ -444,7 +482,10 @@ static void handle_config_post() {
   if (val.length() > 0) strncpy(cfg_mqtt_server, val.c_str(), sizeof(cfg_mqtt_server) - 1);
 
   val = parser_extract_value(body.c_str(), "mqtt_port");
-  if (val.length() > 0) cfg_mqtt_port = val.toInt();
+  if (val.length() > 0) {
+    int port = val.toInt();
+    if (port > 0 && port <= 65535) cfg_mqtt_port = port;
+  }
 
   val = parser_extract_value(body.c_str(), "mqtt_user");
   if (val.length() > 0) strncpy(cfg_mqtt_user, val.c_str(), sizeof(cfg_mqtt_user) - 1);
@@ -489,6 +530,11 @@ static void handle_whitelist_add() {
   String node_id = parser_extract_value(body.c_str(), "node_id");
   if (node_id.length() == 0) {
     server.send(400, "application/json", "{\"error\":\"Falta node_id\"}");
+    return;
+  }
+  if (!node_id_is_valid(node_id.c_str())) {
+    server.send(400, "application/json",
+      "{\"error\":\"node_id invalido: use 1-15 caracteres sin / + # espacios | ,\"}");
     return;
   }
   bool ok = node_whitelist_add(node_id.c_str());
@@ -545,4 +591,24 @@ void web_service_loop() {
 
 const char* web_service_get_gateway_id() {
   return cfg_gateway_id;
+}
+
+int web_service_get_lora_freq() {
+  return cfg_lora_freq;
+}
+
+const char* web_service_get_mqtt_server() {
+  return cfg_mqtt_server;
+}
+
+int web_service_get_mqtt_port() {
+  return cfg_mqtt_port;
+}
+
+const char* web_service_get_mqtt_user() {
+  return cfg_mqtt_user;
+}
+
+const char* web_service_get_mqtt_pass() {
+  return cfg_mqtt_pass;
 }

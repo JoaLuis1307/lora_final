@@ -24,6 +24,10 @@ static void send_ack(const String& ack_type, const String& data) {
   if (data.length() > 0) msg += "," + data;
   uint8_t crc_val = crc8((const uint8_t*)msg.c_str(), msg.length());
   msg += ",CRC" + String(crc_val);
+  if (msg.length() > LORA_MAX_PAYLOAD) {
+    Serial.println("ACK no enviado: supera el limite del SX1278");
+    return;
+  }
   lora_send(msg);
   Serial.print("ACK enviado: ");
   Serial.println(msg);
@@ -63,7 +67,8 @@ static void handle_command(const String& cmd_json) {
       while (end < (int)cmd_json.length() && isDigit(cmd_json[end])) end++;
       if (end > start) {
         send_interval = cmd_json.substring(start, end).toInt();
-        if (send_interval < 1000) send_interval = 1000;
+        if (send_interval < MIN_SEND_INTERVAL) send_interval = MIN_SEND_INTERVAL;
+        if (send_interval > MAX_SEND_INTERVAL) send_interval = MAX_SEND_INTERVAL;
         send_ack("1", String(send_interval));
         Serial.print("  -> interval changed to ");
         Serial.print(send_interval);

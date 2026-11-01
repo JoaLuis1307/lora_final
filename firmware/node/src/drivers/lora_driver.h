@@ -10,7 +10,7 @@ extern float lora_noise_floor;
 extern unsigned long lora_tx_count;
 extern unsigned long lora_rx_count;
 
-void lora_init();
+void lora_init(float freq_hz);
 bool lora_send(const String& data);
 bool lora_send_with_retries(const String& data, int max_retries = 3);
 int lora_available();

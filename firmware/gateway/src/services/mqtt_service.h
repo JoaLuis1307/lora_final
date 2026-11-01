@@ -10,7 +10,7 @@ void mqtt_service_init();
 bool mqtt_reconnect();
 void mqtt_loop();
 bool mqtt_is_connected();
-void mqtt_publish(const char* topic, const char* payload);
+bool mqtt_publish(const char* topic, const char* payload);
 void mqtt_publish_status(bool online, const char* ip);
 void mqtt_publish_info();
 void mqtt_publish_stats(unsigned long packets, unsigned long crc_errs, int nodes);

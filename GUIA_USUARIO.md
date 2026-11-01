@@ -14,7 +14,7 @@ El sistema está diseñado para monitorear el estado de llenado de contenedores 
        ▼ (Sensor mide distancia de basura mediante ultrasonido/TOF)
 [ Nodo Transmisor LoRa P2P ]
        │
-       ▼ (Envío inalámbrico de paquetes de datos a 915 MHz)
+       ▼ (Envío inalámbrico de paquetes de datos por LoRa P2P a 433 MHz)
 [ Gateway Concentrador (Receptor) ]
        │
        ▼ (Se conecta a Internet WiFi y traduce los datos a formato JSON)
@@ -27,7 +27,7 @@ El sistema está diseñado para monitorear el estado de llenado de contenedores 
 
 ### El flujo detallado:
 1. **Medición**: El sensor instalado en la tapa del contenedor mide la distancia hacia la basura en centímetros.
-2. **Envío de Radio**: El microcontrolador del **Nodo** transmite este dato mediante un paquete cifrado por radiofrecuencia (LoRa P2P) a la frecuencia de 915 MHz.
+2. **Envío de Radio**: El microcontrolador del **Nodo** transmite este dato mediante un paquete codificado por radiofrecuencia (LoRa P2P) a la frecuencia de 433 MHz. El CRC-8 del paquete detecta errores de transmisión; no es un cifrado.
 3. **Recepción en Base**: El **Gateway** (ubicado en un punto estratégico con internet) recibe el paquete por radio, lo decodifica y lo publica como un mensaje MQTT en el broker del servidor en la nube.
 4. **Procesamiento en Servidor**: El servidor en la nube recibe el mensaje. Si el nodo está registrado, calcula el porcentaje de llenado (ej: si mide 10cm está al 90%, si mide 80cm está vacío) y actualiza la base de datos de inmediato.
 5. **Visualización en Vivo**: El panel web del operador recibe el dato automáticamente a través de WebSockets (sin necesidad de recargar la página) y actualiza los mapas, alarmas y estadísticas al instante.

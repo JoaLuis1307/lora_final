@@ -41,7 +41,7 @@ void app_init() {
 
   web_service_init();
 
-  lora_init();
+  lora_init((float)web_service_get_lora_freq() * 1000000.0f);
   state.lora = lora_alive;
 
   mqtt_service_init();
@@ -274,7 +274,8 @@ void app_loop() {
     state.lora = lora_alive;
     display_show_status(state.wifi, state.mqtt, state.lora);
     if (state.mqtt) {
-      mqtt_publish_status(state.lora, WiFi.localIP().toString().c_str());
+      // El estado del gateway depende de WiFi/MQTT, no del enlace LoRa.
+      mqtt_publish_status(true, WiFi.localIP().toString().c_str());
     }
   }
 

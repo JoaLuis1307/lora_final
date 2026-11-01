@@ -246,7 +246,7 @@ void app_init() {
   Serial.println("ms");
 
   // Inicializar LoRa y sensores SIEMPRE (necesarios en modo AP y normal)
-  lora_init();
+  lora_init((float)node_config_get_lora_freq() * 1000000.0f);
   if (lora_ready) node_led_lora_on();
   sensor_init();
   sensor_set_mask(node_config_get_sensor_mask());

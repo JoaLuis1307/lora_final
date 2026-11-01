@@ -75,8 +75,10 @@ static void mqtt_callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void mqtt_service_init() {
-  mqtt_client.setBufferSize(512);
-  mqtt_client.setServer(MQTT_SERVER, MQTT_PORT);
+  // La telemetria JSON con GPS y bateria ronda 600 bytes. Con 512 el publish
+  // fallaba en silencio porque PubSubClient reserva tambien topic y cabecera.
+  mqtt_client.setBufferSize(MQTT_BUFFER_SIZE);
+  mqtt_client.setServer(web_service_get_mqtt_server(), web_service_get_mqtt_port());
   mqtt_client.setCallback(mqtt_callback);
 }
 
@@ -96,8 +98,11 @@ bool mqtt_reconnect() {
   bool willRetain = true;
   const char* willMessage = "{\"status\":\"offline\"}";
 
-  if (strlen(MQTT_USER) > 0)
-    ok = mqtt_client.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS, willTopic, willQos, willRetain, willMessage);
+  const char* user = web_service_get_mqtt_user();
+  const char* pass = web_service_get_mqtt_pass();
+
+  if (strlen(user) > 0)
+    ok = mqtt_client.connect(MQTT_CLIENT_ID, user, pass, willTopic, willQos, willRetain, willMessage);
   else
     ok = mqtt_client.connect(MQTT_CLIENT_ID, NULL, NULL, willTopic, willQos, willRetain, willMessage);
 
@@ -120,9 +125,19 @@ void mqtt_loop() { mqtt_client.loop(); }
 
 bool mqtt_is_connected() { return mqtt_client.connected(); }
 
-void mqtt_publish(const char* topic, const char* payload) {
+bool mqtt_publish(const char* topic, const char* payload) {
   led_mqtt_activity();
-  mqtt_client.publish(topic, payload);
+  bool ok = mqtt_client.publish(topic, payload);
+  if (!ok) {
+    // Causas tipicas: buffer pequeno, broker desconectado o topic invalido.
+    Serial.print("MQTT publish FALLO [");
+    Serial.print(topic);
+    Serial.print("] len=");
+    Serial.print(strlen(payload));
+    Serial.print(" state=");
+    Serial.println(mqtt_client.state());
+  }
+  return ok;
 }
 
 void mqtt_publish_status(bool online, const char* ip) {

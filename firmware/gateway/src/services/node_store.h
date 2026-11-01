@@ -43,6 +43,9 @@ void node_store_touch(const char* node_id);
 String node_store_get_json();
 
 // Gestion de whitelist de nodos (NVS)
+// El ID viaja como segmento del topic MQTT y como primer campo del paquete
+// LoRa: 1-15 caracteres, sin separadores ni comodines.
+bool node_id_is_valid(const char* node_id);
 void node_whitelist_init();
 bool node_whitelist_add(const char* node_id);
 bool node_whitelist_remove(const char* node_id);

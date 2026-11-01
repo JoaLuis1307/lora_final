@@ -151,6 +151,18 @@ String node_store_get_json() {
 
 // ===================== WHITELIST (NVS) =====================
 
+bool node_id_is_valid(const char* node_id) {
+  if (node_id == nullptr) return false;
+  size_t len = strlen(node_id);
+  if (len == 0 || len > 15) return false;
+  for (size_t i = 0; i < len; i++) {
+    char c = node_id[i];
+    if (c == ',' || c == '|' || c == '/' || c == '+' || c == '#' ||
+        c == ' ' || c == '\t' || c == '\r' || c == '\n') return false;
+  }
+  return true;
+}
+
 void node_whitelist_init() {
   node_prefs.begin("nodes", true);
   allowed_count = node_prefs.getInt("count", 0);
@@ -179,8 +191,7 @@ static void whitelist_save() {
 }
 
 bool node_whitelist_add(const char* node_id) {
-  if (!node_id || strlen(node_id) == 0) return false;
-  if (strlen(node_id) > 15) return false;
+  if (!node_id_is_valid(node_id)) return false;
 
   // Verificar si ya existe
   for (int i = 0; i < allowed_count; i++) {

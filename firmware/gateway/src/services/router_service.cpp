@@ -22,15 +22,18 @@ static uint8_t crc8(const uint8_t* data, size_t len) {
   return crc;
 }
 
-// Extracts CRC from payload end, validates, returns clean payload
-static String validate_crc(const String& raw, bool& crc_ok) {
+// Extracts CRC from payload end, validates, returns clean payload.
+// crc_present indica si el paquete traia campo CRC (los ACK no lo llevan).
+static String validate_crc(const String& raw, bool& crc_ok, bool& crc_present) {
   crc_ok = false;
+  crc_present = false;
   int last_comma = raw.lastIndexOf(',');
   if (last_comma < 0) return raw;
 
   String last_field = raw.substring(last_comma + 1);
   if (!last_field.startsWith("CRC")) return raw;
 
+  crc_present = true;
   uint8_t received_crc = (uint8_t)last_field.substring(3).toInt();
   String clean = raw.substring(0, last_comma);
   uint8_t calc_crc = crc8((const uint8_t*)clean.c_str(), clean.length());
@@ -82,10 +85,9 @@ void router_loop() {
 
   int first_comma = raw.indexOf(',');
   int first_pipe = raw.indexOf('|');
-  if (first_comma > 1 && (first_pipe < 0 || first_comma < first_pipe)) {
+  if (first_comma > 0 && (first_pipe < 0 || first_comma < first_pipe)) {
     String node_id = raw.substring(0, first_comma);
-    bool valid_id = (node_id.length() > 0 && node_id.length() <= 15);
-    if (!valid_id) {
+    if (!node_id_is_valid(node_id.c_str())) {
       Serial.println("Router: node_id invalido, ignorando");
       return;
     }
@@ -98,21 +100,33 @@ void router_loop() {
     }
 
     bool crc_ok = false;
-    String clean_raw = validate_crc(raw, crc_ok);
-    if (!crc_ok) router_crc_errors++;
+    bool crc_present = false;
+    String clean_raw = validate_crc(raw, crc_ok, crc_present);
+    String after_id = clean_raw.substring(first_comma + 1);
 
-    String payload = clean_raw.substring(first_comma + 1);
-
-    if (payload.startsWith("ACK")) {
-      String ack_data = payload.substring(3);
+    // ACK del nodo: no lleva CRC de telemetria, se procesa antes de validarlo.
+    if (after_id.startsWith("ACK")) {
+      String ack_data = after_id.substring(3);
       int ack_comma = ack_data.indexOf(',');
       if (ack_comma > 0) ack_data = ack_data.substring(0, ack_comma);
+      if (ack_data.length() == 0) ack_data = "1";
       String ack_json = "{\"ack\":" + ack_data + "}";
       if (allowed) router_handle_ack(node_id, ack_json);
       node_store_touch(node_id.c_str());
       display_update_signal(node_id.c_str(), lora_last_rssi, lora_last_snr, router_packets, router_crc_errors);
       return;
     }
+
+    if (crc_present && !crc_ok) {
+      router_crc_errors++;
+      Serial.println("  -> CRC ERROR!");
+      if (!LORA_PUBLISH_CRC_ERRORS) {
+        Serial.println("  -> Telemetria descartada (CRC invalido)");
+        return;
+      }
+    }
+
+    String payload = after_id;
 
     TelemetryDisplay td = {};
     strncpy(td.node_id, node_id.c_str(), sizeof(td.node_id) - 1);
@@ -130,8 +144,8 @@ void router_loop() {
     json += ",\"crc_err\":" + String(router_crc_errors);
     json += "}";
 
-    if (!crc_ok) {
-      Serial.println("  -> CRC ERROR!");
+    if (!crc_ok && crc_present) {
+      Serial.println("  -> CRC invalido publicado para diagnostico");
     }
 
     if (allowed) {
@@ -145,7 +159,7 @@ void router_loop() {
   String type = parser_get_data_type(raw);
   String payload = parser_get_payload(raw);
 
-  if (node_id.length() == 0) {
+  if (!node_id_is_valid(node_id.c_str())) {
     Serial.println("Router: node_id invalido, ignorando");
     return;
   }
@@ -181,11 +195,12 @@ void router_handle_telemetry(const String& node_id, const String& payload) {
   String data = parser_is_json(payload.c_str()) ? payload : parser_build_json("value", payload.c_str());
 
   if (mqtt_is_connected()) {
-    mqtt_publish(topic.c_str(), data.c_str());
-    Serial.print("  -> MQTT telemetry [");
-    Serial.print(topic);
-    Serial.print("]: ");
-    Serial.println(data);
+    if (mqtt_publish(topic.c_str(), data.c_str())) {
+      Serial.print("  -> MQTT telemetry [");
+      Serial.print(topic);
+      Serial.print("]: ");
+      Serial.println(data);
+    }
   } else {
     Serial.print("  -> MQTT DESCONECTADO! No se publica telemetry del nodo ");
     Serial.print(node_id);
@@ -194,8 +209,11 @@ void router_handle_telemetry(const String& node_id, const String& payload) {
     Serial.println(")");
   }
 
+  // ACK por LoRa para que el nodo sepa que el gateway recibio el paquete.
   String ack_msg = node_id + "|ack|1";
-  lora_send((const uint8_t*)ack_msg.c_str(), ack_msg.length());
+  if (ack_msg.length() <= LORA_MAX_PAYLOAD) {
+    lora_send((const uint8_t*)ack_msg.c_str(), ack_msg.length());
+  }
 }
 
 void router_handle_system(const String& node_id, const String& payload) {
@@ -245,6 +263,14 @@ void router_handle_ack(const String& node_id, const String& payload) {
 
 void router_send_command_to_lora(const String& node_id, const String& command) {
   String msg = node_id + "|command|" + command;
+  if (msg.length() > LORA_MAX_PAYLOAD) {
+    Serial.print("LoRa TX command abortado: ");
+    Serial.print(msg.length());
+    Serial.print(" bytes > limite SX1278 (");
+    Serial.print(LORA_MAX_PAYLOAD);
+    Serial.println(")");
+    return;
+  }
   led_lora_activity();
   lora_send((const uint8_t*)msg.c_str(), msg.length());
   Serial.print("LoRa TX command to ");

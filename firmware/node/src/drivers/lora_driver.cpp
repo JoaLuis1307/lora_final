@@ -8,17 +8,30 @@ float lora_noise_floor = 0;
 unsigned long lora_tx_count = 0;
 unsigned long lora_rx_count = 0;
 
-void lora_init() {
+void lora_init(float freq_hz) {
+  // El SX1278 cubre 137-525 MHz; el modulo de 433 MHz se usa en 410-525 MHz.
+  if (freq_hz < (float)LORA_FREQ_MIN_MHZ * 1000000.0f ||
+      freq_hz > (float)LORA_FREQ_MAX_MHZ * 1000000.0f) {
+    Serial.println("LoRa: frecuencia fuera de rango, usando 433 MHz");
+    freq_hz = LORA_FREQ;
+  }
+
   SPI.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
   LoRa.setPins(LORA_CS, LORA_RST, LORA_IRQ);
 
-  lora_ready = LoRa.begin(LORA_FREQ);
+  lora_ready = LoRa.begin(freq_hz);
   if (lora_ready) {
     LoRa.setSpreadingFactor(LORA_SPREADING_FACTOR);
     LoRa.setSignalBandwidth(LORA_BANDWIDTH_HZ);
     LoRa.setCodingRate4(LORA_CODING_RATE);
-    LoRa.setTxPower(LORA_TX_POWER_DBM);
-    Serial.println("LoRa OK");
+    LoRa.setTxPower(constrain(LORA_TX_POWER_DBM, 2, 17)); // SX1278 PA_BOOST
+    LoRa.setSyncWord(LORA_SYNC_WORD);
+    LoRa.setPreambleLength(LORA_PREAMBLE_LENGTH);
+    LoRa.enableCrc(); // CRC de radio ademas del CRC-8 de aplicacion
+    LoRa.receive(); // quedar a la escucha de comandos/ACK del gateway
+    Serial.print("LoRa OK @ ");
+    Serial.print(freq_hz / 1000000.0f, 3);
+    Serial.println(" MHz");
   } else {
     Serial.println("LoRa fallo");
   }
@@ -32,36 +45,41 @@ float lora_read_noise() {
   SPI.transfer(0x1A & 0x7F);
   uint8_t raw = SPI.transfer(0);
   digitalWrite(LORA_CS, HIGH);
-  LoRa.idle();
-  return -164.0 + raw;
-}
-
-static bool lora_channel_clear() {
+  // No dejar la radio en idle: volver a RX para no perder comandos.
   LoRa.receive();
-  delayMicroseconds(100);
-  if (LoRa.parsePacket() > 0) return false;
-  LoRa.idle();
-  return true;
+  return -164.0 + raw;
 }
 
 bool lora_send(const String& data) {
   if (!lora_ready) return false;
+  if (data.length() == 0) return false;
+  if (data.length() > LORA_MAX_PAYLOAD) {
+    Serial.print("LoRa TX abortado: payload ");
+    Serial.print(data.length());
+    Serial.print(" bytes > limite SX1278 (");
+    Serial.print(LORA_MAX_PAYLOAD);
+    Serial.println(")");
+    return false;
+  }
+
   LoRa.beginPacket();
-  LoRa.print(data);
-  bool ok = LoRa.endPacket();
+  size_t written = LoRa.write((const uint8_t*)data.c_str(), data.length());
+  bool ok = false;
+  if (written == data.length()) {
+    ok = LoRa.endPacket();
+  } else {
+    LoRa.idle();
+    Serial.println("LoRa TX abortado: escritura incompleta");
+  }
   if (ok) lora_tx_count++;
   LoRa.receive();
   return ok;
 }
 
 bool lora_send_with_retries(const String& data, int max_retries) {
+  // No se sondea el canal con parsePacket(): eso podria consumir un comando
+  // pendiente del gateway. Solo se reintenta con espera aleatoria.
   for (int attempt = 0; attempt <= max_retries; attempt++) {
-    for (int wait = 0; wait < 5; wait++) {
-      if (lora_channel_clear()) break;
-      int backoff = random(50, 200);
-      delay(backoff);
-    }
-
     if (lora_send(data)) return true;
 
     if (attempt < max_retries) {

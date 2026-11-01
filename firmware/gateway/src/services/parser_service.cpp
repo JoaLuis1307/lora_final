@@ -21,17 +21,26 @@ String parser_extract_value(const char* json, const char* key) {
   String j = String(json);
   int colon = j.indexOf(':', pos);
   if (colon < 0) return "";
-  int start = j.indexOf('"', colon + 1);
-  if (start < 0) {
-    start = colon + 1;
-    while (start < (int)j.length() && j[start] == ' ') start++;
-    int end = start;
-    while (end < (int)j.length() && j[end] != ',' && j[end] != '}') end++;
-    return j.substring(start, end);
+
+  // Decidir por el primer caracter del valor, no por la proxima comilla del
+  // documento. Si el valor es numerico (ej. "mqtt_port":1883) y despues hay
+  // otro campo de texto, buscar la comilla siguiente devolvia el nombre de la
+  // clave equivocada y el puerto nunca se guardaba.
+  int start = colon + 1;
+  while (start < (int)j.length() && isSpace(j[start])) start++;
+  if (start >= (int)j.length()) return "";
+
+  if (j[start] == '"') {
+    int end = j.indexOf('"', start + 1);
+    if (end < 0) return "";
+    return j.substring(start + 1, end);
   }
-  int end = j.indexOf('"', start + 1);
-  if (end < 0) return "";
-  return j.substring(start + 1, end);
+
+  int end = start;
+  while (end < (int)j.length() && j[end] != ',' && j[end] != '}') end++;
+  String value = j.substring(start, end);
+  value.trim();
+  return value;
 }
 
 String parser_build_json(const char* key, const char* value) {

@@ -258,11 +258,11 @@ Herramientas</a>
 <tr><td>IRQ Pin</td><td class="mono">GPIO 27</td></tr>
 <tr><td>Protocolo</td><td>LoRa CSS</td></tr>
 <tr><td>BW / SF / CR</td><td class="mono">125kHz / 7 / 4/5</td></tr>
-<tr><td>Potencia TX</td><td class="mono">20 dBm</td></tr>
+<tr><td>Potencia TX</td><td class="mono">17 dBm</td></tr>
 </table>
 </div></div>
 <div class="card"><div class="card-head">Frecuencia de Operacion</div><div class="card-body">
-<div class="fg"><label>Frecuencia (MHz)</label><input id="clf" type="number" placeholder="433"><div class="help">Debe coincidir con la frecuencia del gateway</div></div>
+<div class="fg"><label>Frecuencia (MHz)</label><input id="clf" type="number" min="410" max="525" placeholder="433"><div class="help">Debe coincidir con el gateway. Rango del SX1278: 410-525 MHz</div></div>
 <div class="actions"><button class="btn btn-primary" onclick="saveLora()">Aplicar</button></div>
 </div></div>
 </div>
@@ -270,7 +270,7 @@ Herramientas</a>
 <!-- CONFIGURACION -->
 <div id="config" class="page">
 <div class="card"><div class="card-head"><span class="dot dot-b"></span>Identificacion</div><div class="card-body">
-<div class="fg"><label>Node ID</label><input id="cnid" placeholder="node_01"><div class="help">Identificador unico del nodo en la red LoRa</div></div>
+<div class="fg"><label>Node ID</label><input id="cnid" placeholder="N1" maxlength="15"><div class="help">Identificador unico en la red LoRa (max. 15 caracteres, sin comas ni barras)</div></div>
 <div class="actions"><button class="btn btn-primary" onclick="saveId()">Guardar</button></div>
 </div></div>
 
@@ -383,7 +383,7 @@ function hc(i,ok){$(i).innerHTML=ok?'<span style="color:#0d904f;font-weight:600"
 function ec(i,en){$(i).innerHTML=en?'<span style="color:#0d904f">Activo</span>':'<span style="color:#999">Desactivado</span>';}
 if(d.sensor_health){hc('sh0',d.sensor_health[0]);hc('sh1',d.sensor_health[1]);hc('sh2',d.sensor_health[2]);hc('sh3',d.sensor_health[3]);hc('sh4',d.sensor_health[4]);hc('sh5',d.sensor_health[5]);}
 if(d.sensor_enabled_arr){ec('se0',d.sensor_enabled_arr[0]);ec('se1',d.sensor_enabled_arr[1]);ec('se2',d.sensor_enabled_arr[2]);ec('se3',d.sensor_enabled_arr[3]);ec('se4',d.sensor_enabled_arr[4]);ec('se5',d.sensor_enabled_arr[5]);}
-var icons=['s_dht_icon','s_mq_icon','s_ultra_icon','s_ir_icon','s_tof_icon','s_gps_icon'];
+var icons=['s_bat_icon','s_mq_icon','s_ultra_icon','s_ir_icon','s_tof_icon','s_gps_icon'];
 if(d.sensor_health&&d.sensor_enabled_arr){icons.forEach(function(i,idx){$(i).className='sensor-icon '+(d.sensor_enabled_arr[idx]?(d.sensor_health[idx]?'ok':'er'):'off');});}
 }
 async function poll(){try{var r=await fetch('/api/status');if(r.ok)upd(await r.json())}catch(e){}}
@@ -528,19 +528,46 @@ static String extract_str(const String& body, const char* key) {
   return "";
 }
 
+// El ID viaja como primer campo del paquete LoRa y como segmento del topic
+// MQTT; no puede contener separadores ni comodines.
+static bool node_id_is_valid(const char* id) {
+  if (id == nullptr) return false;
+  size_t len = strlen(id);
+  if (len == 0 || len > NODE_ID_MAX_LEN) return false;
+  for (size_t i = 0; i < len; i++) {
+    char c = id[i];
+    if (c == ',' || c == '|' || c == '/' || c == '+' || c == '#' ||
+        c == ' ' || c == '\t' || c == '\r' || c == '\n') return false;
+  }
+  return true;
+}
+
 static void handle_config_post() {
   String body = server.arg("plain");
 
   String nid = extract_str(body, "node_id");
-  if (nid.length() > 0 && nid.length() < 32) {
+  int lf = extract_int(body, "lora_freq");
+
+  if (nid.length() > 0 && !node_id_is_valid(nid.c_str())) {
+    server.send(400, "application/json",
+      "{\"ok\":false,\"error\":\"Node ID invalido: 1-15 caracteres sin comas, barras ni espacios\"}");
+    return;
+  }
+  if (lf > 0 && (lf < LORA_FREQ_MIN_MHZ || lf > LORA_FREQ_MAX_MHZ)) {
+    server.send(400, "application/json",
+      "{\"ok\":false,\"error\":\"Frecuencia fuera de rango para el SX1278 (410-525 MHz)\"}");
+    return;
+  }
+
+  if (nid.length() > 0) {
     strncpy(cfg_node_id, nid.c_str(), sizeof(cfg_node_id) - 1);
   }
 
+  if (lf > 0) cfg_lora_freq = lf;
+
   int si = extract_int(body, "send_interval");
   if (si >= MIN_SEND_INTERVAL) cfg_send_interval = si;
-
-  int lf = extract_int(body, "lora_freq");
-  if (lf > 0) cfg_lora_freq = lf;
+  if (cfg_send_interval > MAX_SEND_INTERVAL) cfg_send_interval = MAX_SEND_INTERVAL;
 
   int ds = extract_int(body, "deep_sleep");
   if (ds >= 0) cfg_deep_sleep = ds;
@@ -598,10 +625,10 @@ static void handle_lora_radio() {
   String json = "{";
   json += "\"lora_ready\":" + String(lora_ready ? "true" : "false");
   json += ",\"freq\":" + String(cfg_lora_freq);
-  json += ",\"bw\":125";
-  json += ",\"sf\":7";
-  json += ",\"cr\":\"4/5\"";
-  json += ",\"tx_power\":20";
+  json += ",\"bw\":" + String(LORA_BANDWIDTH_HZ / 1000);
+  json += ",\"sf\":" + String(LORA_SPREADING_FACTOR);
+  json += ",\"cr\":\"4/" + String(LORA_CODING_RATE) + "\"";
+  json += ",\"tx_power\":" + String(constrain(LORA_TX_POWER_DBM, 2, 17));
   json += ",\"rssi\":" + String(lora_last_rssi, 1);
   json += ",\"snr\":" + String(lora_last_snr, 1);
   json += ",\"noise\":" + String(noise, 1);
@@ -617,8 +644,16 @@ static void handle_lora_radio() {
 void node_config_load() {
   cfg_prefs.begin("node", true);
   strncpy(cfg_node_id, cfg_prefs.getString("n_id", NODE_ID).c_str(), sizeof(cfg_node_id) - 1);
+  if (!node_id_is_valid(cfg_node_id)) {
+    strncpy(cfg_node_id, NODE_ID, sizeof(cfg_node_id) - 1);
+  }
   cfg_send_interval = cfg_prefs.getInt("s_int", SEND_INTERVAL);
+  if (cfg_send_interval < MIN_SEND_INTERVAL) cfg_send_interval = MIN_SEND_INTERVAL;
+  if (cfg_send_interval > MAX_SEND_INTERVAL) cfg_send_interval = MAX_SEND_INTERVAL;
   cfg_lora_freq = cfg_prefs.getInt("l_freq", (int)(LORA_FREQ / 1000000));
+  if (cfg_lora_freq < LORA_FREQ_MIN_MHZ || cfg_lora_freq > LORA_FREQ_MAX_MHZ) {
+    cfg_lora_freq = (int)(LORA_FREQ / 1000000);
+  }
   cfg_deep_sleep = cfg_prefs.getInt("d_sleep", DEEP_SLEEP_ENABLE);
   cfg_sensor_mask = cfg_prefs.getUChar("s_mask", DEFAULT_SENSOR_MASK);
   cfg_prefs.end();

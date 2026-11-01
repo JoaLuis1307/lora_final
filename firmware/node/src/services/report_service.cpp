@@ -67,6 +67,17 @@ void report_send() {
   Serial.print("]: ");
   Serial.println(payload);
 
+  // El SX1278 no puede transmitir mas de 255 bytes: nunca enviar un paquete
+  // truncado (el CRC ya no cuadraria en el gateway).
+  if (msg.length() > LORA_MAX_PAYLOAD) {
+    Serial.print("  -> LoRa NO enviado: ");
+    Serial.print(msg.length());
+    Serial.print(" bytes > limite SX1278 (");
+    Serial.print(LORA_MAX_PAYLOAD);
+    Serial.println(")");
+    return;
+  }
+
   if (lora_send_with_retries(msg, 3)) {
     Serial.println("  -> LoRa OK");
   } else {

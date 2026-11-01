@@ -2,8 +2,9 @@
 #define CONFIG_H
 
 // Identificacion del nodo
-#define NODE_ID         "node_01"
+#define NODE_ID         "N1"
 #define NODE_NUM        1
+#define NODE_ID_MAX_LEN 15   // Debe coincidir con la validacion del gateway
 
 // LoRa (SPI - VSPI)
 #define LORA_CS         5
@@ -12,11 +13,20 @@
 #define LORA_SCK        18
 #define LORA_MISO       19
 #define LORA_MOSI       23
+// El SX1278 tiene un FIFO de 256 bytes: la libreria LoRa permite 255 como maximo.
+#define LORA_MAX_PAYLOAD       255
 #define LORA_FREQ       433E6
 #define LORA_SPREADING_FACTOR  7
 #define LORA_BANDWIDTH_HZ      125000
 #define LORA_CODING_RATE       5
+// PA_BOOST del SX1278 sin PA_DAC: 2..17 dBm. No subir de 17.
 #define LORA_TX_POWER_DBM      17
+// Red privada LoRa (valor por defecto de la libreria). Debe coincidir con el gateway.
+#define LORA_SYNC_WORD         0x12
+#define LORA_PREAMBLE_LENGTH   8
+// Rango del SX1278; el modulo de 433 MHz esta sintonizado para 410-525 MHz.
+#define LORA_FREQ_MIN_MHZ      410
+#define LORA_FREQ_MAX_MHZ      525
 
 // I2C (VL53L0X + INA219)
 #define I2C_SDA         21
@@ -44,6 +54,7 @@
 // Tiempos
 #define SEND_INTERVAL   30000
 #define MIN_SEND_INTERVAL 5000
+#define MAX_SEND_INTERVAL 3600000   // 1 hora
 
 // Deep sleep
 #define DEEP_SLEEP_ENABLE   0
