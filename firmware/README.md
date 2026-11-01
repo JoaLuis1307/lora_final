@@ -497,6 +497,12 @@ firmware/
   cae al ultrasonido.
 - **GPS**: solo se reporta un fix con menos de 15 s de antiguedad; si no llegan
   bytes NMEA durante 60 s, el nodo reinicia `Serial2` automaticamente.
+- **VL53L0X sobre agua**: el laser de 940 nm se refleja mal en la superficie del
+  agua, por eso el driver usa perfil de largo alcance (limite de senal 0.1 MCPS
+  y presupuesto de 200 ms). Aun asi, el alcance real sobre agua ronda 1-1.5 m.
+  Si el sensor queda mas lejos, o si hay tapa/vidrio frente al lente, la lectura
+  puede ser 8190 (sin objetivo) o una distancia fija equivocada. En ese caso el
+  ultrasonido sigue siendo la fuente confiable para el nivel.
 - **Niveles 5 V**: el ECHO del HC-SR04 y el AOUT del MQ135 pueden superar 3.3 V.
   Usar divisor de tension o level shifter antes de entrar al ESP32.
 - **Buses SPI separados**: el nodo usa VSPI (18/19/23/5) y el gateway HSPI

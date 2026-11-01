@@ -162,6 +162,7 @@ static void read_and_print_tof() {
     } else {
       Serial.println("  VL53L0X: LECTURA INVALIDA");
     }
+    tof_debug_print();
   } else {
     Serial.println("  VL53L0X: SIN DATOS");
   }

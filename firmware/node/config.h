@@ -33,6 +33,12 @@
 #define I2C_SCL         22
 #define TOF_XSHUT_PIN   13
 
+// Rango util aceptado del VL53L0X (mm). Fuera de estos limites la lectura se
+// descarta: por debajo del minimo del sensor (~30 mm) o mas alla del alcance
+// practico sobre agua (~2 m).
+#define TOF_MIN_MM      30
+#define TOF_MAX_MM      2000
+
 // Sensores digitales
 #define MQ135_PIN       34
 #define TRIG_PIN        32
