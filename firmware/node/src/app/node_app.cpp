@@ -30,6 +30,18 @@ static bool menu_dirty = true;
 static bool ap_mode = false;
 static Preferences app_prefs;
 
+// Distancia para el LED de tanque lleno: usar el TOF y, si no hay lectura
+// valida, caer al ultrasonico (el laser del VL53L0X falla sobre el agua).
+static uint16_t led_distance_mm(const SensorData& d) {
+  if (d.tof_mm > 0) return d.tof_mm;
+  if (d.distance_cm > 0.0f) {
+    float mm = d.distance_cm * 10.0f;
+    if (mm > 65535.0f) mm = 65535.0f;
+    return (uint16_t)mm;
+  }
+  return 0;
+}
+
 // Deep sleep
 #if DEEP_SLEEP_ENABLE
 static void enter_deep_sleep() {
@@ -157,7 +169,8 @@ static void read_and_print_tof() {
 
 static void read_and_print_gps() {
   gps_update();
-  if (sensor_healthy[SENSOR_GPS] && gps.location.isValid()) {
+  if (sensor_healthy[SENSOR_GPS] && gps.location.isValid() &&
+      gps.location.age() < GPS_FIX_MAX_AGE_MS) {
     Serial.print("  Lat: "); Serial.print(gps.location.lat(), 6);
     Serial.print("  Lon: "); Serial.print(gps.location.lng(), 6);
     Serial.print("  Alt: "); Serial.print(gps.altitude.meters(), 1); Serial.print(" m");
@@ -314,7 +327,7 @@ void app_loop() {
     command_check();
 
     SensorData led_d = sensor_read_all();
-    node_led_update(led_d.tof_mm);
+    node_led_update(led_distance_mm(led_d));
 
     // Enviar datos LoRa periodicamente incluso en modo AP
     if (now - last_send >= (unsigned long)node_config_get_interval() + send_jitter) {
@@ -348,7 +361,7 @@ void app_loop() {
   handle_serial();
 
   SensorData led_d = sensor_read_all();
-  node_led_update(led_d.tof_mm);
+  node_led_update(led_distance_mm(led_d));
 
   if (menu_dirty) {
     menu_dirty = false;

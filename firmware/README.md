@@ -492,6 +492,13 @@ firmware/
 
 - **GPIO 15 es pin strapping**: no usar para XSHUT del VL53L0X. Se usa GPIO 13.
 - **Pull-ups I2C**: 4.7k entre SDA/SCL y 3.3 V.
+- **Lecturas de sensores**: se cachean 1 s para no bloquear el `loop()` con el
+  HC-SR04. El LED rojo de tanque lleno usa el VL53L0X y, si no hay lectura,
+  cae al ultrasonido.
+- **GPS**: solo se reporta un fix con menos de 15 s de antiguedad; si no llegan
+  bytes NMEA durante 60 s, el nodo reinicia `Serial2` automaticamente.
+- **Niveles 5 V**: el ECHO del HC-SR04 y el AOUT del MQ135 pueden superar 3.3 V.
+  Usar divisor de tension o level shifter antes de entrar al ESP32.
 - **Buses SPI separados**: el nodo usa VSPI (18/19/23/5) y el gateway HSPI
   (12/13/11/10). No comparten bus.
 - **IDs unicos**: `gateway_01` para hardware y `gateway_02` para el simulador

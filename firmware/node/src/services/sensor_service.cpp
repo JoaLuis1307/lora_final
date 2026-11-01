@@ -14,6 +14,19 @@ bool sensor_enabled[SENSOR_COUNT] = {true, true, true, true, true, true};
 static unsigned long last_retry = 0;
 static const unsigned long RETRY_INTERVAL = 30000;
 
+// Cache de lecturas: evita leer el HC-SR04 (bloqueante hasta 30 ms) en cada
+// vuelta del loop. Una lectura de hasta 1 s de antiguedad es suficiente para
+// los LEDs, el reporte LoRa y la web de configuracion.
+static SensorData cached_data;
+static bool cached_valid = false;
+static unsigned long cached_ms = 0;
+static const unsigned long SENSOR_CACHE_MS = 1000;
+
+// Watchdog del GPS: charsProcessed() es acumulativo, asi que si no cambia es
+// que no estan llegando bytes NMEA.
+static unsigned long gps_last_activity_ms = 0;
+static uint32_t gps_last_chars = 0;
+
 void sensor_set_mask(uint8_t mask) {
   for (int i = 0; i < SENSOR_COUNT; i++) {
     sensor_enabled[i] = (mask >> i) & 1;
@@ -39,26 +52,30 @@ void sensor_init() {
   sensor_healthy[SENSOR_IR] = true;
   sensor_healthy[SENSOR_TOF] = tof_init();
   gps_init();
-  sensor_healthy[SENSOR_GPS] = true;
+  // Solo se marca sano cuando realmente llegan datos NMEA.
+  sensor_healthy[SENSOR_GPS] = false;
+  gps_last_chars = gps.charsProcessed();
+  gps_last_activity_ms = millis();
 }
 
 void sensor_update() {
-  if (sensor_enabled[SENSOR_GPS]) gps_update();
-
   unsigned long now = millis();
 
-  if (sensor_enabled[SENSOR_GPS] && !sensor_healthy[SENSOR_GPS]) {
-    if (!gps.charsProcessed()) {
-      static unsigned long gps_last_init = 0;
-      if (gps_last_init == 0) {
-        gps_last_init = now;
-      } else if (now - gps_last_init > 60000) {
-        Serial.println("GPS sin datos, reintentando init...");
-        gps_init();
-        gps_last_init = now;
-      }
-    } else {
-      sensor_healthy[SENSOR_GPS] = true;
+  if (sensor_enabled[SENSOR_GPS]) {
+    gps_update();
+
+    uint32_t chars = gps.charsProcessed();
+    if (chars > 0) sensor_healthy[SENSOR_GPS] = true;
+
+    if (chars != gps_last_chars) {
+      gps_last_chars = chars;
+      gps_last_activity_ms = now; // hay actividad NMEA
+    } else if (now - gps_last_activity_ms >= GPS_RETRY_INTERVAL_MS) {
+      // Sin bytes nuevos: antena desconectada, cable o puerto caido.
+      Serial.println("GPS sin datos NMEA, reiniciando Serial2...");
+      sensor_healthy[SENSOR_GPS] = false;
+      gps_init();
+      gps_last_activity_ms = now;
     }
   }
 
@@ -76,6 +93,11 @@ void sensor_update() {
 }
 
 SensorData sensor_read_all() {
+  unsigned long now = millis();
+  if (cached_valid && (now - cached_ms) < SENSOR_CACHE_MS) {
+    return cached_data;
+  }
+
   SensorData d;
   d.temperature       = 0;
   d.humidity          = 0;
@@ -134,7 +156,8 @@ SensorData sensor_read_all() {
   }
 
   if (sensor_enabled[SENSOR_GPS] && sensor_healthy[SENSOR_GPS]) {
-    if (gps.location.isValid()) {
+    // age() evita reenviar coordenadas viejas si el GPS pierde la senal.
+    if (gps.location.isValid() && gps.location.age() < GPS_FIX_MAX_AGE_MS) {
       d.lat       = gps.location.lat();
       d.lng       = gps.location.lng();
       d.altitude  = gps.altitude.meters();
@@ -143,5 +166,8 @@ SensorData sensor_read_all() {
     }
   }
 
+  cached_data = d;
+  cached_ms = millis();
+  cached_valid = true;
   return d;
 }

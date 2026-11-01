@@ -3,6 +3,11 @@
 
 #include <Arduino.h>
 
+// Un fix GPS mas viejo que esto ya no se reporta como valido (ms).
+static const uint32_t GPS_FIX_MAX_AGE_MS = 15000;
+// Si no llegan bytes NMEA durante este tiempo, se reinicia el puerto (ms).
+static const uint32_t GPS_RETRY_INTERVAL_MS = 60000;
+
 enum SensorType {
   SENSOR_INA219,  // index 0 - Bateria (reemplaza DHT11)
   SENSOR_MQ135,   // index 1
