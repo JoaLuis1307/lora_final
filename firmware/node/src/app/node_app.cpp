@@ -30,15 +30,16 @@ static bool menu_dirty = true;
 static bool ap_mode = false;
 static Preferences app_prefs;
 
-// Distancia para el LED de tanque lleno: usar el TOF y, si no hay lectura
-// valida, caer al ultrasonico (el laser del VL53L0X falla sobre el agua).
+// Distancia para el LED de tanque lleno: el ultrasonido es la fuente
+// principal y el TOF queda como respaldo (el laser del VL53L0X falla sobre
+// el agua).
 static uint16_t led_distance_mm(const SensorData& d) {
-  if (d.tof_mm > 0) return d.tof_mm;
   if (d.distance_cm > 0.0f) {
     float mm = d.distance_cm * 10.0f;
     if (mm > 65535.0f) mm = 65535.0f;
     return (uint16_t)mm;
   }
+  if (d.tof_mm > 0) return d.tof_mm;
   return 0;
 }
 

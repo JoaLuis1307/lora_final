@@ -349,10 +349,12 @@ export const telemetryService = {
       const savedTelemetry = await this.saveTelemetry(fastify, telemetryEntry);
       
       // 3. Estimate Status and Battery based on container fill level, signal strength (RSSI), battery, and noise (SNR)
-      const fillDistance = telemetryEntry.tof_cm > 0
-        ? telemetryEntry.tof_cm
-        : telemetryEntry.ultrasonic_cm > 0
-          ? telemetryEntry.ultrasonic_cm
+      // El ultrasonido es la fuente principal del nivel porque el laser del
+      // VL53L0X se refleja mal en el agua. El ToF queda solo como respaldo.
+      const fillDistance = telemetryEntry.ultrasonic_cm > 0
+        ? telemetryEntry.ultrasonic_cm
+        : telemetryEntry.tof_cm > 0
+          ? telemetryEntry.tof_cm
           : undefined;
       
       let status: 'Online' | 'Warning' | 'Offline' = 'Online';

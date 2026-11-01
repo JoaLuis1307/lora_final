@@ -101,11 +101,18 @@ class BinProvider with ChangeNotifier {
     }
   }
 
+  static const double _maxValidDistance = 130.0;
+
+  static bool _isPlausible(double? distance) =>
+      distance != null && distance > 0 && distance <= _maxValidDistance;
+
   static double? _validDistance(dynamic tel) {
-    final tof = (tel['tof_cm'] as num?)?.toDouble();
-    if (tof != null && tof > 0) return tof;
+    // El ultrasonido es la fuente principal del nivel; el ToF es respaldo
+    // porque el laser del VL53L0X se refleja mal en el agua.
     final ultrasonic = (tel['ultrasonic_cm'] as num?)?.toDouble();
-    if (ultrasonic != null && ultrasonic > 0) return ultrasonic;
+    if (_isPlausible(ultrasonic)) return ultrasonic;
+    final tof = (tel['tof_cm'] as num?)?.toDouble();
+    if (_isPlausible(tof)) return tof;
     return null;
   }
 

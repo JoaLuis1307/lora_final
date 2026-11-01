@@ -2,11 +2,16 @@
  * Utility helper to calculate the fill percentage of a container
  * based on the user-configured container height and full-distance threshold.
  */
+export const MAX_VALID_DISTANCE_CM = 130;
+
+const isPlausibleDistance = (value: number): boolean =>
+  Number.isFinite(value) && value > 0 && value <= MAX_VALID_DISTANCE_CM;
+
 export const calculateFillPercentage = (distance: number | undefined): number => {
   if (distance === undefined || distance === null || !Number.isFinite(distance)) return 0;
 
   // Si la distancia medida sale de rango (<= 0 o > 130 cm), retornamos -1 (fuera de rango)
-  if (distance <= 0 || distance > 130) {
+  if (distance <= 0 || distance > MAX_VALID_DISTANCE_CM) {
     return -1;
   }
 
@@ -47,9 +52,11 @@ export const getValidFillDistance = (telemetry: {
   fill?: number | null;
 } | undefined): number | undefined => {
   if (!telemetry) return undefined;
-  const tof = Number(telemetry.tof_cm);
-  if (Number.isFinite(tof) && tof > 0) return tof;
+  // El ultrasonido es la fuente principal del nivel porque el laser del
+  // VL53L0X se refleja mal en el agua. El ToF queda como respaldo.
   const ultrasonic = Number(telemetry.ultrasonic_cm);
-  if (Number.isFinite(ultrasonic) && ultrasonic > 0) return ultrasonic;
+  if (isPlausibleDistance(ultrasonic)) return ultrasonic;
+  const tof = Number(telemetry.tof_cm);
+  if (isPlausibleDistance(tof)) return tof;
   return undefined;
 };
