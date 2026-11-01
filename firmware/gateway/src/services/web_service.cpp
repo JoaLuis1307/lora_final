@@ -379,6 +379,9 @@ static void config_load() {
   strncpy(cfg_wifi_pass, prefs.getString("w_pass", WIFI_PASSWORD).c_str(), sizeof(cfg_wifi_pass) - 1);
   strncpy(cfg_mqtt_server, prefs.getString("m_srv", MQTT_SERVER).c_str(), sizeof(cfg_mqtt_server) - 1);
   cfg_mqtt_port = prefs.getInt("m_port", MQTT_PORT);
+  if (cfg_mqtt_port <= 0 || cfg_mqtt_port > 65535) {
+    cfg_mqtt_port = MQTT_PORT;
+  }
   strncpy(cfg_mqtt_user, prefs.getString("m_usr", MQTT_USER).c_str(), sizeof(cfg_mqtt_user) - 1);
   strncpy(cfg_mqtt_pass, prefs.getString("m_psw", MQTT_PASS).c_str(), sizeof(cfg_mqtt_pass) - 1);
   strncpy(cfg_gateway_id, prefs.getString("g_id", MQTT_GATEWAY_ID).c_str(), sizeof(cfg_gateway_id) - 1);

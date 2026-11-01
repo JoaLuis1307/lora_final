@@ -54,8 +54,9 @@
 #define LED_VERDE       2   // Tanque disponible
 #define LED_AZUL        15  // LoRa conectado/funcionando
 
-// Umbral de tanque lleno (distancia en mm desde el sensor al nivel max)
-#define FULL_THRESHOLD_MM  100
+// Contenedor de 1 m3 asumido como 1 m x 1 m x 1 m, con el sensor en la
+// parte superior. Al 85% quedan aproximadamente 150 mm hasta el sensor.
+#define FULL_THRESHOLD_MM  150
 
 // Tiempos
 #define SEND_INTERVAL   30000

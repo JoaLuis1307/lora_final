@@ -80,10 +80,22 @@ void mqtt_service_init() {
   mqtt_client.setBufferSize(MQTT_BUFFER_SIZE);
   mqtt_client.setServer(web_service_get_mqtt_server(), web_service_get_mqtt_port());
   mqtt_client.setCallback(mqtt_callback);
+  mqtt_esp_client.setTimeout(10);
+
+  Serial.print("MQTT servidor: ");
+  Serial.print(web_service_get_mqtt_server());
+  Serial.print(":");
+  Serial.println(web_service_get_mqtt_port());
 }
 
 bool mqtt_reconnect() {
   if (!wifi_is_connected()) return false;
+  if (mqtt_client.connected()) return true;
+
+  // Descarta cualquier socket dejado a medias por un intento anterior.
+  mqtt_client.disconnect();
+  mqtt_esp_client.stop();
+
   Serial.print("MQTT conectando con LWT...");
   bool ok;
 
@@ -106,6 +118,17 @@ bool mqtt_reconnect() {
   else
     ok = mqtt_client.connect(MQTT_CLIENT_ID, NULL, NULL, willTopic, willQos, willRetain, willMessage);
 
+  // Algunos brokers o proxies MQTT no aceptan un LWT QoS 1. Reintentar sin
+  // LWT permite distinguir ese caso de un fallo de red o autenticacion.
+  if (!ok) {
+    mqtt_esp_client.stop();
+    Serial.println(" reintentando sin LWT...");
+    if (strlen(user) > 0)
+      ok = mqtt_client.connect(MQTT_CLIENT_ID, user, pass);
+    else
+      ok = mqtt_client.connect(MQTT_CLIENT_ID, NULL, NULL);
+  }
+
   if (ok) {
     Serial.println(" OK");
     mqtt_client.subscribe(topic_command.c_str());
@@ -116,6 +139,7 @@ bool mqtt_reconnect() {
   } else {
     Serial.print(" fallo rc=");
     Serial.println(mqtt_client.state());
+    mqtt_esp_client.stop();
   }
   mqtt_connected_flag = ok;
   return ok;

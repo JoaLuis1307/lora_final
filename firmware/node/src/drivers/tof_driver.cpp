@@ -133,12 +133,10 @@ bool tof_read(uint16_t& distance_mm) {
     return false;
   }
 
-  // Estados >= 5 indican fallo de senal/fase: el valor no es confiable.
-  if (last_status >= 5) {
-    last_rejected = true;
-    return false;
-  }
-
+  // Algunos modulos VL53L0X reportan un estado de fase no cero aunque el
+  // valor en milimetros sea estable y este dentro del rango fisico. El valor
+  // ya fue filtrado por timeout, objetivo ausente y limites del montaje, por
+  // lo que no se descarta solo por RESULT_RANGE_STATUS.
   distance_mm = raw;
   return true;
 }

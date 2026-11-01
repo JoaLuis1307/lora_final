@@ -59,9 +59,19 @@ void wifi_init() {
     sta_connected = true;
     Serial.print("\nWiFi conectado: ");
     Serial.println(WiFi.localIP());
+    Serial.print("WiFi SSID: ");
+    Serial.println(WiFi.SSID());
+    Serial.print("WiFi RSSI: ");
+    Serial.print(WiFi.RSSI());
+    Serial.println(" dBm");
+    Serial.print("WiFi gateway: ");
+    Serial.println(WiFi.gatewayIP());
+    Serial.print("WiFi DNS: ");
+    Serial.println(WiFi.dnsIP());
     ip_addr = WiFi.localIP().toString();
   } else {
-    Serial.println("\nFallo WiFi.");
+    Serial.print("\nFallo WiFi. Estado=");
+    Serial.println((int)WiFi.status());
   }
 }
 
